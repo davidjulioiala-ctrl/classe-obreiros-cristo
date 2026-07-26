@@ -1,22 +1,28 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  decimal,
+  boolean,
+  date,
+} from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
+ * Extended with role-based access control for the church management system.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  // Church-specific roles
+  churchRole: mysqlEnum("churchRole", ["lider", "oficial", "louvor", "membro"]).default("membro").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -25,4 +31,211 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Members table - core data for church members
+ */
+export const members = mysqlTable("members", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  sex: mysqlEnum("sex", ["M", "F"]).notNull(),
+  birthDate: date("birthDate"),
+  father: varchar("father", { length: 255 }),
+  mother: varchar("mother", { length: 255 }),
+  nationality: varchar("nationality", { length: 255 }),
+  region: varchar("region", { length: 255 }),
+  residence: varchar("residence", { length: 255 }),
+  phoneOrange: varchar("phoneOrange", { length: 20 }),
+  phoneTelecel: varchar("phoneTelecel", { length: 20 }),
+  email: varchar("email", { length: 320 }),
+  groupId: int("groupId"),
+  position: varchar("position", { length: 255 }),
+  isGuest: boolean("isGuest").default(false).notNull(),
+  guestOf: int("guestOf"), // Reference to the member who invited this guest
+  isActive: boolean("isActive").default(true).notNull(),
+  isTransferred: boolean("isTransferred").default(false).notNull(),
+  transferredAt: timestamp("transferredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Member = typeof members.$inferSelect;
+export type InsertMember = typeof members.$inferInsert;
+
+/**
+ * Groups table - automatic grouping of members
+ */
+export const groups = mysqlTable("groups", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  criteria: varchar("criteria", { length: 255 }), // e.g., "sex:M", "age:18-25"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Group = typeof groups.$inferSelect;
+export type InsertGroup = typeof groups.$inferInsert;
+
+/**
+ * Activities table - church events and activities
+ */
+export const activities = mysqlTable("activities", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  date: date("date").notNull(),
+  startTime: varchar("startTime", { length: 10 }),
+  endTime: varchar("endTime", { length: 10 }),
+  location: varchar("location", { length: 255 }),
+  type: varchar("type", { length: 100 }), // e.g., "culto", "estudo", "reunião"
+  audience: varchar("audience", { length: 100 }), // e.g., "geral", "jovens", "mulheres"
+  hasCommission: boolean("hasCommission").default(false).notNull(),
+  speakerName: varchar("speakerName", { length: 255 }),
+  speakerSex: mysqlEnum("speakerSex", ["M", "F"]),
+  speakerPhoneOrange: varchar("speakerPhoneOrange", { length: 20 }),
+  speakerPhoneTelecel: varchar("speakerPhoneTelecel", { length: 20 }),
+  speakerResidence: varchar("speakerResidence", { length: 255 }),
+  theme: varchar("theme", { length: 255 }),
+  biblicalReference: varchar("biblicalReference", { length: 255 }), // For religious themes
+  isReligious: boolean("isReligious").default(true).notNull(),
+  status: mysqlEnum("status", ["planejada", "realizada", "cancelada"]).default("planejada").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = typeof activities.$inferInsert;
+
+/**
+ * Commission members - members assigned to organize an activity
+ */
+export const commissionMembers = mysqlTable("commissionMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  activityId: int("activityId").notNull(),
+  memberId: int("memberId").notNull(),
+  role: varchar("role", { length: 100 }), // e.g., "coordenador", "secretário"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CommissionMember = typeof commissionMembers.$inferSelect;
+export type InsertCommissionMember = typeof commissionMembers.$inferInsert;
+
+/**
+ * Attendance records - presence tracking for activities
+ */
+export const attendance = mysqlTable("attendance", {
+  id: int("id").autoincrement().primaryKey(),
+  activityId: int("activityId").notNull(),
+  memberId: int("memberId").notNull(),
+  isPresent: boolean("isPresent").default(true).notNull(),
+  recordedBy: int("recordedBy"), // User who recorded the attendance
+  recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Attendance = typeof attendance.$inferSelect;
+export type InsertAttendance = typeof attendance.$inferInsert;
+
+/**
+ * Quotas - monthly contribution payments
+ */
+export const quotas = mysqlTable("quotas", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId").notNull(),
+  month: int("month").notNull(), // 1-12
+  year: int("year").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  isPaid: boolean("isPaid").default(false).notNull(),
+  paidAt: timestamp("paidAt"),
+  paidBy: int("paidBy"), // User who recorded the payment
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Quota = typeof quotas.$inferSelect;
+export type InsertQuota = typeof quotas.$inferInsert;
+
+/**
+ * Other income - non-quota financial entries
+ */
+export const otherIncome = mysqlTable("otherIncome", {
+  id: int("id").autoincrement().primaryKey(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  date: date("date").notNull(),
+  recordedBy: int("recordedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OtherIncome = typeof otherIncome.$inferSelect;
+export type InsertOtherIncome = typeof otherIncome.$inferInsert;
+
+/**
+ * Expenses - financial outflows
+ */
+export const expenses = mysqlTable("expenses", {
+  id: int("id").autoincrement().primaryKey(),
+  sequence: int("sequence").autoincrement().notNull(),
+  designation: varchar("designation", { length: 255 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  date: date("date").notNull(),
+  recordedBy: int("recordedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = typeof expenses.$inferInsert;
+
+/**
+ * Transfers - member transfers between groups or churches
+ */
+export const transfers = mysqlTable("transfers", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId").notNull(),
+  fromGroupId: int("fromGroupId"),
+  toGroupId: int("toGroupId"),
+  toChurch: varchar("toChurch", { length: 255 }), // Name of destination church
+  reason: text("reason"),
+  status: mysqlEnum("status", ["pendente", "aprovada", "concluida", "cancelada"]).default("pendente").notNull(),
+  approvedBy: int("approvedBy"),
+  approvedAt: timestamp("approvedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Transfer = typeof transfers.$inferSelect;
+export type InsertTransfer = typeof transfers.$inferInsert;
+
+/**
+ * Reports - generated activity reports and minutes
+ */
+export const reports = mysqlTable("reports", {
+  id: int("id").autoincrement().primaryKey(),
+  activityId: int("activityId").notNull(),
+  type: mysqlEnum("type", ["ata", "relatorio"]).notNull(),
+  content: text("content"),
+  generatedBy: int("generatedBy").notNull(),
+  downloadedBy: varchar("downloadedBy", { length: 1000 }), // JSON array of user IDs
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
+
+/**
+ * Audit log - track important actions
+ */
+export const auditLog = mysqlTable("auditLog", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  action: varchar("action", { length: 255 }).notNull(),
+  entityType: varchar("entityType", { length: 100 }),
+  entityId: int("entityId"),
+  details: text("details"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLog.$inferSelect;
+export type InsertAuditLog = typeof auditLog.$inferInsert;

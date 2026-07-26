@@ -1,35 +1,58 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/Dashboard";
+import Members from "@/pages/Members";
+import Activities from "@/pages/Activities";
+import Finances from "@/pages/Finances";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
+          <p className="text-slate-600">A carregar...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Switch>
+        <Route path={"/"} component={Login} />
+        <Route path={"/404"} component={NotFound} />
+        <Route component={Login} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/members"} component={Members} />
+      <Route path={"/activities"} component={Activities} />
+      <Route path={"/finances"} component={Finances} />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path={"/"} component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />
