@@ -6,6 +6,10 @@ import Dashboard from "@/pages/Dashboard";
 import Members from "@/pages/Members";
 import Activities from "@/pages/Activities";
 import Finances from "@/pages/Finances";
+import Attendance from "@/pages/Attendance";
+import Transfers from "@/pages/Transfers";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -41,7 +45,11 @@ function Router() {
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/members"} component={Members} />
       <Route path={"/activities"} component={Activities} />
+      <Route path={"/attendance"} component={Attendance} />
       <Route path={"/finances"} component={Finances} />
+      <Route path={"/transfers"} component={Transfers} />
+      <Route path={"/reports"} component={Reports} />
+      <Route path={"/settings"} component={Settings} />
       <Route path={"/404"} component={NotFound} />
       <Route path={"/"} component={Dashboard} />
       <Route component={NotFound} />

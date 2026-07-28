@@ -18,9 +18,9 @@
 ## Fase 3: Gestão de Atividades
 - [x] Criar schema de atividades (nome, data, tipo, preletor, comissão)
 - [x] Implementar formulário de criação de atividades
-- [ ] Criar sistema de comissões (opcional por atividade)
-- [ ] Implementar registo de presenças por membro
-- [ ] Criar análise de presenças por grupo e sexo
+- [x] Criar sistema de comissões (opcional por atividade)
+- [x] Implementar registo de presenças por membro
+- [x] Criar análise de presenças por grupo e sexo
 - [x] Implementar gráficos de participação com Recharts
 
 ## Fase 4: Módulo Financeiro
@@ -33,18 +33,18 @@
 - [x] Restringir acesso a Líderes apenas
 
 ## Fase 5: Módulo de Transferências
-- [ ] Criar schema de transferências de membros
-- [ ] Implementar fluxo de transferência com etapa intermédia
-- [ ] Criar funcionalidade de adicionar/remover membros da lista de transferência
-- [ ] Implementar histórico de transferências com motivo
-- [ ] Criar relatório de transferências em PDF
+- [x] Criar schema de transferências de membros
+- [x] Implementar fluxo de transferência com etapa intermédia
+- [x] Criar funcionalidade de adicionar/remover membros da lista de transferência
+- [x] Implementar histórico de transferências com motivo
+- [x] Criar relatório de transferências em PDF
 
 ## Fase 6: Relatórios e Atas
-- [ ] Implementar geração de atas para atividades (1 dia)
-- [ ] Implementar geração de relatórios para atividades (>1 dia)
-- [ ] Criar exportação em PDF com layout A4 horizontal
-- [ ] Implementar download de relatórios por Líderes e Oficiais
-- [ ] Criar histórico de relatórios gerados
+- [x] Implementar geração de atas para atividades (1 dia)
+- [x] Implementar geração de relatórios para atividades (>1 dia)
+- [x] Criar exportação em PDF com layout A4 horizontal
+- [x] Implementar download de relatórios por Líderes e Oficiais
+- [x] Criar histórico de relatórios gerados
 
 ## Fase 7: Dashboard Principal
 - [x] Implementar cards de estatísticas (membros, presenças, atividades, cotas)
@@ -61,11 +61,11 @@
 - [ ] Implementar modo dark/light (opcional)
 
 ## Fase 9: Integrações e Finalização
-- [ ] Testar fluxos completos de utilizador
-- [ ] Implementar validações de dados
-- [ ] Criar testes unitários com Vitest
-- [ ] Otimizar performance e carregamento
-- [ ] Preparar para publicação
+- [x] Testar fluxos completos de utilizador
+- [x] Implementar validações de dados
+- [x] Criar testes unitários com Vitest
+- [x] Otimizar performance e carregamento
+- [x] Preparar para publicação
 
 ## Notas Importantes
 - Idioma: Português Europeu em toda a interface
