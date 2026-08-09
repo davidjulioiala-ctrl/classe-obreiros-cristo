@@ -15,6 +15,13 @@
       "when": 1785014407822,
       "tag": "0001_deep_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1785237952852,
+      "tag": "0002_familiar_star_brand",
+      "breakpoints": true
     }
   ]
 }

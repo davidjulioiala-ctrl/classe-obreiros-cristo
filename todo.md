@@ -13,7 +13,7 @@
 - [x] Criar sistema de grupos automáticos
 - [x] Implementar pesquisa e filtros avançados de membros
 - [x] Criar listagem de membros com edição inline
-- [ ] Implementar registo de convidados vinculados a membros
+- [x] Implementar registo de convidados vinculados a membros
 
 ## Fase 3: Gestão de Atividades
 - [x] Criar schema de atividades (nome, data, tipo, preletor, comissão)
@@ -29,7 +29,7 @@
 - [x] Criar sistema de outras receitas (campo livre)
 - [x] Implementar registo de despesas com sequência automática
 - [x] Criar dashboard financeiro com saldo total
-- [ ] Implementar histórico completo de transações
+- [x] Implementar histórico completo de transações
 - [x] Restringir acesso a Líderes apenas
 
 ## Fase 5: Módulo de Transferências
@@ -51,14 +51,14 @@
 - [x] Criar gráficos com Recharts (presenças semanais, contribuições, participação)
 - [x] Implementar feed de atividade recente
 - [x] Criar widgets de resumo (próximas atividades, membros recentes, pagamentos)
-- [ ] Implementar painel lateral direito com perfil e calendário
+- [x] Implementar painel lateral direito com perfil e calendário
 
 ## Fase 8: Interface e UX
 - [x] Implementar tema visual elegante e profissional
 - [x] Criar animações suaves com Framer Motion
 - [x] Implementar responsividade para desktop, tablet e mobile
 - [x] Criar notificações e toasts para feedback do utilizador
-- [ ] Implementar modo dark/light (opcional)
+- [x] Implementar modo dark/light (opcional)
 
 ## Fase 9: Integrações e Finalização
 - [x] Testar fluxos completos de utilizador
@@ -74,3 +74,16 @@
 - Relatórios: Exportáveis em PDF, formato A4 horizontal
 - Dados: Guardados em nuvem (MySQL/TiDB)
 - Hierarquia: Líderes têm acesso completo, Oficiais acesso limitado, Louvor acesso restrito
+
+
+## Fase 10: Sistema de Login Local
+- [x] Criar schema com campos de autenticação local (username, password)
+- [x] Implementar helpers de autenticação com hash de senha
+- [x] Criar procedimentos tRPC para login e CRUD de utilizadores
+- [x] Criar página de login local com formulário
+- [x] Implementar página de gestão de utilizadores com CRUD completo
+- [x] Adicionar menu de utilizadores ao sidebar
+- [x] Integrar autenticação local no fluxo da aplicação
+- [ ] Criar endpoint de login local (/api/auth/login)
+- [ ] Implementar sessões com cookies
+- [ ] Testar fluxo completo de login e CRUD

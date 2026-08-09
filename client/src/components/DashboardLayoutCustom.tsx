@@ -42,6 +42,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
     { icon: FileText, label: "Relatórios", href: "/reports" },
     { icon: Music, label: "Louvor", href: "/louvor" },
     { icon: Settings, label: "Configurações", href: "/settings" },
+    { icon: Users, label: "Utilizadores", href: "/users" },
   ];
 
   // Filter menu based on user role
