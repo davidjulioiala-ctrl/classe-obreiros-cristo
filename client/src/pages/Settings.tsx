@@ -40,12 +40,14 @@ export default function Settings() {
 
         {/* Tabs */}
         <Tabs defaultValue="organization" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="organization">Organização</TabsTrigger>
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="grid min-w-[560px] grid-cols-4 sm:min-w-0">
+              <TabsTrigger value="organization">Organização</TabsTrigger>
             <TabsTrigger value="users">Utilizadores</TabsTrigger>
             <TabsTrigger value="notifications">Notificações</TabsTrigger>
-            <TabsTrigger value="appearance">Aparência</TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Organization Tab */}
           <TabsContent value="organization" className="space-y-6">

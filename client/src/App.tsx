@@ -12,6 +12,8 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import LocalLogin from "@/pages/LocalLogin";
 import UserManagement from "@/pages/UserManagement";
+import Louvor from "@/pages/Louvor";
+import Profile from "@/pages/Profile";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -35,9 +37,9 @@ function Router() {
   if (!user) {
     return (
       <Switch>
-        <Route path={"/"} component={Login} />
+        <Route path={"/"} component={LocalLogin} />
         <Route path={"/404"} component={NotFound} />
-        <Route component={Login} />
+        <Route component={LocalLogin} />
       </Switch>
     );
   }
@@ -51,7 +53,9 @@ function Router() {
       <Route path={"/finances"} component={Finances} />
       <Route path={"/transfers"} component={Transfers} />
       <Route path={"/reports"} component={Reports} />
+      <Route path={"/louvor"} component={Louvor} />
       <Route path={"/settings"} component={Settings} />
+      <Route path={"/profile"} component={Profile} />
       <Route path={"/users"} component={UserManagement} />
       <Route path={"/login"} component={LocalLogin} />
       <Route path={"/404"} component={NotFound} />

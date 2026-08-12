@@ -110,7 +110,7 @@ export default function Transfers() {
       >
         {/* Header */}
         <motion.div
-          className="flex items-center justify-between"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -124,7 +124,7 @@ export default function Transfers() {
           </div>
           <Button
             onClick={() => setShowNewTransfer(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white sm:w-auto"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nova Transferência

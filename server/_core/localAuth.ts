@@ -1,7 +1,8 @@
 import { Express, Request, Response } from "express";
-import { authenticateUser } from "../auth";
+import { authenticateUser, getUserById } from "../auth";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
+import { localAuthMiddleware } from "./localAuthMiddleware";
 
 export function registerLocalAuthRoutes(app: Express) {
   // Local login endpoint
@@ -49,6 +50,23 @@ export function registerLocalAuthRoutes(app: Express) {
     }
   });
 
+  // Get current user endpoint
+  app.get("/api/auth/me", localAuthMiddleware, (req: Request, res: Response) => {
+    try {
+      const user = (req as any).localUser;
+      return res.json({
+        success: true,
+        user,
+      });
+    } catch (error) {
+      console.error("[LocalAuth] Get user error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  });
+
   // Logout endpoint
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     try {
@@ -67,3 +85,4 @@ export function registerLocalAuthRoutes(app: Express) {
     }
   });
 }
+

@@ -277,8 +277,8 @@ export default function UserManagement() {
           animate={{ opacity: 1, y: 0 }}
         >
           <Card className="overflow-hidden bg-white dark:bg-slate-800">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[980px]">
                 <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
@@ -375,6 +375,35 @@ export default function UserManagement() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="space-y-3 p-4 sm:hidden">
+              {filteredUsers.map((user) => (
+                <div key={user.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                      <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">@{user.username}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${user.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}>
+                      {user.isActive ? "Ativo" : "Inativo"}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                    <p className="break-words">{user.email}</p>
+                    <p>{getRoleLabel(user.churchRole)} · {user.role === "admin" ? "Admin" : "Utilizador"}</p>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenDialog(user)} className="flex-1">
+                      <Edit2 className="mr-2 h-4 w-4" /> Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-700 dark:text-red-400">
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {filteredUsers.length === 0 && (
