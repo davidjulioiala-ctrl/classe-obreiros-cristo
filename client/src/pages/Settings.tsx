@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, Image as ImageIcon } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export default function Settings() {
   const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloadingPreview, setIsDownloadingPreview] = useState(false);
+  const [showOrganizationSaved, setShowOrganizationSaved] = useState(false);
   const [notifActivities, setNotifActivities] = useState(true);
   const [notifAttendance, setNotifAttendance] = useState(true);
   const [notifFinances, setNotifFinances] = useState(true);
@@ -38,6 +39,19 @@ export default function Settings() {
     onSuccess: () => toast.success("Configurações guardadas e aplicadas com sucesso!"),
     onError: (err: any) => toast.error(err.message),
   });
+  const organizationSaveMutation = trpc.settings.set.useMutation({
+    onSuccess: () => {
+      setShowOrganizationSaved(true);
+      toast.success("Cabeçalho e logótipo guardados com sucesso.");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  useEffect(() => {
+    if (!showOrganizationSaved) return;
+    const timeout = window.setTimeout(() => setShowOrganizationSaved(false), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [showOrganizationSaved]);
 
   useEffect(() => {
     if (orgQuery.data) {
@@ -82,7 +96,8 @@ export default function Settings() {
   }, [appearanceQuery.data]);
 
   const handleSaveOrganization = () => {
-    setSettingsMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
+    setShowOrganizationSaved(false);
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
   };
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -287,7 +302,16 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={setSettingsMutation.isPending}>
+                {showOrganizationSaved ? (
+                  <div role="status" aria-live="polite" className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                    <div>
+                      <p className="font-semibold">Alterações guardadas</p>
+                      <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-300">O nome, o logótipo e as opções do cabeçalho PDF foram atualizados.</p>
+                    </div>
+                  </div>
+                ) : null}
+                <Button onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={organizationSaveMutation.isPending}>
                   <Save className="w-4 h-4 mr-2" /> Guardar Alterações
                 </Button>
               </div>

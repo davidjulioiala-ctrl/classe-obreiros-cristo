@@ -6612,3 +6612,15 @@
 - [x] Validar a rota /settings e manter as funcionalidades existentes de branding PDF.
 - [x] Executar testes, build e publicação da correção de navegação.
 
+
+## Fase 13: Confirmação Visual de Gravação do Branding — 2026-08-13
+- [x] Mostrar uma notificação visual temporária após guardar com sucesso as definições do logótipo e cabeçalho.
+- [x] Garantir que a notificação é acessível e não substitui as mensagens de erro.
+- [x] Validar o comportamento com testes, build e publicação.
+
+
+## Fase 13: Confirmação Visual de Gravação do Branding — 2026-08-13
+- [x] Mostrar uma notificação visual temporária após guardar com sucesso as definições do logótipo e cabeçalho.
+- [x] Garantir que a notificação é acessível e não substitui as mensagens de erro.
+- [x] Validar o comportamento com testes, build e publicação.
+
