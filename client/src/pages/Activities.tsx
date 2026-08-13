@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Calendar, Check, Download, Edit2, FileText, Loader2, MapPin, Plus, Trash2, Users, X } from "lucide-react";
+import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Trash2, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -68,6 +68,7 @@ async function uploadActivityDocument(activityId: number, file: File, documentTy
 }
 
 function ActivityDocuments({ activityId }: { activityId: number }) {
+  const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const documentsQuery = trpc.activities.documentsList.useQuery({ activityId });
   const documents = documentsQuery.data ?? [];
 
@@ -81,21 +82,53 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
 
   return (
     <div className="mt-3 space-y-2">
-      {documents.map((document) => (
-        <a
-          key={document.id}
-          href={`/api/activity-documents/${document.id}/download`}
-          className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:border-emerald-700"
-          download
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <FileText className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span className="min-w-0 truncate">{document.originalName}</span>
-            <span className="shrink-0 text-xs uppercase text-slate-500">{document.type}</span>
-          </span>
-          <Download className="h-4 w-4 shrink-0 text-slate-500" />
-        </a>
-      ))}
+      {documents.map((document) => {
+        const isPdf = document.mimeType.toLowerCase() === "application/pdf";
+        const isPreviewing = previewDocumentId === document.id;
+        return (
+          <div key={document.id} className="rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="flex flex-col gap-2 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span className="flex min-w-0 items-center gap-2">
+                <FileText className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span className="min-w-0 truncate">{document.originalName}</span>
+                <span className="shrink-0 text-xs uppercase text-slate-500">{document.type}</span>
+              </span>
+              <span className="flex shrink-0 flex-wrap gap-2">
+                {isPdf && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewDocumentId(isPreviewing ? null : document.id)}
+                    aria-expanded={isPreviewing}
+                    aria-controls={`activity-document-preview-${document.id}`}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    {isPreviewing ? "Fechar pré-visualização" : "Pré-visualizar"}
+                  </Button>
+                )}
+                <a
+                  href={`/api/activity-documents/${document.id}/download`}
+                  className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:hover:border-emerald-700"
+                  download
+                >
+                  <Download className="mr-2 h-4 w-4 text-slate-500" />
+                  Descarregar
+                </a>
+              </span>
+            </div>
+            {isPreviewing && (
+              <div id={`activity-document-preview-${document.id}`} className="border-t border-slate-200 p-3 dark:border-slate-700">
+                <iframe
+                  src={`/api/activity-documents/${document.id}/preview`}
+                  title={`Pré-visualização de ${document.originalName}`}
+                  className="h-[min(70vh,720px)] w-full rounded-md border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

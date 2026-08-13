@@ -6557,3 +6557,9 @@
 - [x] Implementar upload e armazenamento seguro de atas/relatórios manuais associados à actividade.
 - [x] Atualizar a listagem e visualização para permitir consultar e descarregar a ata ou relatório a qualquer momento.
 - [x] Adicionar testes unitários, validar typecheck, compilação de produção e guardar checkpoint publicado.
+
+
+## Visualizador Integrado de PDFs em Atividades — 2026-08-13
+- [x] Criar endpoint autenticado para pré-visualização de documentos de actividades com cabeçalhos inline.
+- [x] Atualizar o componente de listagem e visualização de actividades para incorporar um visualizador integrado (iframe/embed) para ficheiros PDF.
+- [x] Adicionar testes unitários para a pré-visualização segura e validar typecheck, build e checkpoint publicado.

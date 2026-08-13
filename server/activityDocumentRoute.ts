@@ -43,6 +43,33 @@ function canManageDocuments(user: { role?: string } | null | undefined) {
   return Boolean(user && ["admin", "lider"].includes(user.role ?? ""));
 }
 
+export function isPreviewableActivityDocument(mimeType: string) {
+  return mimeType === "application/pdf";
+}
+
+async function loadActivityDocumentBytes(documentId: number) {
+  const document = await getActivityDocumentById(documentId);
+  if (!document) return null;
+  const signedUrl = await storageGetSignedUrl(document.storageKey);
+  const response = await fetch(signedUrl);
+  if (!response.ok) throw new Error("storage-fetch-failed");
+  return { document, bytes: Buffer.from(await response.arrayBuffer()) };
+}
+
+function sendActivityDocument(res: Response, document: { mimeType: string; originalName: string }, bytes: Buffer, inline: boolean) {
+  res.setHeader("Content-Type", document.mimeType);
+  res.setHeader("Content-Length", String(bytes.length));
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cache-Control", "private, no-store");
+  if (inline) {
+    res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'");
+    res.setHeader("Content-Disposition", "inline");
+  } else {
+    res.setHeader("Content-Disposition", `attachment; filename="${document.originalName}"; filename*=UTF-8''${encodeURIComponent(document.originalName)}`);
+  }
+  return res.send(bytes);
+}
+
 export function registerActivityDocumentRoute(app: Express) {
   app.post("/api/activity-documents/:activityId", requireSameOrigin, (req: Request, res: Response) => {
     activityDocumentUpload.single("file")(req, res, (error: unknown) => {
@@ -80,6 +107,24 @@ export function registerActivityDocumentRoute(app: Express) {
     });
   });
 
+  app.get("/api/activity-documents/:documentId/preview", (req: Request, res: Response) => {
+    void (async () => {
+      try {
+        const user = await getLocalUserFromRequest(req);
+        if (!user) return res.status(401).json({ error: "É necessário iniciar sessão." });
+        const documentId = Number(req.params.documentId);
+        if (!Number.isInteger(documentId) || documentId <= 0) return res.status(400).json({ error: "Documento inválido." });
+        const loaded = await loadActivityDocumentBytes(documentId);
+        if (!loaded) return res.status(404).json({ error: "Documento não encontrado." });
+        if (!isPreviewableActivityDocument(loaded.document.mimeType)) return res.status(415).json({ error: "A pré-visualização está disponível apenas para PDFs." });
+        return sendActivityDocument(res, loaded.document, loaded.bytes, true);
+      } catch (previewError) {
+        console.error("[ActivityDocumentPreview]", previewError);
+        return res.status(503).json({ error: "Não foi possível pré-visualizar o documento." });
+      }
+    })();
+  });
+
   app.get("/api/activity-documents/:documentId/download", (req: Request, res: Response) => {
     void (async () => {
       try {
@@ -87,16 +132,9 @@ export function registerActivityDocumentRoute(app: Express) {
         if (!user) return res.status(401).json({ error: "É necessário iniciar sessão." });
         const documentId = Number(req.params.documentId);
         if (!Number.isInteger(documentId) || documentId <= 0) return res.status(400).json({ error: "Documento inválido." });
-        const document = await getActivityDocumentById(documentId);
-        if (!document) return res.status(404).json({ error: "Documento não encontrado." });
-        const signedUrl = await storageGetSignedUrl(document.storageKey);
-        const response = await fetch(signedUrl);
-        if (!response.ok) return res.status(502).json({ error: "Não foi possível obter o documento." });
-        const bytes = Buffer.from(await response.arrayBuffer());
-        res.setHeader("Content-Type", document.mimeType);
-        res.setHeader("Content-Length", String(bytes.length));
-        res.setHeader("Content-Disposition", `attachment; filename="${document.originalName}"; filename*=UTF-8''${encodeURIComponent(document.originalName)}`);
-        return res.send(bytes);
+        const loaded = await loadActivityDocumentBytes(documentId);
+        if (!loaded) return res.status(404).json({ error: "Documento não encontrado." });
+        return sendActivityDocument(res, loaded.document, loaded.bytes, false);
       } catch (downloadError) {
         console.error("[ActivityDocumentDownload]", downloadError);
         return res.status(503).json({ error: "Não foi possível descarregar o documento." });
