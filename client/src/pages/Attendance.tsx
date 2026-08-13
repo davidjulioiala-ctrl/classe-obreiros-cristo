@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo } from "react";
 import { Calendar, Users, Check, X, Download, Search, Trash2 } from "lucide-react";
@@ -15,6 +15,9 @@ export default function Attendance() {
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<number, boolean>>({});
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberSearchFocused, setMemberSearchFocused] = useState(false);
+  const [highlightedMemberIndex, setHighlightedMemberIndex] = useState(0);
+  const memberSearchInputRef = useRef<HTMLInputElement>(null);
 
   const { data: activities, isLoading: activitiesLoading } =
     trpc.activities.list.useQuery();
@@ -69,8 +72,42 @@ export default function Attendance() {
 
   const selectedActivityData = activities?.find((a) => a.id === selectedActivity);
   const filteredMembers = useMemo(() => (members ?? []).filter((member) => matchesMemberSearch(member, memberSearch)), [members, memberSearch]);
+  const memberSuggestions = filteredMembers.slice(0, 8);
+  const showMemberSuggestions = memberSearchFocused && memberSearch.trim().length > 0 && memberSuggestions.length > 0;
   const presentCount = Object.values(attendanceRecords).filter(Boolean).length;
   const totalMembers = members?.length || 0;
+
+  const handleMemberSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showMemberSuggestions) {
+      if (event.key === "Escape") setMemberSearch("");
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlightedMemberIndex((current) => (current + 1) % memberSuggestions.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlightedMemberIndex((current) => (current - 1 + memberSuggestions.length) % memberSuggestions.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const member = memberSuggestions[highlightedMemberIndex];
+      if (member) {
+        setMemberSearch(member.name);
+        setMemberSearchFocused(false);
+      }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setMemberSearchFocused(false);
+    }
+  };
+
+  const handleMemberSuggestionSelect = (member: NonNullable<typeof members>[number]) => {
+    setMemberSearch(member.name);
+    setHighlightedMemberIndex(0);
+    setMemberSearchFocused(false);
+    memberSearchInputRef.current?.focus();
+  };
 
   return (
     <DashboardLayoutCustom>
@@ -213,7 +250,52 @@ export default function Attendance() {
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Membros</h3>
               <div className="relative w-full sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-                <Input value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Pesquisar por ID ou nome…" className="pl-9" aria-label="Pesquisar membros por ID ou nome" />
+                <Input
+                  ref={memberSearchInputRef}
+                  value={memberSearch}
+                  onChange={(event) => {
+                    setMemberSearch(event.target.value);
+                    setHighlightedMemberIndex(0);
+                  }}
+                  onFocus={() => setMemberSearchFocused(true)}
+                  onBlur={() => window.setTimeout(() => setMemberSearchFocused(false), 120)}
+                  onKeyDown={handleMemberSearchKeyDown}
+                  placeholder="Pesquisar por ID ou nome…"
+                  className="pl-9"
+                  role="combobox"
+                  aria-label="Pesquisar membros por ID ou nome"
+                  aria-autocomplete="list"
+                  aria-controls="attendance-member-suggestions"
+                  aria-expanded={showMemberSuggestions}
+                  aria-activedescendant={showMemberSuggestions ? `attendance-member-option-${memberSuggestions[highlightedMemberIndex]?.id}` : undefined}
+                />
+                {showMemberSuggestions && (
+                  <div
+                    id="attendance-member-suggestions"
+                    role="listbox"
+                    className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    {memberSuggestions.map((member, index) => (
+                      <button
+                        key={member.id}
+                        id={`attendance-member-option-${member.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={index === highlightedMemberIndex}
+                        className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition-colors ${
+                          index === highlightedMemberIndex
+                            ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100"
+                            : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                        }`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleMemberSuggestionSelect(member)}
+                      >
+                        <span className="min-w-0 truncate font-medium">{member.name}</span>
+                        <span className="ml-3 shrink-0 text-xs text-slate-500 dark:text-slate-400">ID {member.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

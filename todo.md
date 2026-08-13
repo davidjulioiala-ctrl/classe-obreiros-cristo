@@ -6535,3 +6535,10 @@
 - [x] Adicionar testes unitários, validar typecheck, compilação de produção e guardar checkpoint.
 
 - [x] Remover a rota de callback OAuth residual do arranque do servidor e adicionar uma regressão que confirme que o sistema expõe apenas autenticação local.
+
+
+## Preenchimento automático na marcação de presenças — 2026-08-13
+- [x] Rever o componente de presenças (`Attendance.tsx`) para incorporar uma lista de sugestões instantâneas (autocompletar) ao pesquisar por ID ou nome.
+- [x] Permitir navegar pelas sugestões com o teclado ou rato e seleccionar o membro pretendido num clique.
+- [x] Validar a adição e gravação da presença com o ID do membro seleccionado.
+- [x] Executar typecheck, testes unitários, build de produção e guardar checkpoint publicado.
