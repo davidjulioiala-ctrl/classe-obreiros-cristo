@@ -5,7 +5,9 @@ import {
   Clock3,
   Home,
   LockKeyhole,
+  MessageCircleWarning,
   RefreshCw,
+  Send,
   ServerCog,
   ShieldCheck,
 } from "lucide-react";
@@ -88,6 +90,11 @@ export default function SystemStatus() {
   const [checking, setChecking] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState("operational");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reporting, setReporting] = useState(false);
+  const [reportResult, setReportResult] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
   const checkState = useCallback(async (signal?: AbortSignal) => {
     setChecking(true);
@@ -124,6 +131,33 @@ export default function SystemStatus() {
       window.clearInterval(interval);
     };
   }, [checkState]);
+
+  const submitReport = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (reportDescription.trim().length < 10) {
+      setReportResult({ kind: "error", message: "Descreva o problema com pelo menos 10 caracteres." });
+      return;
+    }
+
+    setReporting(true);
+    setReportResult(null);
+    try {
+      const response = await fetch("/api/status-report", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: reportCategory, description: reportDescription.trim() }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { success?: boolean; reference?: string; error?: string };
+      if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível enviar o reporte.");
+      setReportDescription("");
+      setReportResult({ kind: "success", message: `Reporte registado. Referência: ${payload.reference ?? "atribuída pelo sistema"}.` });
+    } catch (error) {
+      setReportResult({ kind: "error", message: error instanceof Error ? error.message : "Não foi possível enviar o reporte neste momento." });
+    } finally {
+      setReporting(false);
+    }
+  };
 
   const view = getSystemStatusView(state, hasError, checking);
   const styles = toneStyles[view.tone];
@@ -203,6 +237,43 @@ export default function SystemStatus() {
             <ShieldCheck className="mr-2 h-4 w-4" />
             Ir para o login
           </Button>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/35 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-white"><MessageCircleWarning aria-hidden="true" className="h-5 w-5 text-amber-300" />Encontrou um problema?</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-400">Envie um relato rápido para a equipa responsável analisar a situação.</p>
+            </div>
+            <Button type="button" variant="outline" className="border-amber-400/30 bg-transparent text-amber-100 hover:bg-amber-400/10" onClick={() => { setReportOpen((open) => !open); setReportResult(null); }}>
+              <MessageCircleWarning className="mr-2 h-4 w-4" />{reportOpen ? "Fechar reporte" : "Reportar problema"}
+            </Button>
+          </div>
+
+          {reportOpen ? (
+            <form className="mt-5 space-y-4 border-t border-slate-800 pt-5" onSubmit={(event) => void submitReport(event)}>
+              <div>
+                <label htmlFor="status-report-category" className="text-sm font-medium text-slate-200">Tipo de problema</label>
+                <select id="status-report-category" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)} className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20">
+                  <option value="operational">Funcionamento geral</option>
+                  <option value="access">Acesso ou autenticação</option>
+                  <option value="data">Dados ou registos</option>
+                  <option value="security">Segurança</option>
+                  <option value="other">Outro problema</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="status-report-description" className="text-sm font-medium text-slate-200">Descrição</label>
+                <textarea id="status-report-description" value={reportDescription} onChange={(event) => setReportDescription(event.target.value)} maxLength={4000} required rows={4} placeholder="Explique o que aconteceu, em que página e a hora aproximada. Não inclua palavras-passe ou códigos." className="mt-2 w-full resize-y rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20" />
+                <p className="mt-1 text-right text-xs text-slate-500">{reportDescription.length}/4000</p>
+              </div>
+              {reportResult ? <p role="status" aria-live="polite" className={`rounded-md px-3 py-2 text-sm ${reportResult.kind === "success" ? "bg-emerald-400/10 text-emerald-200" : "bg-rose-400/10 text-rose-200"}`}>{reportResult.message}</p> : null}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button type="button" variant="ghost" className="text-slate-300 hover:bg-slate-800 hover:text-white" onClick={() => setReportOpen(false)}>Cancelar</Button>
+                <Button type="submit" disabled={reporting || reportDescription.trim().length < 10} className="bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Send className="mr-2 h-4 w-4" />{reporting ? "A enviar…" : "Enviar reporte"}</Button>
+              </div>
+            </form>
+          ) : null}
         </div>
 
         <footer className="mt-8 border-t border-slate-800 pt-5 text-center text-xs leading-5 text-slate-500">

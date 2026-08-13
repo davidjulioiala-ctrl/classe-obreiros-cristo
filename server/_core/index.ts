@@ -17,6 +17,7 @@ import { serveStatic, setupVite } from "./vite";
 import { requireSameOrigin, SECURITY_LIMITS, securityHeaders } from "./security";
 import { maintenanceGate } from "./maintenance";
 import { getSystemMaintenanceState } from "../db";
+import { registerStatusReportRoute } from "../statusReportRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -58,6 +59,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   registerLocalAuthRoutes(app);
   registerAdminBootstrapRoute(app);
+  registerStatusReportRoute(app);
   app.get("/api/maintenance", async (_req, res) => {
     try {
       const state = await getSystemMaintenanceState();

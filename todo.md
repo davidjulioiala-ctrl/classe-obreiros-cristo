@@ -6476,3 +6476,10 @@
 - [x] Integrar a página ao endpoint público de manutenção sem expor detalhes internos ou dados sensíveis.
 - [x] Adicionar acesso por rota e ligação a partir do ecrã de manutenção.
 - [x] Adicionar testes para os estados do endpoint e validar typecheck, build e responsividade.
+
+
+## Reporte rápido de problemas na página de estado — 2026-08-13
+- [x] Adicionar botão e modal/secção de reporte de problemas na página /status.
+- [x] Criar endpoint público protegido para submeter relatos de problemas com validação estrita.
+- [x] Ligar a submissão ao sistema de incidentes ou auditoria sem exigir login prévio.
+- [x] Adicionar testes de unidade para o formulário e endpoint de reporte, validando typecheck, build e responsividade.
