@@ -1,5 +1,6 @@
+import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { generateCsv, generateMembersCsv, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
+import { generateCsv, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
 
 describe("list exports", () => {
   it("generates UTF-8 CSV with semicolon delimiters and escaped values", () => {
@@ -48,6 +49,28 @@ describe("list exports", () => {
     expect(csv).toContain("ID;Nome;Sexo");
     expect(csv).toContain("1;Ana Lopes;Feminino");
     expect(csv).toContain("Membro;3;Não;Ativo");
+  });
+
+  it("exports selected member columns to a readable XLSX workbook", () => {
+    const workbookBuffer = generateMembersExcel([{
+      id: 1,
+      name: "Ana Lopes",
+      sex: "F",
+      birthDate: "2000-01-02",
+      position: "Membro",
+      groupId: 3,
+      isGuest: false,
+      isActive: true,
+      phoneOrange: null,
+      phoneTelecel: "923000000",
+      email: "ana@example.org",
+    }], ["name", "id"]);
+
+    expect(workbookBuffer.subarray(0, 2).toString()).toBe("PK");
+    const workbook = XLSX.read(workbookBuffer, { type: "buffer" });
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets.Membros, { header: 1, raw: false }) as unknown[][];
+    expect(rows[0]).toEqual(["Nome", "ID"]);
+    expect(rows[1]).toEqual(["Ana Lopes", "1"]);
   });
 
   it("exports report IDs, activity IDs and content to CSV", () => {

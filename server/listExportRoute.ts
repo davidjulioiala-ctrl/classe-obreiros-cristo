@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers, listReports } from "./db";
-import { generateMembersCsv, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
+import { generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
 import { MEMBER_EXPORT_COLUMN_KEYS, REPORT_EXPORT_COLUMN_KEYS, type MemberExportColumn, type ReportExportColumn } from "../shared/exportColumns";
 
@@ -29,7 +29,7 @@ export function registerListExportRoutes(app: Express) {
       const user = await getLocalUserFromRequest(req);
       if (!user) return res.status(401).json({ error: "Não autenticado" });
       const format = req.params.format;
-      if (format !== "pdf" && format !== "csv") return res.status(400).json({ error: "Formato inválido" });
+      if (format !== "pdf" && format !== "csv" && format !== "xlsx") return res.status(400).json({ error: "Formato inválido" });
       const search = safeSearch(req.query.search).toLocaleLowerCase("pt-PT");
       const columns = parseColumns(req.query.columns, MEMBER_EXPORT_COLUMN_KEYS);
       if (!columns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
@@ -41,6 +41,13 @@ export function registerListExportRoutes(app: Express) {
         res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.pdf"`);
         void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:pdf", metadata: { count: members.length, filtered: Boolean(search) } });
         return res.send(buffer);
+      }
+      if (format === "xlsx") {
+        const workbook = generateMembersExcel(members, columns as MemberExportColumn[]);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.xlsx"`);
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:xlsx", metadata: { count: members.length, filtered: Boolean(search) } });
+        return res.send(workbook);
       }
       const csv = generateMembersCsv(members, columns as MemberExportColumn[]);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -59,7 +66,7 @@ export function registerListExportRoutes(app: Express) {
       if (!user) return res.status(401).json({ error: "Não autenticado" });
       if (!canExportReports(user)) return res.status(403).json({ error: "Sem permissão para exportar relatórios." });
       const format = req.params.format;
-      if (format !== "pdf" && format !== "csv") return res.status(400).json({ error: "Formato inválido" });
+      if (format !== "pdf" && format !== "csv" && format !== "xlsx") return res.status(400).json({ error: "Formato inválido" });
       const columns = parseColumns(req.query.columns, REPORT_EXPORT_COLUMN_KEYS);
       if (!columns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
       const reports = await listReports();

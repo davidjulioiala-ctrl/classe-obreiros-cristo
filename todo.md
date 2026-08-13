@@ -6542,3 +6542,10 @@
 - [x] Permitir navegar pelas sugestões com o teclado ou rato e seleccionar o membro pretendido num clique.
 - [x] Validar a adição e gravação da presença com o ID do membro seleccionado.
 - [x] Executar typecheck, testes unitários, build de produção e guardar checkpoint publicado.
+
+
+## Exportação de membros para Excel — 2026-08-13
+- [x] Criar um gerador XLSX com cabeçalhos, filtros de dados e colunas seleccionadas.
+- [x] Adicionar endpoint autenticado para exportar membros em formato Excel.
+- [x] Adicionar o botão Excel à página de Membros e manter a validação de colunas permitidas.
+- [x] Adicionar testes de conteúdo e tipo MIME, executar build e guardar checkpoint publicado.

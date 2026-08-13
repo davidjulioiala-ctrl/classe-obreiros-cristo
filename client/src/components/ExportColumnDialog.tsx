@@ -58,7 +58,7 @@ export function ExportColumnDialog({ open, title, description, columns, selected
             </label>
           ))}
         </div>
-        <p className="text-xs text-slate-500">Seleccione pelo menos uma coluna. A mesma selecção será aplicada ao PDF e ao CSV quando iniciar a exportação.</p>
+        <p className="text-xs text-slate-500">Seleccione pelo menos uma coluna. A selecção será aplicada ao formato escolhido quando iniciar a exportação.</p>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button type="button" disabled={draft.length === 0 || isSubmitting} onClick={() => onConfirm(draft)} className="bg-emerald-600 text-white hover:bg-emerald-700">{isSubmitting ? "A preparar…" : confirmLabel}</Button>

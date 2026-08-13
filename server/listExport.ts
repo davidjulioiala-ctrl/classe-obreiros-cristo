@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import * as XLSX from "xlsx";
 import {
   MEMBER_EXPORT_COLUMN_KEYS,
   MEMBER_EXPORT_COLUMNS,
@@ -97,6 +98,20 @@ export function generateMembersCsv(members: ExportMember[], columns: MemberExpor
     columns.map((column) => memberLabels[column]),
     members.map((member) => columns.map((column) => memberValue(member, column)))
   );
+}
+
+export function generateMembersExcel(members: ExportMember[], columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
+  const rows = [
+    columns.map((column) => memberLabels[column]),
+    ...members.map((member) => columns.map((column) => memberValue(member, column))),
+  ];
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+  worksheet["!autofilter"] = { ref: `A1:${XLSX.utils.encode_col(columns.length - 1)}${Math.max(rows.length, 1)}` };
+  worksheet["!cols"] = columns.map((column) => ({ wch: column === "name" || column === "email" ? 30 : 18 }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Membros");
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
 export function generateReportsCsv(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {

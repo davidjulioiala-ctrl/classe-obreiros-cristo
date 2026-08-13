@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,9 +53,9 @@ export default function Members() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<MemberForm>(emptyForm);
   const [editingGroup, setEditingGroup] = useState<{ id: number; name: string; description?: string } | null>(null);
-  const [exportingFormat, setExportingFormat] = useState<"pdf" | "csv" | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "csv" | "xlsx" | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [pendingExportFormat, setPendingExportFormat] = useState<"pdf" | "csv">("pdf");
+  const [pendingExportFormat, setPendingExportFormat] = useState<"pdf" | "csv" | "xlsx">("pdf");
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS]);
   const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
   const { data: groups, refetch: refetchGroups } = trpc.groups.list.useQuery();
@@ -151,7 +151,7 @@ export default function Members() {
     if (window.confirm(`Eliminar o membro ${name}?`)) deleteMemberMutation.mutate({ id });
   };
 
-  const openExportDialog = (format: "pdf" | "csv") => {
+  const openExportDialog = (format: "pdf" | "csv" | "xlsx") => {
     setPendingExportFormat(format);
     setExportDialogOpen(true);
   };
@@ -189,7 +189,10 @@ export default function Members() {
               <Download className="mr-2 h-4 w-4" /> PDF
             </Button>
             <Button onClick={() => openExportDialog("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV
+              <FileText className="mr-2 h-4 w-4" /> CSV
+            </Button>
+            <Button onClick={() => openExportDialog("xlsx")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
             </Button>
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
               {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
