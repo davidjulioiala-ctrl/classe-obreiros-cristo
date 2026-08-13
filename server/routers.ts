@@ -410,7 +410,8 @@ const expensesRouter = router({
     .input(z.object({ designation: z.string().trim().min(1), quantity: z.number().int().positive(), unitPrice: z.string().min(1), date: z.coerce.date() }))
     .mutation(async ({ input, ctx }) => {
       const totalPrice = (input.quantity * Number(input.unitPrice)).toFixed(2);
-      const result = await db.createExpense({ ...input, totalPrice, recordedBy: ctx.user.id });
+      const sequence = await db.getNextExpenseSequence();
+      const result = await db.createExpense({ ...input, sequence, totalPrice, recordedBy: ctx.user.id });
       await writeAudit(ctx, "criar", "expense", undefined, { designation: input.designation, quantity: input.quantity, totalPrice, date: input.date });
       return result;
     }),

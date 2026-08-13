@@ -6329,3 +6329,6 @@
 > Manter a interface em Português Europeu e preservar a autenticação local como porta de entrada do sistema.
 
 > Continuar a execução até concluir o ciclo, sem entregar apenas uma mensagem de progresso.
+- [x] Corrigir a tabela groups ausente na base de dados e criar os cinco grupos base
+- [x] Sincronizar as tabelas de negócio ausentes e corrigir a sequência de despesas
+- [x] Validar abertura do formulário de novo membro com members.list e groups.list sem erro

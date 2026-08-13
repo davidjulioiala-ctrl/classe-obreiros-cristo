@@ -36,6 +36,13 @@
       "when": 1786545943187,
       "tag": "0004_square_radioactive_man",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1786621723409,
+      "tag": "0005_keen_cammi",
+      "breakpoints": true
     }
   ]
 }

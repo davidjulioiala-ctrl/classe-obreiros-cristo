@@ -371,6 +371,17 @@ export async function getOtherIncomeByDateRange(startDate: Date, endDate: Date) 
 
 // ============ EXPENSES ============
 
+export async function getNextExpenseSequence() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const latest = await db
+    .select({ sequence: expenses.sequence })
+    .from(expenses)
+    .orderBy(desc(expenses.sequence))
+    .limit(1);
+  return (latest[0]?.sequence ?? 0) + 1;
+}
+
 export async function createExpense(data: typeof expenses.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

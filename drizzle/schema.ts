@@ -177,7 +177,7 @@ export type InsertOtherIncome = typeof otherIncome.$inferInsert;
  */
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
-  sequence: int("sequence").autoincrement().notNull(),
+  sequence: int("sequence").notNull(),
   designation: varchar("designation", { length: 255 }).notNull(),
   quantity: int("quantity").notNull(),
   unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),

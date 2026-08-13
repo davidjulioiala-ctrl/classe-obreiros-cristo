@@ -1,0 +1,1 @@
+ALTER TABLE `expenses` MODIFY COLUMN `sequence` int NOT NULL;
