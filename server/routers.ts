@@ -10,6 +10,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { positiveId, safeEmail, safeText } from "./_core/security";
 import { buildIncidentDiagnosis } from "./_core/incidentDiagnostics";
+import { applyActivityTypeRules } from "../shared/activityRules";
 
 // ============ MIDDLEWARE ============
 
@@ -212,13 +213,25 @@ const activitiesRouter = router({
         theme: safeText(255, false),
         speakerName: safeText(255, false),
         biblicalReference: safeText(255, false),
+        meetingAgenda: safeText(5000, false),
+        meetingReason: safeText(2000, false),
         isReligious: z.boolean().default(true),
       })
     )
     .mutation(async ({ input, ctx }) => {
+      let rules;
+      try {
+        rules = applyActivityTypeRules(input);
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Dados de actividade inválidos." });
+      }
       const result = await db.createActivity({
         ...input,
         date: new Date(input.date),
+        biblicalReference: rules.biblicalReference,
+        meetingAgenda: rules.meetingAgenda,
+        meetingReason: rules.meetingReason,
+        isReligious: rules.isReligious,
         status: "planejada",
       });
       await writeAudit(ctx, "criar", "activity", undefined, { name: input.name, type: input.type });
@@ -240,6 +253,10 @@ const activitiesRouter = router({
       return await db.getActivityById(input.id);
     }),
 
+  documentsList: protectedProcedure
+    .input(z.object({ activityId: positiveId }))
+    .query(async ({ input }) => db.listActivityDocuments(input.activityId)),
+
   update: liderProcedure
     .input(z.object({
       id: positiveId,
@@ -254,12 +271,27 @@ const activitiesRouter = router({
               theme: safeText(255, false),
         speakerName: safeText(255, false),
         biblicalReference: safeText(255, false),
+        meetingAgenda: safeText(5000, false),
+        meetingReason: safeText(2000, false),
         isReligious: z.boolean(),
       }))
 
     .mutation(async ({ input, ctx }) => {
       const { id, date, ...data } = input;
-      const result = await db.updateActivity(id, { ...data, date: new Date(date) });
+      let rules;
+      try {
+        rules = applyActivityTypeRules(input);
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Dados de actividade inválidos." });
+      }
+      const result = await db.updateActivity(id, {
+        ...data,
+        date: new Date(date),
+        biblicalReference: rules.biblicalReference,
+        meetingAgenda: rules.meetingAgenda,
+        meetingReason: rules.meetingReason,
+        isReligious: rules.isReligious,
+      });
       await writeAudit(ctx, "editar", "activity", id, { name: input.name, type: input.type });
       return result;
     }),

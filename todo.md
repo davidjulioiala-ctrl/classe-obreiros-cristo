@@ -6549,3 +6549,11 @@
 - [x] Adicionar endpoint autenticado para exportar membros em formato Excel.
 - [x] Adicionar o botão Excel à página de Membros e manter a validação de colunas permitidas.
 - [x] Adicionar testes de conteúdo e tipo MIME, executar build e guardar checkpoint publicado.
+
+
+## Actualizações no menu de Atividades — 2026-08-13
+- [x] Atualizar o esquema Drizzle para suportar campos de reunião (ordem do dia, motivo) e anexo permanente de ata/relatório.
+- [x] Ajustar o formulário de Atividades para que o tipo Reunião abra os campos específicos e o tipo Social oculte a referência bíblica.
+- [x] Implementar upload e armazenamento seguro de atas/relatórios manuais associados à actividade.
+- [x] Atualizar a listagem e visualização para permitir consultar e descarregar a ata ou relatório a qualquer momento.
+- [x] Adicionar testes unitários, validar typecheck, compilação de produção e guardar checkpoint publicado.

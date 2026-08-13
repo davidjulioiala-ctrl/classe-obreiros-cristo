@@ -1,0 +1,108 @@
+import multer from "multer";
+import type { Express, Request, Response } from "express";
+import { z } from "zod";
+import { createActivityDocument, getActivityDocumentById, getActivityById } from "./db";
+import { storageGetSignedUrl, storagePut } from "./storage";
+import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
+import { requireSameOrigin } from "./_core/security";
+
+const MAX_ACTIVITY_DOCUMENT_BYTES = 15 * 1024 * 1024;
+const allowedMimeTypes = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.oasis.opendocument.text",
+  "text/plain",
+]);
+
+const activityDocumentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_ACTIVITY_DOCUMENT_BYTES, files: 1, fields: 1, parts: 2 },
+  fileFilter: (_req, file, callback) => {
+    callback(null, allowedMimeTypes.has(file.mimetype));
+  },
+});
+
+const documentTypeSchema = z.enum(["ata", "relatorio"]);
+
+function hasValidSignature(file: Express.Multer.File) {
+  if (file.mimetype === "application/pdf") return file.buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (file.mimetype === "application/msword") return file.buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+  if (file.mimetype.includes("wordprocessingml") || file.mimetype === "application/vnd.oasis.opendocument.text") {
+    return file.buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+  }
+  return file.mimetype === "text/plain";
+}
+
+function safeFileName(originalName: string) {
+  const base = originalName.normalize("NFKC").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").slice(0, 180);
+  return base || "documento-actividade";
+}
+
+function canManageDocuments(user: { role?: string } | null | undefined) {
+  return Boolean(user && ["admin", "lider"].includes(user.role ?? ""));
+}
+
+export function registerActivityDocumentRoute(app: Express) {
+  app.post("/api/activity-documents/:activityId", requireSameOrigin, (req: Request, res: Response) => {
+    activityDocumentUpload.single("file")(req, res, (error: unknown) => {
+      void (async () => {
+        try {
+          if (error) return res.status(400).json({ error: "Anexe um PDF, DOC, DOCX, ODT ou TXT válido até 15 MB." });
+          const user = await getLocalUserFromRequest(req);
+          if (!user || !canManageDocuments(user)) return res.status(403).json({ error: "Não tem permissão para anexar documentos." });
+          const activityId = Number(req.params.activityId);
+          if (!Number.isInteger(activityId) || activityId <= 0) return res.status(400).json({ error: "Actividade inválida." });
+          const activity = await getActivityById(activityId);
+          if (!activity) return res.status(404).json({ error: "Actividade não encontrada." });
+          const parsedType = documentTypeSchema.safeParse(req.body?.documentType);
+          if (!parsedType.success || !req.file || !req.file.size || req.file.size > MAX_ACTIVITY_DOCUMENT_BYTES || !hasValidSignature(req.file)) {
+            return res.status(400).json({ error: "Indique o tipo e anexe um documento válido." });
+          }
+
+          const stored = await storagePut(`activity-documents/${activityId}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeFileName(req.file.originalname)}`, req.file.buffer, req.file.mimetype);
+          const result = await createActivityDocument({
+            activityId,
+            type: parsedType.data,
+            originalName: safeFileName(req.file.originalname),
+            storageKey: stored.key,
+            storageUrl: stored.url,
+            mimeType: req.file.mimetype,
+            sizeBytes: req.file.size,
+            uploadedBy: user.id,
+          });
+          return res.status(201).json({ success: true, documentId: Number((result as { insertId?: number }).insertId ?? 0) });
+        } catch (uploadError) {
+          console.error("[ActivityDocumentUpload]", uploadError);
+          return res.status(503).json({ error: "Não foi possível guardar o documento neste momento." });
+        }
+      })();
+    });
+  });
+
+  app.get("/api/activity-documents/:documentId/download", (req: Request, res: Response) => {
+    void (async () => {
+      try {
+        const user = await getLocalUserFromRequest(req);
+        if (!user) return res.status(401).json({ error: "É necessário iniciar sessão." });
+        const documentId = Number(req.params.documentId);
+        if (!Number.isInteger(documentId) || documentId <= 0) return res.status(400).json({ error: "Documento inválido." });
+        const document = await getActivityDocumentById(documentId);
+        if (!document) return res.status(404).json({ error: "Documento não encontrado." });
+        const signedUrl = await storageGetSignedUrl(document.storageKey);
+        const response = await fetch(signedUrl);
+        if (!response.ok) return res.status(502).json({ error: "Não foi possível obter o documento." });
+        const bytes = Buffer.from(await response.arrayBuffer());
+        res.setHeader("Content-Type", document.mimeType);
+        res.setHeader("Content-Length", String(bytes.length));
+        res.setHeader("Content-Disposition", `attachment; filename="${document.originalName}"; filename*=UTF-8''${encodeURIComponent(document.originalName)}`);
+        return res.send(bytes);
+      } catch (downloadError) {
+        console.error("[ActivityDocumentDownload]", downloadError);
+        return res.status(503).json({ error: "Não foi possível descarregar o documento." });
+      }
+    })();
+  });
+}
+
+export const activityDocumentUploadLimits = { maxBytes: MAX_ACTIVITY_DOCUMENT_BYTES, allowedMimeTypes: Array.from(allowedMimeTypes) };

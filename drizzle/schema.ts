@@ -105,6 +105,8 @@ export const activities = mysqlTable("activities", {
   speakerResidence: text("speakerResidence"),
   theme: varchar("theme", { length: 255 }),
   biblicalReference: varchar("biblicalReference", { length: 255 }), // For religious themes
+  meetingAgenda: text("meetingAgenda"), // One agenda item per line for meetings
+  meetingReason: text("meetingReason"),
   isReligious: boolean("isReligious").default(true).notNull(),
   status: mysqlEnum("status", ["planejada", "realizada", "cancelada"]).default("planejada").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -113,6 +115,26 @@ export const activities = mysqlTable("activities", {
 
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = typeof activities.$inferInsert;
+
+/**
+ * Permanent manually uploaded minutes and reports linked to an activity.
+ * File bytes remain in S3; this table stores only metadata and the storage reference.
+ */
+export const activityDocuments = mysqlTable("activityDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  activityId: int("activityId").notNull(),
+  type: mysqlEnum("type", ["ata", "relatorio"]).notNull(),
+  originalName: varchar("originalName", { length: 255 }).notNull(),
+  storageKey: varchar("storageKey", { length: 512 }).notNull(),
+  storageUrl: varchar("storageUrl", { length: 1000 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  sizeBytes: int("sizeBytes").notNull(),
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityDocument = typeof activityDocuments.$inferSelect;
+export type InsertActivityDocument = typeof activityDocuments.$inferInsert;
 
 /**
  * Commission members - members assigned to organize an activity

@@ -18,6 +18,7 @@ import { maintenanceGate } from "./maintenance";
 import { getSystemMaintenanceState } from "../db";
 import { registerStatusReportRoute } from "../statusReportRoute";
 import { registerListExportRoutes } from "../listExportRoute";
+import { registerActivityDocumentRoute } from "../activityDocumentRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -48,7 +49,7 @@ async function startServer() {
   // small to reduce parser exhaustion and malicious payload risk.
   app.use((req, res, next) => {
     const contentType = req.get("content-type")?.toLowerCase() ?? "";
-    if (contentType.startsWith("multipart/form-data") && req.path !== "/api/status-report") {
+    if (contentType.startsWith("multipart/form-data") && req.path !== "/api/status-report" && !req.path.startsWith("/api/activity-documents/")) {
       return res.status(415).json({ error: "Uploads de ficheiros não estão disponíveis neste endpoint." });
     }
     return next();
@@ -60,6 +61,7 @@ async function startServer() {
   registerAdminBootstrapRoute(app);
   registerStatusReportRoute(app);
   registerListExportRoutes(app);
+  registerActivityDocumentRoute(app);
   app.get("/api/maintenance", async (_req, res) => {
     try {
       const state = await getSystemMaintenanceState();

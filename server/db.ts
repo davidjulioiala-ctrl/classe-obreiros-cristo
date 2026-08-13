@@ -7,6 +7,7 @@ import {
   members,
   groups,
   activities,
+  activityDocuments,
   attendance,
   quotas,
   otherIncome,
@@ -360,6 +361,25 @@ export async function updateActivity(id: number, data: Partial<typeof activities
   if (!db) throw new Error("Database not available");
 
   return await db.update(activities).set(protect(data as Record<string, unknown>, ACTIVITY_PRIVATE_FIELDS) as Partial<typeof activities.$inferInsert>).where(eq(activities.id, id));
+}
+
+export async function createActivityDocument(data: typeof activityDocuments.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(activityDocuments).values(data);
+}
+
+export async function listActivityDocuments(activityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.select().from(activityDocuments).where(eq(activityDocuments.activityId, activityId)).orderBy(desc(activityDocuments.createdAt));
+}
+
+export async function getActivityDocumentById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(activityDocuments).where(eq(activityDocuments.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
 // ============ ATTENDANCE ============
@@ -749,6 +769,7 @@ export async function deleteActivity(id: number) {
   if (!db) throw new Error("Database not available");
   await db.delete(commissionMembers).where(eq(commissionMembers.activityId, id));
   await db.delete(attendance).where(eq(attendance.activityId, id));
+  await db.delete(activityDocuments).where(eq(activityDocuments.activityId, id));
   return await db.delete(activities).where(eq(activities.id, id));
 }
 
