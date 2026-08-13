@@ -6592,3 +6592,10 @@
 ### Histórico de implementação da Fase 9
 - [x] Validação final concluída após integração dos controlos de branding.
 
+
+## Fase 10: Pré-visualização em Tempo Real do Cabeçalho PDF — 2026-08-13
+- [x] Adicionar painel visual de pré-visualização do cabeçalho PDF na secção de branding.
+- [x] Atualizar a pré-visualização imediatamente ao alterar nome, logótipo, alinhamento ou tamanho.
+- [x] Garantir estados sem logótipo, acessibilidade e responsividade em ecrãs pequenos.
+- [x] Validar testes, build e publicação da pré-visualização.
+

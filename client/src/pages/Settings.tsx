@@ -9,6 +9,7 @@ import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
+import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -122,6 +123,9 @@ export default function Settings() {
     setSettingsMutation.mutate({ keyName: "appearance", keyValue: JSON.stringify({ theme: themeMode, accent: accentColor }) });
   };
 
+  const previewLogoSize = getPdfPreviewLogoSize(logoSize);
+  const previewName = getPdfPreviewName(organizationName);
+
   return (
     <DashboardLayoutCustom>
       <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -193,6 +197,56 @@ export default function Settings() {
                         </div>
                       </div>
                       <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">As opções são aplicadas a novos PDFs exportados. O sistema mantém a proporção original do logótipo.</p>
+
+                      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-100/80 p-3 dark:border-slate-700 dark:bg-slate-950/50" aria-live="polite">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Pré-visualização do cabeçalho PDF</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Atualização em tempo real com as opções selecionadas.</p>
+                          </div>
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">A4 · PDF</span>
+                        </div>
+
+                        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
+                          <div className="min-h-[190px] p-5 sm:p-7">
+                            {logoAlignment === "center" ? (
+                              <div className="flex flex-col items-center text-center">
+                                {logoUrl ? (
+                                  <img src={logoUrl} alt="Pré-visualização do logótipo no cabeçalho" className="shrink-0 object-contain" style={{ width: previewLogoSize, height: previewLogoSize }} />
+                                ) : (
+                                  <div className="flex shrink-0 items-center justify-center rounded-md border border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" style={{ width: previewLogoSize, height: previewLogoSize }} aria-label="Espaço reservado para o logótipo">
+                                    <ImageIcon className="h-7 w-7" aria-hidden="true" />
+                                  </div>
+                                )}
+                                <p className="mt-3 max-w-full truncate text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
+                                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
+                              </div>
+                            ) : (
+                              <div className={`flex items-center gap-4 ${logoAlignment === "right" ? "flex-row-reverse text-right" : "text-left"}`}>
+                                {logoUrl ? (
+                                  <img src={logoUrl} alt="Pré-visualização do logótipo no cabeçalho" className="shrink-0 object-contain" style={{ width: previewLogoSize, height: previewLogoSize }} />
+                                ) : (
+                                  <div className="flex shrink-0 items-center justify-center rounded-md border border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" style={{ width: previewLogoSize, height: previewLogoSize }} aria-label="Espaço reservado para o logótipo">
+                                    <ImageIcon className="h-7 w-7" aria-hidden="true" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
+                                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="mt-5 h-px bg-emerald-200 dark:bg-emerald-800" />
+                            <div className="mt-4 space-y-2">
+                              <div className="h-2 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+                              <div className="h-2 w-full rounded bg-slate-100 dark:bg-slate-800" />
+                              <div className="h-2 w-5/6 rounded bg-slate-100 dark:bg-slate-800" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
