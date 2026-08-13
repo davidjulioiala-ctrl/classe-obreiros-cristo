@@ -40,6 +40,16 @@ describe("branding dos PDFs", () => {
     expect(storageGetSignedUrl).toHaveBeenCalledWith("organization-branding/logo.png");
   });
 
+  it("aplica as preferências temporárias ao gerar uma amostra", async () => {
+    getAppSetting.mockResolvedValue(JSON.stringify({ congregationName: "Nome guardado", logoAlignment: "left", logoSize: "small" }));
+
+    const branding = await loadPdfBranding({ congregationName: "Nome ainda não guardado", logoAlignment: "right", logoSize: "large" });
+
+    expect(branding.congregationName).toBe("Nome ainda não guardado");
+    expect(branding.logoAlignment).toBe("right");
+    expect(branding.logoSize).toBe("large");
+  });
+
   it("volta ao nome predefinido quando a configuração é inválida", async () => {
     getAppSetting.mockResolvedValue("não é JSON");
 

@@ -45,17 +45,25 @@ function detectLogoType(buffer: Buffer): PdfBranding["logoMimeType"] {
   return null;
 }
 
-export async function loadPdfBranding(): Promise<PdfBranding> {
+export type PdfBrandingOverrides = {
+  congregationName?: unknown;
+  logoAlignment?: unknown;
+  logoSize?: unknown;
+};
+
+export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Promise<PdfBranding> {
   let settings: OrganizationSettings = {};
   try {
     settings = parseOrganizationSettings(await getAppSetting("organization"));
   } catch (error) {
     console.warn("[PdfBranding] Não foi possível ler as definições da organização:", error);
   }
-  const congregationName = normalizeName(settings.congregationName ?? settings.organizationName);
+  const congregationName = normalizeName(overrides.congregationName ?? settings.congregationName ?? settings.organizationName);
   const logoKey = typeof settings.logoKey === "string" ? settings.logoKey.trim().slice(0, 512) : "";
-  const logoAlignment: LogoAlignment = settings.logoAlignment === "left" || settings.logoAlignment === "right" ? settings.logoAlignment : "center";
-  const logoSize: LogoSizePreset = settings.logoSize === "small" || settings.logoSize === "large" ? settings.logoSize : "medium";
+  const requestedAlignment = overrides.logoAlignment ?? settings.logoAlignment;
+  const requestedSize = overrides.logoSize ?? settings.logoSize;
+  const logoAlignment: LogoAlignment = requestedAlignment === "left" || requestedAlignment === "right" ? requestedAlignment : "center";
+  const logoSize: LogoSizePreset = requestedSize === "small" || requestedSize === "large" ? requestedSize : "medium";
 
   if (!logoKey) return { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
 

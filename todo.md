@@ -6599,3 +6599,10 @@
 - [x] Garantir estados sem logótipo, acessibilidade e responsividade em ecrãs pequenos.
 - [x] Validar testes, build e publicação da pré-visualização.
 
+
+## Fase 11: Download de PDF de Teste do Branding — 2026-08-13
+- [x] Criar endpoint protegido para gerar um PDF de teste com definições de branding ainda não guardadas.
+- [x] Adicionar botão de download no painel de pré-visualização com estados de carregamento e erro.
+- [x] Garantir que o PDF de teste respeita nome, logótipo, alinhamento e tamanho atuais.
+- [x] Validar autenticação, testes, build e publicação.
+

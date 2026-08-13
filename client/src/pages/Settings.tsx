@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Image as ImageIcon } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ export default function Settings() {
   const [logoAlignment, setLogoAlignment] = useState<"left" | "center" | "right">("center");
   const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isDownloadingPreview, setIsDownloadingPreview] = useState(false);
   const [notifActivities, setNotifActivities] = useState(true);
   const [notifAttendance, setNotifAttendance] = useState(true);
   const [notifFinances, setNotifFinances] = useState(true);
@@ -107,6 +108,36 @@ export default function Settings() {
       toast.error(error instanceof Error ? error.message : "Não foi possível carregar o logótipo.");
     } finally {
       setIsUploadingLogo(false);
+    }
+  };
+
+  const handleDownloadPreview = async () => {
+    setIsDownloadingPreview(true);
+    try {
+      const response = await fetch("/api/settings/organization/preview-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ congregationName: organizationName, logoAlignment, logoSize }),
+      });
+      if (!response.ok) {
+        const result = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(result.error || "Não foi possível gerar o PDF de teste.");
+      }
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "pre-visualizacao-cabecalho.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+      toast.success("PDF de teste descarregado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o PDF de teste.");
+    } finally {
+      setIsDownloadingPreview(false);
     }
   };
 
@@ -204,7 +235,13 @@ export default function Settings() {
                             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Pré-visualização do cabeçalho PDF</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">Atualização em tempo real com as opções selecionadas.</p>
                           </div>
-                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">A4 · PDF</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">A4 · PDF</span>
+                            <Button type="button" size="sm" variant="outline" onClick={handleDownloadPreview} disabled={isDownloadingPreview} className="h-8 border-emerald-300 bg-white px-2.5 text-xs text-emerald-800 hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-950/50">
+                              <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                              {isDownloadingPreview ? "A gerar…" : "Descarregar teste"}
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
