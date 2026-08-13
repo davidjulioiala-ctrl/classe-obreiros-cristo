@@ -6360,19 +6360,27 @@
 - [x] Remover o cadastro independente de membros no menu Louvor e apresentar apenas membros do cadastro principal com cargo de Ministério de Louvor
 
 ## Fase 12: Novas Solicitações (Agosto 2026 - Parte 2)
-- [ ] Adicionar campo Responsável automático em quotas, outras receitas e despesas
-- [ ] Garantir que o menu Louvor apresenta exclusivamente membros com o cargo de Ministério de Louvor do cadastro principal
-- [ ] Devolver o menu e o CRUD completo de Gestão de Utilizadores ao sistema
-- [ ] Adicionar opção de alteração e recuperação de senha de utilizador em caso de esquecimento
+- [x] Adicionar campo Responsável automático em quotas, outras receitas e despesas (substituído por preenchimento manual conforme requisito posterior)
+- [x] Garantir que o menu Louvor apresenta exclusivamente membros com o cargo de Ministério de Louvor do cadastro principal
+- [x] Devolver o menu e o CRUD completo de Gestão de Utilizadores ao sistema
+- [x] Adicionar opção de alteração e recuperação de senha de utilizador em caso de esquecimento
 - [x] Adicionar campo Responsável automático em Quotas, Outras Receitas e Despesas
 - [x] Garantir que o menu Louvor apresenta apenas membros do Ministério de Louvor sincronizados ao cadastro principal
 - [x] Devolver a opção de criação de utilizadores e adicionar o fluxo de alteração/recuperação de senha
 
 ## Fase 13: Solicitações Adicionais de Gestão
-- [ ] Permitir clicar em cima de cada membro em falta em 'Campos em falta' e completar os dados diretamente sem sair da página
-- [ ] Adicionar o cargo 'Membro' na lista de cargos do cadastro de membros
-- [ ] Alterar o campo responsável nas finanças (Quotas, Outras Receitas, Despesas) para preenchimento manual (nome de quem está a realizar o lançamento)
-- [ ] Adicionar data automática de cadastro na criação de utilizadores
-- [ ] Criar o novo menu de Materiais para registar e controlar património/materiais da organização e respetivos responsáveis pela guarda
-- [ ] Corrigir as cores de destaque nas Configurações (Aparência/Tema) para funcionarem de forma dinâmica e persistente
-- [ ] Garantir que todos os cadastros e lançamentos utilizam IDs gerados automaticamente pela base de dados
+- [x] Permitir clicar em cima de cada membro em falta em 'Campos em falta' e completar os dados diretamente sem sair da página
+- [x] Adicionar o cargo 'Membro' na lista de cargos do cadastro de membros
+- [x] Alterar o campo responsável nas finanças (Quotas, Outras Receitas, Despesas) para preenchimento manual (nome de quem está a realizar o lançamento)
+- [x] Adicionar data automática de cadastro na criação de utilizadores
+- [x] Criar o novo menu de Materiais para registar e controlar património/materiais da organização e respetivos responsáveis pela guarda
+- [x] Corrigir as cores de destaque nas Configurações (Aparência/Tema) para funcionarem de forma dinâmica e persistente
+- [x] Garantir que todos os cadastros e lançamentos utilizam IDs gerados automaticamente pela base de dados
+
+
+## Refinamentos do módulo financeiro — solicitação atual
+- [x] Ampliar o campo de Designação no formulário e na listagem de Despesas.
+- [x] Apresentar o ID automático em cada registo de Quotas, Outras receitas e Despesas.
+- [x] Adicionar campo de pesquisa aos submenus Quotas, Outras receitas e Despesas.
+- [x] Tornar todos os campos e colunas do submenu Quotas visíveis e responsivos.
+- [ ] Validar pesquisa, IDs, responsividade, testes e build do módulo financeiro.
