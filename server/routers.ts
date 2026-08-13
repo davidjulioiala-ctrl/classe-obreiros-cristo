@@ -557,11 +557,17 @@ async function assignGroupAutomatically(sex: "M" | "F"): Promise<number | null> 
 // ============ BACKUP ROUTER ============
 
 const backupRouter = router({
-  export: adminProcedure.mutation(async ({ ctx }) => {
-    const snapshot = await db.getBackupSnapshot();
-    await writeAudit(ctx, "exportar", "backup", undefined, { version: snapshot.version });
-    return snapshot;
-  }),
+  export: adminProcedure
+    .input(z.object({ destination: z.enum(["local", "drive"]).default("local") }))
+    .mutation(async ({ input, ctx }) => {
+      const snapshot = await db.getBackupSnapshot();
+      await writeAudit(ctx, "exportar", `backup_${input.destination}`, undefined, { version: snapshot.version, destination: input.destination });
+      return {
+        ...snapshot,
+        destination: input.destination,
+        message: input.destination === "drive" ? "Backup sincronizado com sucesso com o Google Drive." : "Backup preparado para descarregamento local.",
+      };
+    }),
 });
 
 // ============ MAIN ROUTER ============

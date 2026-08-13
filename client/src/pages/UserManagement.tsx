@@ -128,6 +128,7 @@ export default function UserManagement() {
     if (editingUser) {
       updateUser.mutate({
         userId: editingUser.id,
+        username,
         name,
         email,
         role: formData.role,
@@ -219,7 +220,7 @@ export default function UserManagement() {
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-lg">
           <DialogHeader><DialogTitle>{editingUser ? "Editar utilizador" : "Novo utilizador"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><label className="mb-1 block text-sm font-medium">Utilizador</label><Input value={formData.username} disabled={Boolean(editingUser)} onChange={(event) => setFormData({ ...formData, username: event.target.value })} placeholder="username" /></div>
+            <div><label className="mb-1 block text-sm font-medium">Utilizador (Código)</label><Input value={formData.username} onChange={(event) => setFormData({ ...formData, username: event.target.value })} placeholder="username" /></div>
             <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
             <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} placeholder="Nome completo" /></div>
             <div><label className="mb-1 block text-sm font-medium">Email</label><Input type="email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} placeholder="email@exemplo.com" /></div>

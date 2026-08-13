@@ -104,6 +104,7 @@ export async function createUser(
 export async function updateUser(
   userId: number,
   updates: {
+    username?: string;
     name?: string;
     email?: string;
     churchRole?: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro";
@@ -123,6 +124,7 @@ export async function updateUser(
       updatedAt: new Date(),
     };
 
+    if (updates.username) updateData.username = updates.username.trim().toLowerCase();
     if (updates.name) updateData.name = updates.name;
     if (updates.email) updateData.email = updates.email;
     if (updates.churchRole) updateData.churchRole = updates.churchRole;

@@ -164,25 +164,7 @@ export default function LocalLogin() {
               </motion.button>
             </motion.form>
 
-            {/* Demo credentials */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-6 p-4 bg-slate-700/30 border border-slate-600/50 rounded-lg"
-            >
-              <p className="text-xs font-semibold text-slate-300 mb-2">
-                Credenciais de Demonstração:
-              </p>
-              <div className="space-y-1 text-xs text-slate-400">
-                <p>
-                  <span className="text-emerald-400">Utilizador:</span> admin
-                </p>
-                <p>
-                  <span className="text-emerald-400">Senha:</span> admin123
-                </p>
-              </div>
-            </motion.div>
+
 
             {/* Footer */}
             <motion.div

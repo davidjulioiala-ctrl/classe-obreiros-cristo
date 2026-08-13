@@ -86,6 +86,7 @@ export const authRouter = router({
     .input(
       z.object({
         userId: z.number().int().positive(),
+        username: z.string().trim().min(3).optional(),
         name: z.string().trim().min(1).optional(),
         email: z.string().email().optional(),
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).optional(),

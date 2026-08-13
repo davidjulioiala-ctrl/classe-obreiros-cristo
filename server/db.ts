@@ -248,6 +248,19 @@ export async function recordAttendance(data: typeof attendance.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  const existing = await db
+    .select()
+    .from(attendance)
+    .where(and(eq(attendance.activityId, data.activityId!), eq(attendance.memberId, data.memberId!)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return await db
+      .update(attendance)
+      .set({ isPresent: data.isPresent, recordedBy: data.recordedBy })
+      .where(eq(attendance.id, existing[0].id));
+  }
+
   return await db.insert(attendance).values(data);
 }
 
