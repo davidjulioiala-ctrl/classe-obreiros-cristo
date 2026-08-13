@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Save, Bell, Palette } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,10 @@ export default function Settings() {
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
   const [location, setLocation] = useState("Luanda, Angola");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoKey, setLogoKey] = useState("");
+  const [logoName, setLogoName] = useState("");
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [notifActivities, setNotifActivities] = useState(true);
   const [notifAttendance, setNotifAttendance] = useState(true);
   const [notifFinances, setNotifFinances] = useState(true);
@@ -39,6 +43,9 @@ export default function Settings() {
         if (parsed.email) setEmail(parsed.email);
         if (parsed.phone) setPhone(parsed.phone);
         if (parsed.location) setLocation(parsed.location);
+        if (parsed.logoUrl) setLogoUrl(parsed.logoUrl);
+        if (parsed.logoKey) setLogoKey(parsed.logoKey);
+        if (parsed.logoName) setLogoName(parsed.logoName);
       } catch {}
     }
   }, [orgQuery.data]);
@@ -69,7 +76,33 @@ export default function Settings() {
   }, [appearanceQuery.data]);
 
   const handleSaveOrganization = () => {
-    setSettingsMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location }) });
+    setSettingsMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey }) });
+  };
+
+  const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if ((file.type !== "image/png" && file.type !== "image/jpeg") || file.size > 5 * 1024 * 1024) {
+      toast.error("Escolha um logótipo PNG ou JPEG até 5 MB.");
+      return;
+    }
+    setIsUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+      const response = await fetch("/api/settings/organization/logo", { method: "POST", body: formData, credentials: "same-origin" });
+      const result = (await response.json().catch(() => ({}))) as { logoUrl?: string; logoKey?: string; error?: string };
+      if (!response.ok || !result.logoUrl) throw new Error(result.error || "Não foi possível carregar o logótipo.");
+      setLogoUrl(result.logoUrl);
+      setLogoKey(result.logoKey || "");
+      setLogoName(file.name);
+      toast.success("Logótipo carregado com segurança. Guarde as alterações para o associar à organização.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar o logótipo.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleSaveNotifications = () => {
@@ -122,7 +155,25 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Localização</label>
                   <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Localização" />
                 </div>
-                <Button onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <div className="flex items-start gap-3">
+                    <ImageIcon className="mt-0.5 h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900 dark:text-white">Logótipo para cabeçalhos PDF</p>
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">PNG ou JPEG, até 5 MB. Será guardado no armazenamento privado e utilizado nos PDFs exportados.</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-800">
+                          <Upload className="h-4 w-4" />
+                          {isUploadingLogo ? "A carregar…" : "Escolher logótipo"}
+                          <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={handleLogoUpload} disabled={isUploadingLogo} />
+                        </label>
+                        {logoName ? <span className="max-w-full truncate text-sm text-slate-600 dark:text-slate-300">{logoName}</span> : <span className="text-sm text-slate-500 dark:text-slate-400">Nenhum logótipo configurado</span>}
+                      </div>
+                      {logoUrl ? <img src={logoUrl} alt="Pré-visualização do logótipo da congregação" className="mt-4 h-20 max-w-[220px] rounded-lg border border-slate-200 bg-white object-contain p-2 dark:border-slate-700" /> : null}
+                    </div>
+                  </div>
+                </div>
+                <Button onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={setSettingsMutation.isPending}>
                   <Save className="w-4 h-4 mr-2" /> Guardar Alterações
                 </Button>
               </div>

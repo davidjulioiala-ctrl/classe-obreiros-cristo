@@ -5,6 +5,7 @@ import { getDb, getActivityById, getCommissionByActivity } from "./db";
 import { members } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { notifySecurityEvent } from "./_core/securityAlerts";
+import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
 
 export function registerActivityPdfRoute(app: Express) {
   app.get("/api/activities/:id/export-pdf", async (req: Request, res: Response) => {
@@ -41,6 +42,7 @@ export function registerActivityPdfRoute(app: Express) {
         })
       );
 
+      const branding = await loadPdfBranding();
       res.status(200);
       res.setHeader("Content-Type", "application/pdf");
       const filename = `${docType === "ata" ? "ata-reuniao" : "relatorio-atividade"}-${activity.id}-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -49,11 +51,8 @@ export function registerActivityPdfRoute(app: Express) {
       const doc = new PDFDocument({ size: "A4", margin: 40 });
       doc.pipe(res);
 
-      // Cabeçalho
-      doc.fontSize(16).fillColor("#064e3b").text("Classe Obreiros de Cristo", { align: "center" });
-      doc.fontSize(11).fillColor("#0f172a").text("Sistema de Gestão Eclesiástica", { align: "center" });
-      doc.moveDown(0.5);
-      doc.fontSize(14).fillColor("#047857").text(docType === "ata" ? "ATA DE REUNIÃO" : "RELATÓRIO DE ATIVIDADE", { align: "center" });
+      // Cabeçalho personalizado da congregação
+      drawPdfHeader(doc, branding, docType === "ata" ? "ATA DE REUNIÃO" : "RELATÓRIO DE ATIVIDADE");
       doc.fontSize(9).fillColor("#64748b").text(`Emitido em ${new Date().toLocaleString("pt-PT")} por ${user.username}`, { align: "center" });
       doc.moveDown(1);
 
@@ -108,6 +107,8 @@ export function registerActivityPdfRoute(app: Express) {
       // Assinaturas
       doc.fontSize(9).fillColor("#0f172a");
       doc.text("O(a) Secretário(a): ___________________________        O(a) Dirigente: ___________________________", { align: "center" });
+      doc.moveDown(1);
+      doc.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "documento gerado pelo sistema"), { align: "center" });
 
       doc.end();
 

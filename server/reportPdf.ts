@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getReportById, updateReport } from "./db";
+import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
 
 export function registerReportPdfRoute(app: Express) {
   app.get("/api/reports/:id/pdf", async (req: Request, res: Response) => {
@@ -21,19 +22,19 @@ export function registerReportPdfRoute(app: Express) {
       const downloadedBy = Array.from(new Set([...previousDownloads, user.id]));
       await updateReport(id, { downloadedBy: JSON.stringify(downloadedBy) });
 
+      const branding = await loadPdfBranding();
       res.status(200);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="relatorio-${id}.pdf"`);
 
       const document = new PDFDocument({ size: "A4", margin: 48 });
       document.pipe(res);
-      document.fontSize(20).fillColor("#064e3b").text(report.type === "ata" ? "Ata da atividade" : "Relatório de atividade");
-      document.moveDown(0.5);
-      document.fontSize(10).fillColor("#64748b").text(`N.º ${report.id}  |  Actividade ${report.activityId}  |  Gerado em ${new Date(report.createdAt).toLocaleString("pt-PT")}`);
+      drawPdfHeader(document, branding, report.type === "ata" ? "ATA DA ACTIVIDADE" : "RELATÓRIO DE ACTIVIDADE");
+      document.fontSize(10).fillColor("#64748b").text(`N.º ${report.id}  |  Actividade ${report.activityId}  |  Gerado em ${new Date(report.createdAt).toLocaleString("pt-PT")}`, { align: "center" });
       document.moveDown(1);
       document.fontSize(12).fillColor("#0f172a").text(report.content || "Sem conteúdo registado.", { align: "left", lineGap: 5 });
       document.moveDown(2);
-      document.fontSize(9).fillColor("#64748b").text("Classe Obreiros de Cristo — documento gerado pelo sistema", { align: "center" });
+      document.fontSize(9).fillColor("#64748b").text(pdfFooterText(branding, "documento gerado pelo sistema"), { align: "center" });
       document.end();
     } catch (error) {
       console.error("[Reports] PDF generation error:", error);

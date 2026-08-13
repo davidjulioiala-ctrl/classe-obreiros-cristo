@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers } from "./db";
 import { notifySecurityEvent } from "./_core/securityAlerts";
+import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
 
 function calculateAge(value: unknown) {
   if (!value) return null;
@@ -32,14 +33,14 @@ export function registerTransferPdfRoute(app: Express) {
       const selected = allMembers.filter((member) => ids.includes(member.id));
       if (!selected.length) return res.status(404).json({ error: "Membros não encontrados" });
 
+      const branding = await loadPdfBranding();
       res.status(200);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="transferencias-jovens-${new Date().toISOString().slice(0, 10)}.pdf"`);
       const document = new PDFDocument({ size: "A4", layout: "landscape", margin: 34 });
       document.pipe(res);
-      document.fontSize(18).fillColor("#064e3b").text("Classe Obreiros de Cristo");
-      document.fontSize(14).fillColor("#0f172a").text("Transferência validada para a camada de jovens");
-      document.fontSize(9).fillColor("#64748b").text(`Gerado em ${new Date().toLocaleString("pt-PT")} · ${selected.length} pessoa(s)`);
+      drawPdfHeader(document, branding, "TRANSFERÊNCIA VALIDADA PARA A CAMADA DE JOVENS", { landscape: true });
+      document.fontSize(9).fillColor("#64748b").text(`Gerado em ${new Date().toLocaleString("pt-PT")} · ${selected.length} pessoa(s)`, { align: "center" });
       document.moveDown(0.7);
       document.fontSize(10).fillColor("#0f172a").text(`Motivo comum: ${reason}`);
       document.moveDown(0.8);
@@ -69,10 +70,15 @@ export function registerTransferPdfRoute(app: Express) {
       selected.forEach((member) => {
         const birthDate = member.birthDate ? new Date(member.birthDate).toLocaleDateString("pt-PT") : "—";
         drawRow([member.name, birthDate, calculateAge(member.birthDate)?.toString() ?? "—", member.sex === "M" ? "Masculino" : "Feminino", member.groupId ? `Grupo #${member.groupId}` : "—", member.phoneOrange || member.phoneTelecel || "—", member.isActive ? "Ativo" : "Inativo"]);
-        if (y > 520) { document.addPage({ size: "A4", layout: "landscape", margin: 34 }); y = 34; drawRow(columns.map((column) => column.title), true); }
+        if (y > 520) {
+          document.addPage({ size: "A4", layout: "landscape", margin: 34 });
+          drawPdfHeader(document, branding, "TRANSFERÊNCIA VALIDADA PARA A CAMADA DE JOVENS", { landscape: true });
+          y = document.y + 4;
+          drawRow(columns.map((column) => column.title), true);
+        }
       });
       document.moveDown(1);
-      document.fontSize(8).fillColor("#64748b").text("Os registos originais permanecem guardados no sistema; a transferência altera apenas o estado operacional do membro.", 34, Math.min(y + 12, 550));
+      document.fontSize(8).fillColor("#64748b").text(`${pdfFooterText(branding, "documento gerado pelo sistema")}. Os registos originais permanecem guardados no sistema; a transferência altera apenas o estado operacional do membro.`, 34, Math.min(y + 12, 550));
       document.end();
       void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de transferência concluída", actorId: user.id, resource: "transferencias-adultos-pdf", metadata: { registos: selected.length, formato: "pdf" } });
     } catch (error) {

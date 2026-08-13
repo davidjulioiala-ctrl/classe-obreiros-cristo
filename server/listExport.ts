@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import * as XLSX from "xlsx";
+import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
 import {
   MEMBER_EXPORT_COLUMN_KEYS,
   MEMBER_EXPORT_COLUMNS,
@@ -121,18 +122,19 @@ export function generateReportsCsv(reports: ExportReport[], columns: ReportExpor
   );
 }
 
-function createPdf(title: string) {
+async function createPdf(title: string) {
   const document = new PDFDocument({ size: "A4", margin: 42 });
   const chunks: Buffer[] = [];
+  const branding = await loadPdfBranding();
   document.on("data", (chunk: Buffer) => chunks.push(chunk));
-  document.fontSize(18).fillColor("#064e3b").text(title, { align: "center" });
-  document.moveDown(0.35).fontSize(9).fillColor("#64748b").text(`Gerado em ${displayDateTime(new Date())}`, { align: "center" });
+  drawPdfHeader(document, branding, title);
+  document.fontSize(9).fillColor("#64748b").text(`Gerado em ${displayDateTime(new Date())}`, { align: "center" });
   document.moveDown(1);
-  return { document, chunks };
+  return { document, chunks, branding };
 }
 
-export function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
-  const { document, chunks } = createPdf("Lista de membros");
+export async function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
+  const { document, chunks, branding } = await createPdf("Lista de membros");
   document.fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
   document.moveDown(0.6);
   for (const member of members) {
@@ -141,21 +143,21 @@ export function generateMembersPdf(members: ExportMember[], search = "", columns
     document.moveDown(0.45);
   }
   if (members.length === 0) document.fontSize(10).fillColor("#64748b").text("Nenhum membro encontrado.");
-  document.fontSize(8).fillColor("#64748b").text("Classe Obreiros de Cristo — exportação protegida pelo sistema", { align: "center" });
+  document.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "exportação protegida pelo sistema"), { align: "center" });
   const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
   document.end();
   return result;
 }
 
-export function generateReportsPdf(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
-  const { document, chunks } = createPdf("Lista de relatórios e atas");
+export async function generateReportsPdf(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
+  const { document, chunks, branding } = await createPdf("Lista de relatórios e atas");
   for (const report of reports) {
     const values = columns.map((column) => `${reportLabels[column]}: ${reportValue(report, column)}`);
     document.fontSize(9).fillColor("#0f172a").text(values.join(" · "), { lineGap: 3 });
     document.moveDown(0.8);
   }
   if (reports.length === 0) document.fontSize(10).fillColor("#64748b").text("Ainda não existem relatórios.");
-  document.fontSize(8).fillColor("#64748b").text("Classe Obreiros de Cristo — exportação protegida pelo sistema", { align: "center" });
+  document.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "exportação protegida pelo sistema"), { align: "center" });
   const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
   document.end();
   return result;

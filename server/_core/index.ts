@@ -20,6 +20,7 @@ import { registerStatusReportRoute } from "../statusReportRoute";
 import { registerListExportRoutes } from "../listExportRoute";
 import { registerActivityDocumentRoute } from "../activityDocumentRoute";
 import { registerActivityPdfRoute } from "../activityPdfRoute";
+import { registerBrandingRoute } from "../brandingRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -64,6 +65,7 @@ async function startServer() {
   registerListExportRoutes(app);
   registerActivityDocumentRoute(app);
   registerActivityPdfRoute(app);
+  registerBrandingRoute(app);
   app.get("/api/maintenance", async (_req, res) => {
     try {
       const state = await getSystemMaintenanceState();

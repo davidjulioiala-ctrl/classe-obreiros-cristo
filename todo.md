@@ -6576,3 +6576,9 @@
 - [x] Adicionar rota protegida `/api/activities/:id/export-pdf` para exportar a ata ou o relatório oficial.
 - [x] Adicionar botões de "Exportar Ata PDF" e "Exportar Relatório PDF" na página de Atividades.
 - [x] Validar typecheck, testes unitários, build de produção e guardar checkpoint publicado.
+
+## Fase 8: Branding da Congregação em PDFs
+- [x] Criar campos de configuração para nome e logótipo da congregação no servidor e base de dados
+- [x] Criar painel de definições na interface para upload seguro do logótipo e definição do nome
+- [x] Atualizar geradores de PDF para incluir o cabeçalho personalizado com o logótipo e o nome da congregação
+- [x] Executar testes unitários e build de produção para validar a congregação nos PDFs
