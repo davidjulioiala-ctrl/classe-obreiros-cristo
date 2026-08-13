@@ -6358,3 +6358,12 @@
 
 - [x] Remover passwords e outros dados sensíveis dos novos registos de auditoria e impedir que futuras edições de utilizadores os gravem
 - [x] Remover o cadastro independente de membros no menu Louvor e apresentar apenas membros do cadastro principal com cargo de Ministério de Louvor
+
+## Fase 12: Novas Solicitações (Agosto 2026 - Parte 2)
+- [ ] Adicionar campo Responsável automático em quotas, outras receitas e despesas
+- [ ] Garantir que o menu Louvor apresenta exclusivamente membros com o cargo de Ministério de Louvor do cadastro principal
+- [ ] Devolver o menu e o CRUD completo de Gestão de Utilizadores ao sistema
+- [ ] Adicionar opção de alteração e recuperação de senha de utilizador em caso de esquecimento
+- [x] Adicionar campo Responsável automático em Quotas, Outras Receitas e Despesas
+- [x] Garantir que o menu Louvor apresenta apenas membros do Ministério de Louvor sincronizados ao cadastro principal
+- [x] Devolver a opção de criação de utilizadores e adicionar o fluxo de alteração/recuperação de senha

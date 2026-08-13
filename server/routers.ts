@@ -367,11 +367,13 @@ const quotasRouter = router({
       const quota = await db.getQuotasByMonthYear(input.month, input.year);
       const existing = quota.find((q) => q.memberId === input.memberId);
 
+      const responsibleName = ctx.user.name || ctx.user.username;
       if (existing) {
         return await db.updateQuota(existing.id, {
           isPaid: true,
           paidAt: new Date(),
           paidBy: ctx.user.id,
+          responsibleName,
         });
       }
 
@@ -383,6 +385,7 @@ const quotasRouter = router({
         isPaid: true,
         paidAt: new Date(),
         paidBy: ctx.user.id,
+        responsibleName,
       });
     }),
 
@@ -419,8 +422,9 @@ const otherIncomeRouter = router({
   create: financialProcedure
     .input(z.object({ description: z.string().trim().min(1), amount: z.string().min(1), date: z.coerce.date() }))
     .mutation(async ({ input, ctx }) => {
-      const result = await db.createOtherIncome({ ...input, recordedBy: ctx.user.id });
-      await writeAudit(ctx, "criar", "otherIncome", undefined, { description: input.description, amount: input.amount, date: input.date });
+      const responsibleName = ctx.user.name || ctx.user.username;
+      const result = await db.createOtherIncome({ ...input, recordedBy: ctx.user.id, responsibleName });
+      await writeAudit(ctx, "criar", "otherIncome", undefined, { description: input.description, amount: input.amount, date: input.date, responsibleName });
       return result;
     }),
   update: financialProcedure
@@ -449,8 +453,9 @@ const expensesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const totalPrice = (input.quantity * Number(input.unitPrice)).toFixed(2);
       const sequence = await db.getNextExpenseSequence();
-      const result = await db.createExpense({ ...input, sequence, totalPrice, recordedBy: ctx.user.id });
-      await writeAudit(ctx, "criar", "expense", undefined, { designation: input.designation, quantity: input.quantity, totalPrice, date: input.date });
+      const responsibleName = ctx.user.name || ctx.user.username;
+      const result = await db.createExpense({ ...input, sequence, totalPrice, recordedBy: ctx.user.id, responsibleName });
+      await writeAudit(ctx, "criar", "expense", undefined, { designation: input.designation, quantity: input.quantity, totalPrice, date: input.date, responsibleName });
       return result;
     }),
   update: financialProcedure
@@ -748,6 +753,8 @@ const historyRouter = router({
     return await db.getMemberHistory(input.memberId);
   }),
 });
+
+
 
 // ============ BACKUP ROUTER ============
 

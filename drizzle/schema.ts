@@ -152,6 +152,7 @@ export const quotas = mysqlTable("quotas", {
   isPaid: boolean("isPaid").default(false).notNull(),
   paidAt: timestamp("paidAt"),
   paidBy: int("paidBy"), // User who recorded the payment
+  responsibleName: varchar("responsibleName", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -168,6 +169,7 @@ export const otherIncome = mysqlTable("otherIncome", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
   recordedBy: int("recordedBy").notNull(),
+  responsibleName: varchar("responsibleName", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -186,6 +188,7 @@ export const expenses = mysqlTable("expenses", {
   totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
   recordedBy: int("recordedBy").notNull(),
+  responsibleName: varchar("responsibleName", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
