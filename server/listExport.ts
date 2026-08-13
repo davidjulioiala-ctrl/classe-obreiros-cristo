@@ -1,4 +1,12 @@
 import PDFDocument from "pdfkit";
+import {
+  MEMBER_EXPORT_COLUMN_KEYS,
+  MEMBER_EXPORT_COLUMNS,
+  REPORT_EXPORT_COLUMN_KEYS,
+  REPORT_EXPORT_COLUMNS,
+  type MemberExportColumn,
+  type ReportExportColumn,
+} from "../shared/exportColumns";
 
 type ExportMember = {
   id: number;
@@ -22,6 +30,9 @@ type ExportReport = {
   createdAt: Date | string;
 };
 
+const memberLabels = Object.fromEntries(MEMBER_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<MemberExportColumn, string>;
+const reportLabels = Object.fromEntries(REPORT_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<ReportExportColumn, string>;
+
 function displayDate(value: Date | string | null | undefined) {
   if (!value) return "—";
   const date = value instanceof Date ? value : new Date(value);
@@ -44,6 +55,33 @@ function calculateAge(value: Date | string | null) {
   return age >= 0 ? String(age) : "—";
 }
 
+function memberValue(member: ExportMember, column: MemberExportColumn): string | number {
+  switch (column) {
+    case "id": return member.id;
+    case "name": return member.name;
+    case "sex": return member.sex === "M" ? "Masculino" : "Feminino";
+    case "birthDate": return displayDate(member.birthDate);
+    case "age": return calculateAge(member.birthDate);
+    case "position": return member.position || "Sem cargo";
+    case "groupId": return member.groupId ?? "";
+    case "isGuest": return member.isGuest ? "Sim" : "Não";
+    case "isActive": return member.isActive ? "Ativo" : "Inativo";
+    case "phoneOrange": return member.phoneOrange || "";
+    case "phoneTelecel": return member.phoneTelecel || "";
+    case "email": return member.email || "";
+  }
+}
+
+function reportValue(report: ExportReport, column: ReportExportColumn): string | number {
+  switch (column) {
+    case "id": return report.id;
+    case "type": return report.type === "ata" ? "Ata de actividade" : "Relatório";
+    case "activityId": return report.activityId;
+    case "createdAt": return displayDateTime(report.createdAt);
+    case "content": return report.content || "";
+  }
+}
+
 function csvCell(value: unknown) {
   const text = value === null || value === undefined ? "" : String(value);
   return /[;"\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -54,36 +92,17 @@ export function generateCsv(headers: string[], rows: unknown[][]) {
   return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
 
-export function generateMembersCsv(members: ExportMember[]) {
+export function generateMembersCsv(members: ExportMember[], columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
   return generateCsv(
-    ["ID", "Nome", "Sexo", "Data de nascimento", "Idade", "Cargo", "Grupo ID", "Convidado", "Estado", "Telefone Orange", "Telefone Telecel", "Email"],
-    members.map((member) => [
-      member.id,
-      member.name,
-      member.sex === "M" ? "Masculino" : "Feminino",
-      displayDate(member.birthDate),
-      calculateAge(member.birthDate),
-      member.position || "Sem cargo",
-      member.groupId ?? "",
-      member.isGuest ? "Sim" : "Não",
-      member.isActive ? "Ativo" : "Inativo",
-      member.phoneOrange || "",
-      member.phoneTelecel || "",
-      member.email || "",
-    ])
+    columns.map((column) => memberLabels[column]),
+    members.map((member) => columns.map((column) => memberValue(member, column)))
   );
 }
 
-export function generateReportsCsv(reports: ExportReport[]) {
+export function generateReportsCsv(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
   return generateCsv(
-    ["ID", "Tipo", "Actividade ID", "Data de criação", "Conteúdo"],
-    reports.map((report) => [
-      report.id,
-      report.type === "ata" ? "Ata de actividade" : "Relatório",
-      report.activityId,
-      displayDateTime(report.createdAt),
-      report.content || "",
-    ])
+    columns.map((column) => reportLabels[column]),
+    reports.map((report) => columns.map((column) => reportValue(report, column)))
   );
 }
 
@@ -97,33 +116,32 @@ function createPdf(title: string) {
   return { document, chunks };
 }
 
-export function generateMembersPdf(members: ExportMember[], search = "") {
+export function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
   const { document, chunks } = createPdf("Lista de membros");
   document.fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
   document.moveDown(0.6);
   for (const member of members) {
-    document.fontSize(10).fillColor("#0f172a").text(`#${member.id} · ${member.name}`);
-    document.fontSize(8).fillColor("#475569").text(
-      `${member.position || "Sem cargo"} · ${member.sex === "M" ? "Masculino" : "Feminino"} · ${calculateAge(member.birthDate)} anos · Grupo #${member.groupId ?? "—"} · ${member.isActive ? "Activo" : "Inactivo"}${member.isGuest ? " · Convidado" : ""}`
-    );
+    const values = columns.map((column) => `${memberLabels[column]}: ${memberValue(member, column)}`);
+    document.fontSize(9).fillColor("#0f172a").text(values.join(" · "), { lineGap: 2 });
     document.moveDown(0.45);
   }
   if (members.length === 0) document.fontSize(10).fillColor("#64748b").text("Nenhum membro encontrado.");
   document.fontSize(8).fillColor("#64748b").text("Classe Obreiros de Cristo — exportação protegida pelo sistema", { align: "center" });
+  const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
   document.end();
-  return new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
+  return result;
 }
 
-export function generateReportsPdf(reports: ExportReport[]) {
+export function generateReportsPdf(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
   const { document, chunks } = createPdf("Lista de relatórios e atas");
   for (const report of reports) {
-    document.fontSize(11).fillColor("#0f172a").text(`#${report.id} · ${report.type === "ata" ? "Ata de actividade" : "Relatório"}`);
-    document.fontSize(8).fillColor("#475569").text(`Actividade #${report.activityId} · ${displayDateTime(report.createdAt)}`);
-    document.moveDown(0.3).fontSize(9).fillColor("#334155").text(report.content || "Sem conteúdo registado.", { lineGap: 3 });
+    const values = columns.map((column) => `${reportLabels[column]}: ${reportValue(report, column)}`);
+    document.fontSize(9).fillColor("#0f172a").text(values.join(" · "), { lineGap: 3 });
     document.moveDown(0.8);
   }
   if (reports.length === 0) document.fontSize(10).fillColor("#64748b").text("Ainda não existem relatórios.");
   document.fontSize(8).fillColor("#64748b").text("Classe Obreiros de Cristo — exportação protegida pelo sistema", { align: "center" });
+  const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
   document.end();
-  return new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
+  return result;
 }

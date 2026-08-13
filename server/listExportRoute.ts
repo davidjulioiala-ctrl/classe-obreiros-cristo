@@ -3,6 +3,7 @@ import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers, listReports } from "./db";
 import { generateMembersCsv, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
+import { MEMBER_EXPORT_COLUMN_KEYS, REPORT_EXPORT_COLUMN_KEYS, type MemberExportColumn, type ReportExportColumn } from "../shared/exportColumns";
 
 function canExportReports(user: { role: string; churchRole: string } | null) {
   return Boolean(user && (user.role === "admin" || user.churchRole === "lider" || user.churchRole === "oficial"));
@@ -10,6 +11,16 @@ function canExportReports(user: { role: string; churchRole: string } | null) {
 
 function safeSearch(value: unknown) {
   return String(value ?? "").trim().slice(0, 100);
+}
+
+function parseColumns<T extends string>(value: unknown, allowed: readonly T[]): T[] | null {
+  if (value === undefined) return [...allowed];
+  const raw = Array.isArray(value) ? value[0] : value;
+  const requested = String(raw).split(",").map((item) => item.trim()).filter(Boolean);
+  if (requested.length === 0) return null;
+  const unique = Array.from(new Set(requested));
+  if (unique.some((item) => !allowed.includes(item as T))) return null;
+  return unique as T[];
 }
 
 export function registerListExportRoutes(app: Express) {
@@ -20,16 +31,18 @@ export function registerListExportRoutes(app: Express) {
       const format = req.params.format;
       if (format !== "pdf" && format !== "csv") return res.status(400).json({ error: "Formato inválido" });
       const search = safeSearch(req.query.search).toLocaleLowerCase("pt-PT");
+      const columns = parseColumns(req.query.columns, MEMBER_EXPORT_COLUMN_KEYS);
+      if (!columns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
       const members = (await getAllMembers()).filter((member) => !search || member.name.toLocaleLowerCase("pt-PT").includes(search));
       const suffix = search ? "-pesquisa" : "";
       if (format === "pdf") {
-        const buffer = await generateMembersPdf(members, search);
+        const buffer = await generateMembersPdf(members, search, columns as MemberExportColumn[]);
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.pdf"`);
         void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:pdf", metadata: { count: members.length, filtered: Boolean(search) } });
         return res.send(buffer);
       }
-      const csv = generateMembersCsv(members);
+      const csv = generateMembersCsv(members, columns as MemberExportColumn[]);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.csv"`);
       void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:csv", metadata: { count: members.length, filtered: Boolean(search) } });
@@ -47,15 +60,17 @@ export function registerListExportRoutes(app: Express) {
       if (!canExportReports(user)) return res.status(403).json({ error: "Sem permissão para exportar relatórios." });
       const format = req.params.format;
       if (format !== "pdf" && format !== "csv") return res.status(400).json({ error: "Formato inválido" });
+      const columns = parseColumns(req.query.columns, REPORT_EXPORT_COLUMN_KEYS);
+      if (!columns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
       const reports = await listReports();
       if (format === "pdf") {
-        const buffer = await generateReportsPdf(reports);
+        const buffer = await generateReportsPdf(reports, columns as ReportExportColumn[]);
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", 'attachment; filename="relatorios.pdf"');
         void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de relatórios concluída", actorId: user.id, resource: "relatorios:pdf", metadata: { count: reports.length } });
         return res.send(buffer);
       }
-      const csv = generateReportsCsv(reports);
+      const csv = generateReportsCsv(reports, columns as ReportExportColumn[]);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", 'attachment; filename="relatorios.csv"');
       void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de relatórios concluída", actorId: user.id, resource: "relatorios:csv", metadata: { count: reports.length } });

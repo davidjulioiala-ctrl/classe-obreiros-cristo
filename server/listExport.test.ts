@@ -10,6 +10,26 @@ describe("list exports", () => {
     expect(csv).toContain('1;"Ana; ""Lopes""\n"');
   });
 
+  it("exports only the selected member columns in the requested order", () => {
+    const csv = generateMembersCsv([{
+      id: 1,
+      name: "Ana Lopes",
+      sex: "F",
+      birthDate: "2000-01-02",
+      position: "Membro",
+      groupId: 3,
+      isGuest: false,
+      isActive: true,
+      phoneOrange: null,
+      phoneTelecel: "923000000",
+      email: "ana@example.org",
+    }], ["name", "id"]);
+
+    expect(csv).toContain("Nome;ID");
+    expect(csv).toContain("Ana Lopes;1");
+    expect(csv).not.toContain("Email");
+  });
+
   it("exports member IDs and relevant list fields to CSV", () => {
     const csv = generateMembersCsv([{
       id: 1,

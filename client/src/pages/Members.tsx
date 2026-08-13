@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
+import { ExportColumnDialog } from "@/components/ExportColumnDialog";
+import { MEMBER_EXPORT_COLUMN_KEYS, MEMBER_EXPORT_COLUMNS } from "@shared/exportColumns";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { downloadProtectedFile } from "@/lib/fileDownload";
@@ -51,6 +53,9 @@ export default function Members() {
   const [formData, setFormData] = useState<MemberForm>(emptyForm);
   const [editingGroup, setEditingGroup] = useState<{ id: number; name: string; description?: string } | null>(null);
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "csv" | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [pendingExportFormat, setPendingExportFormat] = useState<"pdf" | "csv">("pdf");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS]);
   const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
   const { data: groups, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -145,12 +150,22 @@ export default function Members() {
     if (window.confirm(`Eliminar o membro ${name}?`)) deleteMemberMutation.mutate({ id });
   };
 
-  const exportMembers = async (format: "pdf" | "csv") => {
+  const openExportDialog = (format: "pdf" | "csv") => {
+    setPendingExportFormat(format);
+    setExportDialogOpen(true);
+  };
+
+  const exportMembers = async (columns = selectedExportColumns) => {
+    if (columns.length === 0) return toast.error("Seleccione pelo menos uma coluna.");
+    const format = pendingExportFormat;
     setExportingFormat(format);
     try {
-      const query = searchQuery.trim() ? `?search=${encodeURIComponent(searchQuery.trim())}` : "";
-      await downloadProtectedFile(`/api/members/export/${format}${query}`, `membros${searchQuery.trim() ? "-pesquisa" : ""}.${format}`);
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      params.set("columns", columns.join(","));
+      await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${searchQuery.trim() ? "-pesquisa" : ""}.${format}`);
       toast.success(`Lista de membros exportada em ${format.toUpperCase()}.`);
+      setExportDialogOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível exportar os membros.");
     } finally {
@@ -169,10 +184,10 @@ export default function Members() {
             <p className="mt-1 text-slate-600 dark:text-slate-400">Gira todos os membros da congregação.</p>
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-            <Button onClick={() => void exportMembers("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+            <Button onClick={() => openExportDialog("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
               <Download className="mr-2 h-4 w-4" /> PDF
             </Button>
-            <Button onClick={() => void exportMembers("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+            <Button onClick={() => openExportDialog("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
               <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV
             </Button>
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
@@ -306,6 +321,8 @@ export default function Members() {
         )}
 
         <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input placeholder="Pesquisar membros…" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10" /></div>
+
+        <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} onConfirm={(columns) => { setSelectedExportColumns(columns); void exportMembers(columns); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />
 
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (

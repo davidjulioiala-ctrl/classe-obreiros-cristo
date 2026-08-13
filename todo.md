@@ -6514,7 +6514,14 @@
 
 
 ## Exportação de Membros e Relatórios em PDF e CSV — 2026-08-13
-- [ ] Criar botões de exportação (PDF e CSV) nas páginas de Membros e Relatórios.
-- [ ] Implementar geradores cliente/servidor para exportar dados formatados com IDs sequenciais, filtros aplicados e codificação UTF-8 correta.
-- [ ] Adicionar testes unitários para validar a geração dos ficheiros de exportação.
-- [ ] Executar typecheck, testes, build e guardar checkpoint.
+- [x] Criar botões de exportação (PDF e CSV) nas páginas de Membros e Relatórios.
+- [x] Implementar geradores cliente/servidor para exportar dados formatados com IDs sequenciais, filtros aplicados e codificação UTF-8 correta.
+- [x] Adicionar testes unitários para validar a geração dos ficheiros de exportação.
+- [x] Executar typecheck, testes, build e guardar checkpoint.
+
+
+## Selecção de colunas para exportação — 2026-08-13
+- [x] Definir colunas permitidas e parâmetros de selecção para membros e relatórios.
+- [x] Adicionar modal ou selector de colunas nas páginas de Membros e Relatórios antes de iniciar a exportação.
+- [x] Atualizar os geradores e rotas no servidor para aceitar apenas colunas válidas e renderizar dinamicamente o PDF e o CSV.
+- [x] Adicionar testes unitários para a selecção de colunas e validar typecheck, build e checkpoint publicado.
