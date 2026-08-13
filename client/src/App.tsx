@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Members from "@/pages/Members";
 import Activities from "@/pages/Activities";

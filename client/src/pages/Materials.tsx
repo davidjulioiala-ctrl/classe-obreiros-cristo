@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -163,7 +164,8 @@ export default function Materials() {
           <Table>
             <TableHeader className="bg-slate-50 dark:bg-slate-700">
               <TableRow>
-                <TableHead>Código</TableHead>
+                <TableHead>ID</TableHead>
+                <TableHead>Código interno</TableHead>
                 <TableHead>Nome do Item</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Qtd</TableHead>
@@ -176,19 +178,20 @@ export default function Materials() {
             <TableBody>
               {materialsQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     A carregar materiais...
                   </TableCell>
                 </TableRow>
               ) : filteredMaterials.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     Nenhum material registado ou encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredMaterials.map((item: any) => (
                   <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <TableCell><RecordIdBadge id={item.id} /></TableCell>
                     <TableCell className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{item.code}</TableCell>
                     <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
                     <TableCell>

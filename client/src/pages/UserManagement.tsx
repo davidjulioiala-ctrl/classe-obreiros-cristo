@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -293,11 +294,11 @@ export default function UserManagement() {
           <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[920px]">
-                <thead className="bg-slate-50 dark:bg-slate-700"><tr>{["Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "Ações"].map((heading) => <th key={heading} className="px-5 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200">{heading}</th>)}</tr></thead>
+                <thead className="bg-slate-50 dark:bg-slate-700"><tr>{["ID", "Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "Ações"].map((heading) => <th key={heading} className="px-5 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200">{heading}</th>)}</tr></thead>
                 <tbody>
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-t border-slate-200 dark:border-slate-700">
-                      <td className="px-5 py-4 font-semibold">@{user.username}</td>
+                      <td className="px-5 py-4"><RecordIdBadge id={user.id} /></td><td className="px-5 py-4 font-semibold">@{user.username}</td>
                       <td className="px-5 py-4">{user.name || "—"}</td>
                       <td className="px-5 py-4">{user.email || "—"}</td>
                       <td className="px-5 py-4"><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{roleLabel(user.churchRole)}</span></td>
@@ -310,7 +311,7 @@ export default function UserManagement() {
               </table>
             </div>
             <div className="space-y-3 p-4 md:hidden">
-              {filteredUsers.map((user) => <div key={user.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold">{user.name || user.username}</p><p className="truncate text-sm text-slate-500">@{user.username}</p></div><span className="shrink-0 text-xs font-semibold">{user.isActive ? "Ativo" : "Inativo"}</span></div><p className="mt-3 break-words text-sm text-slate-600 dark:text-slate-300">{user.email || "Sem email"}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{roleLabel(user.churchRole)} · {user.role === "admin" ? "Administrador" : "Utilizador"}</p><div className="mt-4 flex gap-2"><Button className="flex-1" variant="outline" onClick={() => openDialog(user)}><Edit2 className="mr-2 h-4 w-4" /> Editar</Button><Button variant="outline" onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button></div></div>)}
+              {filteredUsers.map((user) => <div key={user.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><RecordIdBadge id={user.id} /><p className="truncate font-semibold">{user.name || user.username}</p><p className="truncate text-sm text-slate-500">@{user.username}</p></div><span className="shrink-0 text-xs font-semibold">{user.isActive ? "Ativo" : "Inativo"}</span></div><p className="mt-3 break-words text-sm text-slate-600 dark:text-slate-300">{user.email || "Sem email"}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{roleLabel(user.churchRole)} · {user.role === "admin" ? "Administrador" : "Utilizador"}</p><div className="mt-4 flex gap-2"><Button className="flex-1" variant="outline" onClick={() => openDialog(user)}><Edit2 className="mr-2 h-4 w-4" /> Editar</Button><Button variant="outline" onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button></div></div>)}
             </div>
             {!filteredUsers.length && <div className="p-12 text-center text-slate-500"><UsersRound className="mx-auto mb-3 h-8 w-8" />Nenhum utilizador encontrado.</div>}
           </Card>

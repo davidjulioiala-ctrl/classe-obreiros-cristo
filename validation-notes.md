@@ -56,3 +56,12 @@ A captura desktop (1280×720) confirmou um cartão de login centrado, campos vaz
 - Foi criado `LocalAuthProvider` com contexto único e o provider foi colocado na raiz do `App`, permitindo que o `Router` e o `LocalLogin` partilhem a mesma sessão.
 - Typecheck, testes de autenticação/2FA, teste de regressão do fluxo e build passaram. As capturas desktop (1280×720) e mobile (375×812) continuam legíveis, sem overflow e com os campos de login vazios.
 - A validação funcional de credenciais válidas no browser depende de uma credencial administrativa fornecida pelo responsável; os testes automatizados cobrem a resposta de login, a criação do estado de sessão e a navegação SPA sem usar credenciais fictícias.
+
+## Validação da continuação — 13/08/2026
+
+- O primeiro ecrã (`/`) apresenta exclusivamente o formulário de autenticação local com Utilizador, Senha e botão Entrar; não mostra Google, Manus ou OAuth.
+- A captura em 375x812 confirma que o formulário de login local é responsivo e permanece utilizável em telemóvel.
+- A tentativa HTTP com `admin/admin123` foi rejeitada porque a conta `admin` existente na base de dados está inactiva (`isActive=0`). Não foi alterada a base de dados para reactivar uma credencial histórica fraca.
+- A base de dados contém também o administrador local activo `dany` (`isActive=1`); a palavra-passe não foi consultada nem exposta.
+- `pnpm check` passou; `pnpm test` passou com 15 ficheiros e 40 testes; `pnpm build` passou.
+- O teste de adulteração AES-256-GCM foi corrigido para alterar um carácter significativo do payload Base64URL, evitando os bits de preenchimento não autenticados do último carácter.

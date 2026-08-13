@@ -5,6 +5,7 @@ import { Calendar, Users, Check, X, Download, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -229,9 +230,9 @@ export default function Attendance() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-medium text-slate-900 dark:text-white">
+                        <div className="flex flex-wrap items-center gap-2">{existingRecord && <RecordIdBadge id={existingRecord.id} />}<p className="font-medium text-slate-900 dark:text-white">
                           {member.name}
-                        </p>
+                        </p></div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                           {member.position || "Sem cargo"}
                         </p>

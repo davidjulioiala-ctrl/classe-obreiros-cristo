@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -80,7 +81,7 @@ export default function Louvor() {
                 <Card key={m.id} className="border-0 shadow-sm dark:bg-slate-800">
                   <CardContent className="p-4">
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{m.name}</h3>
+                      <div className="flex flex-wrap items-center gap-2"><RecordIdBadge id={m.id} /><h3 className="font-semibold text-slate-900 dark:text-white">{m.name}</h3></div>
                       <p className="text-sm text-emerald-600 font-medium">{m.instrumentOrVoice}</p>
                       {m.phone && <p className="text-xs text-slate-500 mt-1">{m.phone}</p>}
                     </div>
@@ -151,7 +152,7 @@ export default function Louvor() {
                 return (
                   <div key={sc.id} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2"><RecordIdBadge id={sc.id} />
                         <h3 className="font-semibold text-slate-900 dark:text-white">{mem ? mem.name : `Membro #${sc.louvorMemberId}`}</h3>
                         <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">{sc.roleInScale}</span>
                       </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { History, Search } from "lucide-react";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ export default function MemberHistory() {
           <CardContent className="space-y-4">
             <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar por membro, cargo ou detalhe" className="pl-10" /></div>
             {historyQuery.isLoading ? <p className="py-8 text-center text-sm text-slate-500">A carregar histórico…</p> : entries.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem registos históricos.</p> : (
-              <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700"><th className="p-3">Membro</th><th className="p-3">Cargo</th><th className="p-3">Início</th><th className="p-3">Fim</th><th className="p-3">Estado</th><th className="p-3">Detalhes</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id} className="border-b border-slate-100 dark:border-slate-700/60"><td className="p-3 font-medium text-slate-900 dark:text-white">{entry.member?.name ?? `Membro #${entry.memberId}`}</td><td className="p-3">{entry.position}</td><td className="p-3">{formatDate(entry.startDate)}</td><td className="p-3">{formatDate(entry.endDate)}</td><td className="p-3"><Badge variant={entry.isActive ? "default" : "outline"}>{entry.isActive ? "Atual" : "Encerrado"}</Badge></td><td className="max-w-[320px] p-3 text-slate-500">{entry.details || "—"}</td></tr>)}</tbody></table></div>
+              <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700"><th className="p-3">ID</th><th className="p-3">Membro</th><th className="p-3">Cargo</th><th className="p-3">Início</th><th className="p-3">Fim</th><th className="p-3">Estado</th><th className="p-3">Detalhes</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id} className="border-b border-slate-100 dark:border-slate-700/60"><td className="p-3"><RecordIdBadge id={entry.id} /></td><td className="p-3 font-medium text-slate-900 dark:text-white">{entry.member?.name ?? `Membro #${entry.memberId}`}</td><td className="p-3">{entry.position}</td><td className="p-3">{formatDate(entry.startDate)}</td><td className="p-3">{formatDate(entry.endDate)}</td><td className="p-3"><Badge variant={entry.isActive ? "default" : "outline"}>{entry.isActive ? "Atual" : "Encerrado"}</Badge></td><td className="max-w-[320px] p-3 text-slate-500">{entry.details || "—"}</td></tr>)}</tbody></table></div>
             )}
           </CardContent>
         </Card>

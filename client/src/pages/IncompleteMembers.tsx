@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { AlertTriangle, ArrowRight, UserRound } from "lucide-react";
 import { useLocation } from "wouter";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,7 @@ export default function IncompleteMembers() {
               <div key={member.id} className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="rounded-full bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"><UserRound className="h-5 w-5" /></div>
-                  <div className="min-w-0"><p className="truncate font-semibold text-slate-900 dark:text-white">{member.name}</p><div className="mt-2 flex flex-wrap gap-1.5">{missing.map((field) => <Badge key={field} variant="outline" className="border-amber-300 text-amber-800 dark:border-amber-700 dark:text-amber-200">{field}</Badge>)}</div></div>
+                  <div className="min-w-0"><RecordIdBadge id={member.id} /><p className="truncate font-semibold text-slate-900 dark:text-white">{member.name}</p><div className="mt-2 flex flex-wrap gap-1.5">{missing.map((field) => <Badge key={field} variant="outline" className="border-amber-300 text-amber-800 dark:border-amber-700 dark:text-amber-200">{field}</Badge>)}</div></div>
                 </div>
                 <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate("/members")}><ArrowRight className="mr-2 h-4 w-4" />Abrir cadastro</Button>
               </div>

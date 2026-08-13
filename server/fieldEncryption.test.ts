@@ -40,9 +40,12 @@ describe("field encryption", () => {
 
   it("returns null when the authenticated ciphertext is modified", () => {
     const encrypted = encryptSensitive("conteúdo protegido") as string;
-    const last = encrypted.slice(-1);
-    const replacement = last === "a" ? "b" : "a";
-    const tampered = `${encrypted.slice(0, -1)}${replacement}`;
+    const payload = encrypted.slice(DATA_ENCRYPTION_PREFIX.length);
+    const tamperIndex = 4;
+    const current = payload[tamperIndex];
+    const replacement = current === "A" ? "B" : "A";
+    const tamperedPayload = `${payload.slice(0, tamperIndex)}${replacement}${payload.slice(tamperIndex + 1)}`;
+    const tampered = `${DATA_ENCRYPTION_PREFIX}${tamperedPayload}`;
 
     expect(decryptSensitive(tampered)).toBeNull();
   });

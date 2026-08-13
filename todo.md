@@ -6435,3 +6435,15 @@
 - [x] Corrigir a sincronização entre cookie, hook local e navegação para o dashboard
 - [x] Adicionar teste de regressão para login aceite e validar desktop/mobile
 - [x] Executar typecheck, testes, build e guardar checkpoint da correcção
+
+## Sequências por submenu e login local exclusivo — 2026-08-13
+- [x] Mapear IDs actuais, sequências e referências para evitar alterar chaves primárias existentes
+- [x] Implementar numeração visível sequencial independente por submenu, iniciada em 1, preservando chaves internas e relações
+- [x] Remover o convite e o redireccionamento para login Google do arranque do site
+- [x] Adicionar testes para sequências por submenu e login local exclusivo
+- [x] Executar typecheck, testes, build, revisão responsiva e guardar checkpoint
+
+- [x] Finalizar badges de ID sequencial nos submenus financeiros de outras receitas e despesas e no modo móvel.
+- [x] Confirmar que as listas de todos os submenus exibem o ID próprio da tabela, iniciado em 1 quando a tabela está vazia.
+- [x] Auditar o bundle e os componentes legados para garantir que não há prompts ou textos de OAuth/Google na experiência de login local.
+- [x] Executar typecheck, testes Vitest, build e verificação visual responsiva antes do checkpoint.

@@ -25,9 +25,11 @@ export interface LocalAuthContextValue {
   refresh: () => Promise<void>;
 }
 
-async function readResponse(response: Response) {
+async function readResponse(response: Response): Promise<AuthResponse> {
   const payload = await response.json().catch(() => ({} as AuthResponse));
-  if (!response.ok) throw new Error(payload.error || payload.message || "Não foi possível concluir a operação.");
+  if (!response.ok) {
+    throw new Error(payload.error || payload.message || "Não foi possível concluir a operação.");
+  }
   return payload as AuthResponse;
 }
 
@@ -60,7 +62,7 @@ function useLocalAuthState(): LocalAuthContextValue {
     void refresh();
   }, [refresh]);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string): Promise<LoginResult> => {
     try {
       setLoading(true);
       setError(null);
@@ -71,11 +73,15 @@ function useLocalAuthState(): LocalAuthContextValue {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       const data = await readResponse(response);
-      if (data.twoFactorRequired) return { twoFactorRequired: true } satisfies LoginResult;
-      if (!data.user) throw new Error("Resposta de autenticação inválida.");
+      if (data.twoFactorRequired) {
+        return { twoFactorRequired: true };
+      }
+      if (!data.user) {
+        throw new Error("Resposta de autenticação inválida.");
+      }
       setUser(data.user);
       toast.success("Login realizado com sucesso!");
-      return { twoFactorRequired: false, user: data.user } satisfies LoginResult;
+      return { twoFactorRequired: false, user: data.user };
     } catch (cause) {
       const nextError = cause instanceof Error ? cause : new Error("Erro ao fazer login.");
       setError(nextError);
@@ -86,7 +92,7 @@ function useLocalAuthState(): LocalAuthContextValue {
     }
   }, []);
 
-  const verifyTwoFactor = useCallback(async (code: string) => {
+  const verifyTwoFactor = useCallback(async (code: string): Promise<LocalUser> => {
     try {
       setLoading(true);
       setError(null);
@@ -97,7 +103,9 @@ function useLocalAuthState(): LocalAuthContextValue {
         body: JSON.stringify({ code: code.trim() }),
       });
       const data = await readResponse(response);
-      if (!data.user) throw new Error("Resposta de autenticação inválida.");
+      if (!data.user) {
+        throw new Error("Resposta de autenticação inválida.");
+      }
       setUser(data.user);
       toast.success("Verificação em dois passos concluída.");
       return data.user;
@@ -140,13 +148,15 @@ function useLocalAuthState(): LocalAuthContextValue {
 
 const LocalAuthContext = createContext<LocalAuthContextValue | undefined>(undefined);
 
-export function LocalAuthProvider({ children }: { children: React.ReactNode }) {
+export function LocalAuthProvider({ children }: { children: import("react").ReactNode }) {
   const auth = useLocalAuthState();
   return createElement(LocalAuthContext.Provider, { value: auth }, children);
 }
 
-export function useLocalAuth() {
+export function useLocalAuth(): LocalAuthContextValue {
   const context = useContext(LocalAuthContext);
-  if (!context) throw new Error("useLocalAuth must be used within LocalAuthProvider");
+  if (!context) {
+    throw new Error("useLocalAuth must be used within LocalAuthProvider");
+  }
   return context;
 }
