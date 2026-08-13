@@ -201,6 +201,33 @@ export async function getGroupById(id: number) {
   return result.length > 0 ? result[0] : null;
 }
 
+export async function updateGroup(id: number, data: { name?: string; description?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(groups).set(data).where(eq(groups.id, id));
+}
+
+export async function ensureDefaultGroups() {
+  const db = await getDb();
+  if (!db) return;
+
+  const existing = await db.select().from(groups);
+  const required = [
+    { name: "Grupo A", criteria: "primary:A", description: "Grupo principal A" },
+    { name: "Grupo B", criteria: "primary:B", description: "Grupo principal B" },
+    { name: "Grupo C", criteria: "primary:C", description: "Grupo principal C" },
+    { name: "Grupo D", criteria: "primary:D", description: "Grupo principal D" },
+    { name: "Convidados", criteria: "special:guest", description: "Grupo para visitantes e convidados de atividades" },
+  ];
+
+  for (const req of required) {
+    const found = existing.find((g) => g.criteria === req.criteria || g.name.toLowerCase() === req.name.toLowerCase());
+    if (!found) {
+      await db.insert(groups).values(req);
+    }
+  }
+}
+
 // ============ ACTIVITIES ============
 
 export async function createActivity(data: typeof activities.$inferInsert) {

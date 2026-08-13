@@ -21,6 +21,8 @@ const emptyForm = {
   phoneTelecel: "",
   email: "",
   position: "",
+  isGuest: false,
+  groupId: undefined as number | undefined,
 };
 
 type MemberForm = typeof emptyForm;
@@ -31,6 +33,7 @@ export default function Members() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<MemberForm>(emptyForm);
   const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
+  const { data: groups } = trpc.groups.list.useQuery();
   const createMemberMutation = trpc.members.create.useMutation({
     onSuccess: () => {
       toast.success("Membro criado com sucesso!");
@@ -80,6 +83,7 @@ export default function Members() {
       name: formData.name.trim(),
       birthDate: formData.birthDate || undefined,
       email: formData.email.trim() || undefined,
+      groupId: formData.groupId ? Number(formData.groupId) : undefined,
     };
     if (editingId) updateMemberMutation.mutate({ id: editingId, data: normalized });
     else createMemberMutation.mutate(normalized);
@@ -100,6 +104,8 @@ export default function Members() {
       phoneTelecel: member.phoneTelecel ?? "",
       email: member.email ?? "",
       position: member.position ?? "",
+      isGuest: member.isGuest ?? false,
+      groupId: member.groupId ?? undefined,
     });
     setShowForm(true);
   };
@@ -140,6 +146,17 @@ export default function Members() {
               <Input placeholder="Telefone Orange" value={formData.phoneOrange} onChange={(event) => setFormData({ ...formData, phoneOrange: event.target.value })} />
               <Input placeholder="Telefone Telecel" value={formData.phoneTelecel} onChange={(event) => setFormData({ ...formData, phoneTelecel: event.target.value })} />
               <Input type="email" placeholder="Email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} />
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Grupo de integração (Opcional - Distribuição automática por defeito)</label>
+                <select value={formData.groupId || ""} onChange={(event) => setFormData({ ...formData, groupId: event.target.value ? Number(event.target.value) : undefined })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                  <option value="">Distribuir automaticamente / Atribuir grupo equilibrado</option>
+                  {(groups ?? []).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" id="isGuestCheckbox" checked={formData.isGuest} onChange={(event) => setFormData({ ...formData, isGuest: event.target.checked })} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                <label htmlFor="isGuestCheckbox" className="text-sm font-medium text-slate-700 dark:text-slate-300">Convidado / Visitante (Encaminhar para o grupo de convidados)</label>
+              </div>
               <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeForm}>Cancelar</Button><Button type="submit" disabled={isSaving} className="bg-emerald-600 text-white hover:bg-emerald-700">{isSaving ? "A guardar…" : editingId ? "Guardar alterações" : "Guardar membro"}</Button></div>
             </form>
           </motion.div>
@@ -150,7 +167,7 @@ export default function Members() {
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (
             <motion.div key={member.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
-              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><h3 className="font-semibold text-slate-900 dark:text-white">{member.name}</h3><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"}</p>{(member.phoneOrange || member.phoneTelecel) && <p className="mt-1 text-xs text-slate-500">{member.phoneOrange || member.phoneTelecel}</p>}</div><div className="flex shrink-0 gap-1"><Button size="icon" variant="ghost" aria-label={`Detalhes de ${member.name}`} onClick={() => toast.info(`${member.name}${member.email ? ` · ${member.email}` : ""}`)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label={`Editar ${member.name}`} onClick={() => openEdit(member)}><Edit2 className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label={`Eliminar ${member.name}`} disabled={deleteMemberMutation.isPending} onClick={() => removeMember(member.id, member.name)}><Trash2 className="h-4 w-4 text-red-500" /></Button></div></div></Card>
+              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><h3 className="font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Grupo: {(groups ?? []).find((g) => g.id === member.groupId)?.name || "Geral"}</p>{(member.phoneOrange || member.phoneTelecel) && <p className="mt-1 text-xs text-slate-500">{member.phoneOrange || member.phoneTelecel}</p>}</div><div className="flex shrink-0 gap-1"><Button size="icon" variant="ghost" aria-label={`Detalhes de ${member.name}`} onClick={() => toast.info(`${member.name}${member.email ? ` · ${member.email}` : ""}`)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label={`Editar ${member.name}`} onClick={() => openEdit(member)}><Edit2 className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label={`Eliminar ${member.name}`} disabled={deleteMemberMutation.isPending} onClick={() => removeMember(member.id, member.name)}><Trash2 className="h-4 w-4 text-red-500" /></Button></div></div></Card>
             </motion.div>
           )) : <div className="py-8 text-center text-slate-500">Nenhum membro encontrado.</div>}
         </motion.div>

@@ -82,17 +82,22 @@ const membersRouter = router({
         position: z.string().optional(),
         isGuest: z.boolean().default(false),
         guestOf: z.number().optional(),
+        groupId: z.number().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const groupId = await assignGroupAutomatically(input.sex);
+      await db.ensureDefaultGroups();
+      let groupId = input.groupId;
+      if (!groupId) {
+        groupId = await assignGroupAutomatically(input.isGuest);
+      }
 
       const result = await db.createMember({
         ...input,
         groupId,
         birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
       });
-      await writeAudit(ctx, "criar", "member", undefined, { name: input.name, isGuest: input.isGuest });
+      await writeAudit(ctx, "criar", "member", undefined, { name: input.name, isGuest: input.isGuest, groupId });
       return result;
     }),
 
@@ -146,6 +151,7 @@ const membersRouter = router({
 
 const groupsRouter = router({
   list: protectedProcedure.query(async () => {
+    await db.ensureDefaultGroups();
     return await db.getAllGroups();
   }),
 
@@ -153,6 +159,15 @@ const groupsRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getGroupById(input.id);
+    }),
+
+  update: liderProcedure
+    .input(z.object({ id: z.number(), name: z.string().trim().min(1), description: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateGroup(id, data);
+      await writeAudit(ctx, "editar", "group", id, data);
+      return result;
     }),
 });
 
@@ -532,26 +547,32 @@ const transfersRouter = router({
 
 // ============ HELPER FUNCTIONS ============
 
-async function assignGroupAutomatically(sex: "M" | "F"): Promise<number | null> {
-  const groups = await db.getAllGroups();
+async function assignGroupAutomatically(isGuest: boolean): Promise<number | undefined> {
+  await db.ensureDefaultGroups();
+  const allGroups = await db.getAllGroups();
 
-  // Find or create group based on sex
-  let group = groups.find((g) => g.criteria === `sex:${sex}`);
-
-  if (!group) {
-    const groupName = sex === "M" ? "Homens" : "Mulheres";
-    const result = await db.createGroup({
-      name: groupName,
-      criteria: `sex:${sex}`,
-      description: `Grupo automático de ${groupName.toLowerCase()}`,
-    });
-
-    // Get the created group
-    const allGroups = await db.getAllGroups();
-    group = allGroups.find((g) => g.criteria === `sex:${sex}`);
+  if (isGuest) {
+    const guestGroup = allGroups.find((g) => g.criteria === "special:guest" || g.name.toLowerCase().includes("convidad"));
+    if (guestGroup) return guestGroup.id;
   }
 
-  return group?.id || null;
+  // Pick one of the 4 primary groups (criteria primary:A, primary:B, primary:C, primary:D) or balanced by member count
+  const primaryGroups = allGroups.filter((g) => g.criteria?.startsWith("primary:"));
+  if (primaryGroups.length === 0) return allGroups[0]?.id;
+
+  // Balance by finding the group with fewest members
+  let targetGroup = primaryGroups[0];
+  let minCount = Infinity;
+
+  for (const group of primaryGroups) {
+    const membersInGroup = await db.getMembersByGroup(group.id);
+    if (membersInGroup.length < minCount) {
+      minCount = membersInGroup.length;
+      targetGroup = group;
+    }
+  }
+
+  return targetGroup?.id;
 }
 
 // ============ BACKUP ROUTER ============
