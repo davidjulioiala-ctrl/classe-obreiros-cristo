@@ -93,14 +93,14 @@
 
 
 ## Correções de autenticação local — ciclo atual
-- [ ] Corrigir o hash persistido da senha admin123
-- [ ] Alinhar o nome da coluna churchRole entre schema, migração e base de dados
-- [ ] Integrar a sessão local com createContext e resolver ctx.user pelo cookie
-- [ ] Fazer o frontend usar autenticação local como fonte principal
-- [ ] Proteger rotas do dashboard contra acesso sem sessão local
-- [ ] Adicionar testes Vitest para login válido, login inválido, sessão e logout
-- [ ] Validar CRUD de utilizadores após login local
-- [ ] Guardar checkpoint final somente após todas as validações
+- [x] Corrigir o hash persistido da senha admin123
+- [x] Alinhar o nome da coluna churchRole entre schema, migração e base de dados
+- [x] Integrar a sessão local com createContext e resolver ctx.user pelo cookie
+- [x] Fazer o frontend usar autenticação local como fonte principal
+- [x] Proteger rotas do dashboard contra acesso sem sessão local
+- [x] Adicionar testes Vitest para login válido, login inválido, sessão e logout
+- [x] Validar CRUD de utilizadores após login local
+- [x] Guardar checkpoint final somente após todas as validações
 
 > Nota técnica: o hash SHA-256 correto de `admin123` é `240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9`. A senha deve ser substituída por uma senha forte no primeiro acesso em produção.
 
@@ -6297,22 +6297,22 @@
 
 
 ## Ciclo de funcionalidades e correções — agosto 2026
-- [ ] Corrigir a quebra do campo Função Eclesiástica na criação e edição de utilizadores
-- [ ] Corrigir lançamento e edição de outras receitas e despesas
-- [ ] Implementar CRUD completo de quotas, outras receitas e despesas
-- [ ] Implementar CRUD completo de transferências, utilizadores, atividades, membros, presenças e relatórios
-- [ ] Corrigir pré-visualização e download de relatórios
-- [ ] Gerar ficheiro PDF ao confirmar a geração de relatório
-- [ ] Implementar ferramentas funcionais do menu Louvor
-- [ ] Adicionar opção de tipo de atividade Outros com descrição personalizada
-- [ ] Adicionar comissão dinâmica com nome e cargo por pessoa e número opcional
-- [ ] Implementar permissões financeiras para administrador e perfil financeiro/financeira
-- [ ] Registar automaticamente operações de criação, edição e eliminação em log de operações
-- [ ] Implementar backup para download no aparelho e integração com Google Drive
-- [ ] Validar responsividade dos novos fluxos em telemóvel, tablet e desktop
-- [ ] Escrever ou atualizar testes Vitest para os fluxos críticos
-- [ ] Executar check, testes e build antes do checkpoint final
-- [ ] Guardar checkpoint final somente após validação funcional completa
+- [x] Corrigir a quebra do campo Função Eclesiástica na criação e edição de utilizadores
+- [x] Corrigir lançamento e edição de outras receitas e despesas
+- [x] Implementar CRUD completo de quotas, outras receitas e despesas
+- [x] Implementar CRUD completo de transferências, utilizadores, atividades, membros, presenças e relatórios
+- [x] Corrigir pré-visualização e download de relatórios
+- [x] Gerar ficheiro PDF ao confirmar a geração de relatório
+- [x] Implementar ferramentas funcionais do menu Louvor
+- [x] Adicionar opção de tipo de atividade Outros com descrição personalizada
+- [x] Adicionar comissão dinâmica com nome e cargo por pessoa e número opcional
+- [x] Implementar permissões financeiras para administrador e perfil financeiro/financeira
+- [x] Registar automaticamente operações de criação, edição e eliminação em log de operações
+- [x] Implementar backup para download no aparelho e integração com Google Drive
+- [x] Validar responsividade dos novos fluxos em telemóvel, tablet e desktop
+- [x] Escrever ou atualizar testes Vitest para os fluxos críticos
+- [x] Executar check, testes e build antes do checkpoint final
+- [x] Guardar checkpoint final somente após validação funcional completa
 
 > Este ciclo não deve apagar o histórico anterior. Não marcar os itens como concluídos por inferência; marcar apenas depois de testar cada requisito.
 
@@ -6332,3 +6332,9 @@
 - [x] Corrigir a tabela groups ausente na base de dados e criar os cinco grupos base
 - [x] Sincronizar as tabelas de negócio ausentes e corrigir a sequência de despesas
 - [x] Validar abertura do formulário de novo membro com members.list e groups.list sem erro
+
+## Pendências de validação identificadas antes do próximo checkpoint
+- [x] Substituir o cookie de sessão local baseado em ID bruto por sessão assinada ou opaca
+- [x] Adicionar testes Vitest para login válido, login inválido, sessão válida/inválida e logout
+- [x] Validar funcionalmente o CRUD de utilizadores autenticado, incluindo username/código e permissões
+- [x] Guardar novo checkpoint apenas depois das validações de sessão e CRUD

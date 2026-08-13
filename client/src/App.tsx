@@ -18,11 +18,11 @@ import AuditAndBackup from "@/pages/AuditAndBackup";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
 
 function Router() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useLocalAuth();
 
   if (loading) {
     return (

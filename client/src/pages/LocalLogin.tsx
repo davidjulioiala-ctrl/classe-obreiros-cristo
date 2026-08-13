@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 
 export default function LocalLogin() {
@@ -13,7 +12,6 @@ export default function LocalLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [, navigate] = useLocation();
   const { login } = useLocalAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -28,7 +26,8 @@ export default function LocalLogin() {
 
     try {
       await login(username, password);
-      navigate("/dashboard");
+      // Recarrega a aplicação para que o router global valide o cookie local recém-criado.
+      window.location.assign("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
     } finally {

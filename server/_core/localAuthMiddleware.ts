@@ -2,14 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import { parse } from "cookie";
 import { getUserById } from "../auth";
 import { COOKIE_NAME } from "@shared/const";
+import { verifyLocalSessionToken } from "./localSession";
 
 function getSessionUserId(req: Request): number | null {
   const rawCookies = req.headers.cookie ?? "";
   const cookies = parse(rawCookies);
-  const value = cookies[COOKIE_NAME];
-  if (!value) return null;
-  const userId = Number.parseInt(value, 10);
-  return Number.isInteger(userId) && userId > 0 ? userId : null;
+  const session = verifyLocalSessionToken(cookies[COOKIE_NAME]);
+  return session?.userId ?? null;
 }
 
 export async function localAuthMiddleware(
@@ -48,9 +47,8 @@ export async function localAuthMiddleware(
 export async function getLocalUserFromRequest(req: Request) {
   const rawCookies = req.headers.cookie ?? "";
   const cookies = parse(rawCookies);
-  const value = cookies[COOKIE_NAME];
-  const userId = value ? Number.parseInt(value, 10) : NaN;
-  if (!Number.isInteger(userId) || userId <= 0) return null;
-  const user = await getUserById(userId);
+  const session = verifyLocalSessionToken(cookies[COOKIE_NAME]);
+  if (!session) return null;
+  const user = await getUserById(session.userId);
   return user && user.isActive ? user : null;
 }

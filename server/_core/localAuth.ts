@@ -3,6 +3,7 @@ import { authenticateUser, getUserById } from "../auth";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { localAuthMiddleware } from "./localAuthMiddleware";
+import { createLocalSessionToken } from "./localSession";
 
 export function registerLocalAuthRoutes(app: Express) {
   // Local login endpoint
@@ -26,9 +27,9 @@ export function registerLocalAuthRoutes(app: Express) {
         });
       }
 
-      // Set session cookie
+      // Set a signed, expiring session cookie; never expose an unsigned user id.
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, user.id.toString(), cookieOptions);
+      res.cookie(COOKIE_NAME, createLocalSessionToken(user.id), cookieOptions);
 
       return res.json({
         success: true,
