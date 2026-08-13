@@ -1,5 +1,4 @@
 import { ReactNode, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
