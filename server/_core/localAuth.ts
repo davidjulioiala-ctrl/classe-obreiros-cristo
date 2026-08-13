@@ -51,6 +51,11 @@ export function registerLocalAuthRoutes(app: Express) {
     }
   });
 
+  // Activity endpoint: validates the idle timeout and refreshes the signed session cookie.
+  app.post("/api/auth/activity", localAuthMiddleware, (_req: Request, res: Response) => {
+    return res.json({ success: true });
+  });
+
   // Get current user endpoint
   app.get("/api/auth/me", localAuthMiddleware, (req: Request, res: Response) => {
     try {

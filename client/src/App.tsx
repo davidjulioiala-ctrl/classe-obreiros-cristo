@@ -18,6 +18,7 @@ import AuditAndBackup from "@/pages/AuditAndBackup";
 import MemberHistoryPage from "@/pages/MemberHistory";
 import IncompleteMembers from "@/pages/IncompleteMembers";
 import Materials from "@/pages/Materials";
+import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -25,7 +26,7 @@ import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
 
 function Router() {
-  const { user, loading } = useLocalAuth();
+  const { user, loading, logout } = useLocalAuth();
 
   if (loading) {
     return (
@@ -49,7 +50,9 @@ function Router() {
   }
 
   return (
-    <Switch>
+    <>
+      <SessionInactivityGuard user={user} logout={logout} />
+      <Switch>
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/members/incomplete"} component={IncompleteMembers} />
       <Route path={"/members"} component={Members} />
@@ -69,7 +72,8 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       <Route path={"/"} component={Dashboard} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </>
   );
 }
 

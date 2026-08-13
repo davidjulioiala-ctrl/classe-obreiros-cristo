@@ -15,7 +15,7 @@ export async function createContext(
   let user: User | null = null;
 
   try {
-    user = await getLocalUserFromRequest(opts.req);
+    user = await getLocalUserFromRequest(opts.req, opts.res);
   } catch {
     user = null;
   }

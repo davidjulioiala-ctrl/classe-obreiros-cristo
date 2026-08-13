@@ -2,13 +2,18 @@ import { Request, Response, NextFunction } from "express";
 import { parse } from "cookie";
 import { getUserById } from "../auth";
 import { COOKIE_NAME } from "@shared/const";
-import { verifyLocalSessionToken } from "./localSession";
+import { getSessionCookieOptions } from "./cookies";
+import { refreshLocalSessionToken, verifyLocalSessionToken } from "./localSession";
 
-function getSessionUserId(req: Request): number | null {
+function getLocalSession(req: Request) {
   const rawCookies = req.headers.cookie ?? "";
   const cookies = parse(rawCookies);
-  const session = verifyLocalSessionToken(cookies[COOKIE_NAME]);
-  return session?.userId ?? null;
+  return verifyLocalSessionToken(cookies[COOKIE_NAME]);
+}
+
+function refreshSessionCookie(req: Request, res: Response, session: ReturnType<typeof verifyLocalSessionToken>) {
+  if (!session) return;
+  res.cookie(COOKIE_NAME, refreshLocalSessionToken(session), getSessionCookieOptions(req));
 }
 
 export async function localAuthMiddleware(
@@ -17,16 +22,17 @@ export async function localAuthMiddleware(
   next: NextFunction,
 ) {
   try {
-    const userId = getSessionUserId(req);
-    if (!userId) {
+    const session = getLocalSession(req);
+    if (!session) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const user = await getUserById(userId);
+    const user = await getUserById(session.userId);
     if (!user || !user.isActive) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    refreshSessionCookie(req, res, session);
     (req as Request & { localUser?: unknown }).localUser = {
       id: user.id,
       username: user.username,
@@ -44,11 +50,11 @@ export async function localAuthMiddleware(
   }
 }
 
-export async function getLocalUserFromRequest(req: Request) {
-  const rawCookies = req.headers.cookie ?? "";
-  const cookies = parse(rawCookies);
-  const session = verifyLocalSessionToken(cookies[COOKIE_NAME]);
+export async function getLocalUserFromRequest(req: Request, res?: Response) {
+  const session = getLocalSession(req);
   if (!session) return null;
   const user = await getUserById(session.userId);
-  return user && user.isActive ? user : null;
+  if (!user || !user.isActive) return null;
+  if (res) refreshSessionCookie(req, res, session);
+  return user;
 }

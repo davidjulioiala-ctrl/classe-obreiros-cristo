@@ -6383,4 +6383,10 @@
 - [x] Apresentar o ID automático em cada registo de Quotas, Outras receitas e Despesas.
 - [x] Adicionar campo de pesquisa aos submenus Quotas, Outras receitas e Despesas.
 - [x] Tornar todos os campos e colunas do submenu Quotas visíveis e responsivos.
-- [ ] Validar pesquisa, IDs, responsividade, testes e build do módulo financeiro.
+- [x] Validar pesquisa, IDs, responsividade, testes e build do módulo financeiro.
+
+## Fase 14: Segurança de Sessão (Inatividade de 20 minutos)
+- [x] Configurar validade por inatividade de 20 minutos (com aviso aos 18 minutos) no servidor e no cliente
+- [x] Implementar verificação de inatividade no middleware de autenticação
+- [x] Adicionar componente frontend de aviso de inatividade e encerramento de sessão
+- [x] Criar testes unitários para validar a rejeição de sessões inativas após 20 minutos

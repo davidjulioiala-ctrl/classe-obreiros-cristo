@@ -1,11 +1,15 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { ENV } from "./env";
 
-const SESSION_VERSION = "v1";
+const SESSION_VERSION = "v2";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_IDLE_TIMEOUT_SECONDS = 60 * 20;
+const SESSION_WARNING_SECONDS = 60 * 18;
 
-type SessionPayload = {
+export type SessionPayload = {
   userId: number;
+  issuedAt: number;
+  lastActivityAt: number;
   expiresAt: number;
 };
 
@@ -26,31 +30,46 @@ export function createLocalSessionToken(userId: number, now = Date.now()): strin
   }
   const issuedAt = Math.floor(now / 1000);
   const expiresAt = issuedAt + SESSION_TTL_SECONDS;
-  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${expiresAt}`;
+  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${issuedAt}.${expiresAt}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function refreshLocalSessionToken(session: SessionPayload, now = Date.now()): string {
+  const lastActivityAt = Math.floor(now / 1000);
+  const payload = `${SESSION_VERSION}.${session.userId}.${session.issuedAt}.${lastActivityAt}.${session.expiresAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
 export function verifyLocalSessionToken(token: string | undefined, now = Date.now()): SessionPayload | null {
   if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 5 || parts[0] !== SESSION_VERSION) return null;
+  if (parts.length !== 6 || parts[0] !== SESSION_VERSION) return null;
 
-  const [, userIdValue, issuedAtValue, expiresAtValue, signature] = parts;
+  const [, userIdValue, issuedAtValue, lastActivityValue, expiresAtValue, signature] = parts;
   const userId = Number.parseInt(userIdValue, 10);
   const issuedAt = Number.parseInt(issuedAtValue, 10);
+  const lastActivityAt = Number.parseInt(lastActivityValue, 10);
   const expiresAt = Number.parseInt(expiresAtValue, 10);
-  if (![userId, issuedAt, expiresAt].every(Number.isInteger) || userId <= 0 || issuedAt <= 0 || expiresAt <= issuedAt) {
+  if (![userId, issuedAt, lastActivityAt, expiresAt].every(Number.isInteger) || userId <= 0 || issuedAt <= 0 || lastActivityAt < issuedAt || expiresAt <= issuedAt) {
     return null;
   }
 
-  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${expiresAt}`;
+  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${lastActivityAt}.${expiresAt}`;
   const expectedSignature = sign(payload);
   const actual = Buffer.from(signature);
   const expected = Buffer.from(expectedSignature);
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
-  if (Math.floor(now / 1000) >= expiresAt) return null;
 
-  return { userId, expiresAt };
+  const nowSeconds = Math.floor(now / 1000);
+  if (nowSeconds >= expiresAt || nowSeconds - lastActivityAt >= SESSION_IDLE_TIMEOUT_SECONDS) return null;
+
+  return { userId, issuedAt, lastActivityAt, expiresAt };
+}
+
+export function getSessionIdleSeconds(session: SessionPayload, now = Date.now()) {
+  return Math.max(0, Math.floor(now / 1000) - session.lastActivityAt);
 }
 
 export const LOCAL_SESSION_TTL_SECONDS = SESSION_TTL_SECONDS;
+export const LOCAL_SESSION_IDLE_TIMEOUT_SECONDS = SESSION_IDLE_TIMEOUT_SECONDS;
+export const LOCAL_SESSION_WARNING_SECONDS = SESSION_WARNING_SECONDS;
