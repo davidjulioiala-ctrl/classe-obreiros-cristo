@@ -179,12 +179,25 @@ export default function Members() {
               <Input placeholder="Nome completo" value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
               <select value={formData.sex} onChange={(event) => setFormData({ ...formData, sex: event.target.value as "M" | "F" })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"><option value="M">Masculino</option><option value="F">Feminino</option></select>
               <Input type="date" value={formData.birthDate} onChange={(event) => setFormData({ ...formData, birthDate: event.target.value })} />
-              <select value={formData.position || "Membro"} onChange={(event) => setFormData({ ...formData, position: event.target.value })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
-                <option value="Líder">Líder</option>
-                <option value="Oficial">Oficial</option>
-                <option value="Membro de Ministério de Louvor">Membro de Ministério de Louvor</option>
-                <option value="Convidado">Convidado</option>
-              </select>
+              <div className="flex flex-col gap-2">
+                <select value={["Líder", "Oficial", "Membro de Ministério de Louvor", "Convidado"].includes(formData.position) ? formData.position : (formData.position ? "Outros" : "Líder")} onChange={(event) => {
+                  const val = event.target.value;
+                  if (val === "Outros") {
+                    setFormData({ ...formData, position: "" });
+                  } else {
+                    setFormData({ ...formData, position: val });
+                  }
+                }} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                  <option value="Líder">Líder</option>
+                  <option value="Oficial">Oficial</option>
+                  <option value="Membro de Ministério de Louvor">Membro de Ministério de Louvor</option>
+                  <option value="Convidado">Convidado</option>
+                  <option value="Outros">Outros (Personalizado)</option>
+                </select>
+                {(!["Líder", "Oficial", "Membro de Ministério de Louvor", "Convidado"].includes(formData.position) || formData.position === "") && (
+                  <Input placeholder="Escreva o cargo personalizado" value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })} required />
+                )}
+              </div>
               <Input placeholder="Pai" value={formData.father} onChange={(event) => setFormData({ ...formData, father: event.target.value })} />
               <Input placeholder="Mãe" value={formData.mother} onChange={(event) => setFormData({ ...formData, mother: event.target.value })} />
               <Input placeholder="Nacionalidade" value={formData.nationality} onChange={(event) => setFormData({ ...formData, nationality: event.target.value })} />

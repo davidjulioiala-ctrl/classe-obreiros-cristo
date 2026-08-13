@@ -44,7 +44,6 @@ const menuItems: MenuItem[] = [
   { icon: FileText, label: "Relatórios", href: "/reports" },
   { icon: Music, label: "Louvor", href: "/louvor" },
   { icon: Settings, label: "Configurações", href: "/settings" },
-  { icon: Users, label: "Utilizadores", href: "/users" },
   { icon: ShieldCheck, label: "Auditoria e backup", href: "/audit-backup" },
 ];
 

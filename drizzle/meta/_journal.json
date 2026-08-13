@@ -50,6 +50,13 @@
       "when": 1786623922278,
       "tag": "0006_wise_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1786624952153,
+      "tag": "0007_hard_terrax",
+      "breakpoints": true
     }
   ]
 }

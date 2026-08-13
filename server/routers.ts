@@ -466,6 +466,28 @@ const reportsRouter = router({
 
 const auditRouter = router({
   list: liderProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(({ input }) => db.listAuditLogs(input?.limit)),
+  update: liderProcedure.input(z.object({ id: z.number(), action: z.string().optional(), entityType: z.string().optional(), details: z.string().optional() })).mutation(async ({ input, ctx }) => {
+    const { id, ...data } = input;
+    await db.updateAuditLog(id, data);
+    await writeAudit(ctx, "atualizar", "audit_log", id, data);
+    return { success: true };
+  }),
+  delete: liderProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    await db.deleteAuditLog(input.id);
+    await writeAudit(ctx, "eliminar", "audit_log", input.id);
+    return { success: true };
+  }),
+});
+
+const settingsRouter = router({
+  get: protectedProcedure.input(z.object({ keyName: z.string() })).query(async ({ input }) => {
+    return await db.getAppSetting(input.keyName);
+  }),
+  set: liderProcedure.input(z.object({ keyName: z.string(), keyValue: z.string() })).mutation(async ({ input, ctx }) => {
+    await db.setAppSetting(input.keyName, input.keyValue);
+    await writeAudit(ctx, "atualizar", "settings", undefined, { keyName: input.keyName });
+    return { success: true };
+  }),
 });
 
 // ============ TRANSFERS ROUTER ============
@@ -659,6 +681,7 @@ export const appRouter = router({
   audit: auditRouter,
   backup: backupRouter,
   louvor: louvorRouter,
+  settings: settingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

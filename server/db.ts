@@ -16,6 +16,7 @@ import {
   auditLog,
   louvorMembers,
   louvorScales,
+  appSettings,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -718,4 +719,36 @@ export async function deleteLouvorScale(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.delete(louvorScales).where(eq(louvorScales.id, id));
+}
+
+// ============ APP SETTINGS & EDITABLE AUDIT ============
+
+export async function getAppSetting(keyName: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const res = await db.select().from(appSettings).where(eq(appSettings.keyName, keyName)).limit(1);
+  return res[0]?.keyValue ?? null;
+}
+
+export async function setAppSetting(keyName: string, keyValue: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getAppSetting(keyName);
+  if (existing !== null) {
+    return await db.update(appSettings).set({ keyValue }).where(eq(appSettings.keyName, keyName));
+  } else {
+    return await db.insert(appSettings).values({ keyName, keyValue });
+  }
+}
+
+export async function updateAuditLog(id: number, data: { action?: string; entityType?: string; details?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(auditLog).set(data).where(eq(auditLog.id, id));
+}
+
+export async function deleteAuditLog(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(auditLog).where(eq(auditLog.id, id));
 }

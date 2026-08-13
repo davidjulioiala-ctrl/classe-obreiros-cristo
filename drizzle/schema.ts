@@ -238,10 +238,24 @@ export const auditLog = mysqlTable("auditLog", {
   entityId: int("entityId"),
   details: text("details"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
+
+/**
+ * App Settings - persistent configuration for organization, notifications, and appearance
+ */
+export const appSettings = mysqlTable("appSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  keyName: varchar("keyName", { length: 100 }).notNull().unique(),
+  keyValue: text("keyValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;
 
 /**
  * Louvor Members - dedicated members for the music ministry
