@@ -29,12 +29,14 @@ interface DashboardLayoutCustomProps {
   children: ReactNode;
 }
 
-type MenuItem = {
+export type MenuItem = {
   icon: typeof Home;
   label: string;
   href: string;
   nested?: boolean;
 };
+
+export type NavigationUser = { role?: string | null; churchRole?: string | null } | null | undefined;
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
@@ -53,6 +55,19 @@ const menuItems: MenuItem[] = [
   { icon: ShieldCheck, label: "Auditoria e backup", href: "/audit-backup" },
 ];
 
+export function getVisibleMenuItems(user: NavigationUser) {
+  return menuItems.filter((item) => {
+    if (item.href === "/audit-backup" && user?.role !== "admin") return false;
+    if (user?.churchRole === "oficial") {
+      return !["Finanças", "Transferências", "Utilizadores"].includes(item.label);
+    }
+    if (user?.churchRole === "louvor") {
+      return ["Dashboard", "Membros", "Louvor"].includes(item.label);
+    }
+    return true;
+  });
+}
+
 export default function DashboardLayoutCustom({ children }: DashboardLayoutCustomProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -60,16 +75,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const { user, logout } = useLocalAuth();
   const [location, navigate] = useLocation();
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    if (item.href === "/audit-backup" && user?.role !== "admin") return false;
-    if (user?.churchRole === "oficial") {
-      return !["Finanças", "Transferências", "Configurações", "Utilizadores"].includes(item.label);
-    }
-    if (user?.churchRole === "louvor") {
-      return ["Dashboard", "Membros", "Louvor"].includes(item.label);
-    }
-    return true;
-  });
+  const filteredMenuItems = getVisibleMenuItems(user);
 
   const goTo = (href: string) => {
     setMobileSidebarOpen(false);

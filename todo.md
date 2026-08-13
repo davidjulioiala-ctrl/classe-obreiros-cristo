@@ -6606,3 +6606,9 @@
 - [x] Garantir que o PDF de teste respeita nome, logótipo, alinhamento e tamanho atuais.
 - [x] Validar autenticação, testes, build e publicação.
 
+
+## Fase 12: Restauro do Menu Configurações — 2026-08-13
+- [x] Garantir que o menu Configurações aparece para perfis autorizados, incluindo oficial quando aplicável.
+- [x] Validar a rota /settings e manter as funcionalidades existentes de branding PDF.
+- [x] Executar testes, build e publicação da correção de navegação.
+
