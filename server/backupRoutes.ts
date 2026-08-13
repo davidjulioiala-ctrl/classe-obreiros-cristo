@@ -22,8 +22,8 @@ export function registerBackupRoutes(app: Express) {
         const response = await fetch(signedUrl);
         if (!response.ok) return res.status(502).json({ error: "Não foi possível obter o ficheiro do backup." });
         const bytes = Buffer.from(await response.arrayBuffer());
-        res.setHeader("Content-Type", "application/json");
-        res.setHeader("Content-Disposition", `attachment; filename=backup-${backup.version.id}.json`);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename=backup-${backup.version.id}.json.enc`);
         return res.send(bytes);
       } catch (error) {
         console.error("[BackupDownload]", error);

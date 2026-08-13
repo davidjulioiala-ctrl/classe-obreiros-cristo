@@ -26,8 +26,80 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storageGetSignedUrl, storagePut } from "./storage";
+import { decryptFields, decryptJson, encryptFields, encryptJson } from "./_core/fieldEncryption";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+
+const MEMBER_PRIVATE_FIELDS = ["father", "mother", "nationality", "region", "residence", "phoneOrange", "phoneTelecel", "email"] as const;
+const ACTIVITY_PRIVATE_FIELDS = ["speakerPhoneOrange", "speakerPhoneTelecel", "speakerResidence"] as const;
+const COMMISSION_PRIVATE_FIELDS = ["phone"] as const;
+const LOUVOR_PRIVATE_FIELDS = ["phone", "email"] as const;
+const MATERIAL_PRIVATE_FIELDS = ["custodian", "location", "notes"] as const;
+const QUOTA_PRIVATE_FIELDS = ["responsibleName"] as const;
+const INCOME_PRIVATE_FIELDS = ["description", "responsibleName"] as const;
+const EXPENSE_PRIVATE_FIELDS = ["designation", "responsibleName"] as const;
+const TRANSFER_PRIVATE_FIELDS = ["toChurch", "reason"] as const;
+
+function protect<T>(data: T, fields: readonly string[]) {
+  return encryptFields(data as Record<string, unknown>, fields) as T;
+}
+
+function reveal<T>(data: T, fields: readonly string[]) {
+  return decryptFields(data as Record<string, unknown>, fields) as T;
+}
+
+export async function encryptExistingSensitiveData() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const counts = { members: 0, activities: 0, commissionMembers: 0, quotas: 0, otherIncome: 0, expenses: 0, transfers: 0, materials: 0, louvorMembers: 0 };
+
+  const memberRows = await db.select().from(members);
+  for (const row of memberRows) {
+    await db.update(members).set(protect(row as Record<string, unknown>, MEMBER_PRIVATE_FIELDS) as typeof row).where(eq(members.id, row.id));
+    counts.members++;
+  }
+  const activityRows = await db.select().from(activities);
+  for (const row of activityRows) {
+    await db.update(activities).set(protect(row as Record<string, unknown>, ACTIVITY_PRIVATE_FIELDS) as typeof row).where(eq(activities.id, row.id));
+    counts.activities++;
+  }
+  const commissionRows = await db.select().from(commissionMembers);
+  for (const row of commissionRows) {
+    await db.update(commissionMembers).set(protect(row as Record<string, unknown>, COMMISSION_PRIVATE_FIELDS) as typeof row).where(eq(commissionMembers.id, row.id));
+    counts.commissionMembers++;
+  }
+  const quotaRows = await db.select().from(quotas);
+  for (const row of quotaRows) {
+    await db.update(quotas).set(protect(row as Record<string, unknown>, QUOTA_PRIVATE_FIELDS) as typeof row).where(eq(quotas.id, row.id));
+    counts.quotas++;
+  }
+  const incomeRows = await db.select().from(otherIncome);
+  for (const row of incomeRows) {
+    await db.update(otherIncome).set(protect(row as Record<string, unknown>, INCOME_PRIVATE_FIELDS) as typeof row).where(eq(otherIncome.id, row.id));
+    counts.otherIncome++;
+  }
+  const expenseRows = await db.select().from(expenses);
+  for (const row of expenseRows) {
+    await db.update(expenses).set(protect(row as Record<string, unknown>, EXPENSE_PRIVATE_FIELDS) as typeof row).where(eq(expenses.id, row.id));
+    counts.expenses++;
+  }
+  const transferRows = await db.select().from(transfers);
+  for (const row of transferRows) {
+    await db.update(transfers).set(protect(row as Record<string, unknown>, TRANSFER_PRIVATE_FIELDS) as typeof row).where(eq(transfers.id, row.id));
+    counts.transfers++;
+  }
+  const materialRows = await db.select().from(materials);
+  for (const row of materialRows) {
+    await db.update(materials).set(protect(row as Record<string, unknown>, MATERIAL_PRIVATE_FIELDS) as typeof row).where(eq(materials.id, row.id));
+    counts.materials++;
+  }
+  const louvorRows = await db.select().from(louvorMembers);
+  for (const row of louvorRows) {
+    await db.update(louvorMembers).set(protect(row as Record<string, unknown>, LOUVOR_PRIVATE_FIELDS) as typeof row).where(eq(louvorMembers.id, row.id));
+    counts.louvorMembers++;
+  }
+  return counts;
+}
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -130,7 +202,7 @@ export async function createMember(data: typeof members.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(members).values(data);
+  const result = await db.insert(members).values(protect(data as Record<string, unknown>, MEMBER_PRIVATE_FIELDS) as typeof data);
   return result;
 }
 
@@ -144,14 +216,15 @@ export async function getMemberById(id: number) {
     .where(eq(members.id, id))
     .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+  return result.length > 0 ? reveal(result[0], MEMBER_PRIVATE_FIELDS) : null;
 }
 
 export async function getMembersByGroup(groupId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.select().from(members).where(eq(members.groupId, groupId));
+  const rows = await db.select().from(members).where(eq(members.groupId, groupId));
+  return rows.map((row) => reveal(row, MEMBER_PRIVATE_FIELDS));
 }
 
 export async function searchMembers(query: string, isGuest?: boolean) {
@@ -164,18 +237,19 @@ export async function searchMembers(query: string, isGuest?: boolean) {
     conditions.push(eq(members.isGuest, isGuest));
   }
 
-  return await db
+  const rows = await db
     .select()
     .from(members)
     .where(and(...conditions))
     .orderBy(asc(members.name));
+  return rows.map((row) => reveal(row, MEMBER_PRIVATE_FIELDS));
 }
 
 export async function updateMember(id: number, data: Partial<typeof members.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.update(members).set(data).where(eq(members.id, id));
+  return await db.update(members).set(protect(data as Record<string, unknown>, MEMBER_PRIVATE_FIELDS) as Partial<typeof members.$inferInsert>).where(eq(members.id, id));
 }
 
 export async function getAllMembers(activeOnly = true) {
@@ -183,7 +257,8 @@ export async function getAllMembers(activeOnly = true) {
   if (!db) throw new Error("Database not available");
 
   const conditions = activeOnly ? [eq(members.isActive, true)] : [];
-  return await db.select().from(members).where(and(...conditions));
+  const rows = await db.select().from(members).where(and(...conditions));
+  return rows.map((row) => reveal(row, MEMBER_PRIVATE_FIELDS));
 }
 
 // ============ GROUPS ============
@@ -244,7 +319,7 @@ export async function createActivity(data: typeof activities.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(activities).values(data);
+  const result = await db.insert(activities).values(protect(data as Record<string, unknown>, ACTIVITY_PRIVATE_FIELDS) as typeof data);
   return result;
 }
 
@@ -258,25 +333,26 @@ export async function getActivityById(id: number) {
     .where(eq(activities.id, id))
     .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+  return result.length > 0 ? reveal(result[0], ACTIVITY_PRIVATE_FIELDS) : null;
 }
 
 export async function getActivitiesByDateRange(startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(activities)
     .where(between(activities.date, startDate, endDate))
     .orderBy(desc(activities.date));
+  return rows.map((row) => reveal(row, ACTIVITY_PRIVATE_FIELDS));
 }
 
 export async function updateActivity(id: number, data: Partial<typeof activities.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.update(activities).set(data).where(eq(activities.id, id));
+  return await db.update(activities).set(protect(data as Record<string, unknown>, ACTIVITY_PRIVATE_FIELDS) as Partial<typeof activities.$inferInsert>).where(eq(activities.id, id));
 }
 
 // ============ ATTENDANCE ============
@@ -335,31 +411,33 @@ export async function createQuota(data: typeof quotas.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.insert(quotas).values(data);
+  return await db.insert(quotas).values(protect(data as Record<string, unknown>, QUOTA_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function getQuotasByMember(memberId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.select().from(quotas).where(eq(quotas.memberId, memberId));
+  const rows = await db.select().from(quotas).where(eq(quotas.memberId, memberId));
+  return rows.map((row) => reveal(row, QUOTA_PRIVATE_FIELDS));
 }
 
 export async function updateQuota(id: number, data: Partial<typeof quotas.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.update(quotas).set(data).where(eq(quotas.id, id));
+  return await db.update(quotas).set(protect(data as Record<string, unknown>, QUOTA_PRIVATE_FIELDS) as Partial<typeof quotas.$inferInsert>).where(eq(quotas.id, id));
 }
 
 export async function getQuotasByMonthYear(month: number, year: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(quotas)
     .where(and(eq(quotas.month, month), eq(quotas.year, year)));
+  return rows.map((row) => reveal(row, QUOTA_PRIVATE_FIELDS));
 }
 
 // ============ OTHER INCOME ============
@@ -368,17 +446,18 @@ export async function createOtherIncome(data: typeof otherIncome.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.insert(otherIncome).values(data);
+  return await db.insert(otherIncome).values(protect(data as Record<string, unknown>, INCOME_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function getOtherIncomeByDateRange(startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(otherIncome)
     .where(between(otherIncome.date, startDate, endDate));
+  return rows.map((row) => reveal(row, INCOME_PRIVATE_FIELDS));
 }
 
 // ============ EXPENSES ============
@@ -398,18 +477,19 @@ export async function createExpense(data: typeof expenses.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.insert(expenses).values(data);
+  return await db.insert(expenses).values(protect(data as Record<string, unknown>, EXPENSE_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function getExpensesByDateRange(startDate: Date, endDate: Date) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(expenses)
     .where(between(expenses.date, startDate, endDate))
     .orderBy(desc(expenses.sequence));
+  return rows.map((row) => reveal(row, EXPENSE_PRIVATE_FIELDS));
 }
 
 // ============ TRANSFERS ============
@@ -418,7 +498,7 @@ export async function createTransfer(data: typeof transfers.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.insert(transfers).values(data);
+  return await db.insert(transfers).values(protect(data as Record<string, unknown>, TRANSFER_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function getTransferById(id: number) {
@@ -431,25 +511,26 @@ export async function getTransferById(id: number) {
     .where(eq(transfers.id, id))
     .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+  return result.length > 0 ? reveal(result[0], TRANSFER_PRIVATE_FIELDS) : null;
 }
 
 export async function updateTransfer(id: number, data: Partial<typeof transfers.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.update(transfers).set(data).where(eq(transfers.id, id));
+  return await db.update(transfers).set(protect(data as Record<string, unknown>, TRANSFER_PRIVATE_FIELDS) as Partial<typeof transfers.$inferInsert>).where(eq(transfers.id, id));
 }
 
 export async function getTransfersByMember(memberId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(transfers)
     .where(eq(transfers.memberId, memberId))
     .orderBy(desc(transfers.createdAt));
+  return rows.map((row) => reveal(row, TRANSFER_PRIVATE_FIELDS));
 }
 
 // ============ REPORTS ============
@@ -480,17 +561,18 @@ export async function addCommissionMember(data: typeof commissionMembers.$inferI
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db.insert(commissionMembers).values(data);
+  return await db.insert(commissionMembers).values(protect(data as Record<string, unknown>, COMMISSION_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function getCommissionByActivity(activityId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return await db
+  const rows = await db
     .select()
     .from(commissionMembers)
     .where(eq(commissionMembers.activityId, activityId));
+  return rows.map((row) => reveal(row, COMMISSION_PRIVATE_FIELDS));
 }
 
 
@@ -499,7 +581,8 @@ export async function getCommissionByActivity(activityId: number) {
 export async function listQuotas() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(quotas).orderBy(desc(quotas.createdAt));
+  const rows = await db.select().from(quotas).orderBy(desc(quotas.createdAt));
+  return rows.map((row) => reveal(row, QUOTA_PRIVATE_FIELDS));
 }
 
 export async function deleteQuota(id: number) {
@@ -511,13 +594,14 @@ export async function deleteQuota(id: number) {
 export async function listOtherIncome() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(otherIncome).orderBy(desc(otherIncome.date), desc(otherIncome.createdAt));
+  const rows = await db.select().from(otherIncome).orderBy(desc(otherIncome.date), desc(otherIncome.createdAt));
+  return rows.map((row) => reveal(row, INCOME_PRIVATE_FIELDS));
 }
 
 export async function updateOtherIncome(id: number, data: Partial<typeof otherIncome.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(otherIncome).set(data).where(eq(otherIncome.id, id));
+  return db.update(otherIncome).set(protect(data as Record<string, unknown>, INCOME_PRIVATE_FIELDS) as Partial<typeof otherIncome.$inferInsert>).where(eq(otherIncome.id, id));
 }
 
 export async function deleteOtherIncome(id: number) {
@@ -529,13 +613,14 @@ export async function deleteOtherIncome(id: number) {
 export async function listExpenses() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(expenses).orderBy(desc(expenses.date), desc(expenses.sequence));
+  const rows = await db.select().from(expenses).orderBy(desc(expenses.date), desc(expenses.sequence));
+  return rows.map((row) => reveal(row, EXPENSE_PRIVATE_FIELDS));
 }
 
 export async function updateExpense(id: number, data: Partial<typeof expenses.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(expenses).set(data).where(eq(expenses.id, id));
+  return db.update(expenses).set(protect(data as Record<string, unknown>, EXPENSE_PRIVATE_FIELDS) as Partial<typeof expenses.$inferInsert>).where(eq(expenses.id, id));
 }
 
 function dateOnly(value: Date | string | null | undefined) {
@@ -708,10 +793,10 @@ export async function createBackupVersion(input: { createdBy: number; destinatio
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const snapshot = await getBackupSnapshot();
-  const payload = JSON.stringify(snapshot);
+  const payload = encryptJson(snapshot);
   const checksum = createHash("sha256").update(payload).digest("hex");
-  const key = `backups/${input.createdBy}/${Date.now()}.json`;
-  const stored = await storagePut(key, payload, "application/json");
+  const key = `backups/${input.createdBy}/${Date.now()}.json.enc`;
+  const stored = await storagePut(key, payload, "application/octet-stream");
   const versionLabel = input.versionLabel?.trim() || `Backup ${new Date().toLocaleString("pt-PT")}`;
   const result = await db.insert(backupVersions).values({ versionLabel, destination: input.destination, cloudEmail: input.cloudEmail?.trim() || null, storageKey: stored.key, fileUrl: null, fileSize: Buffer.byteLength(payload), checksum, createdBy: input.createdBy });
   const id = Number((result as { insertId?: number }).insertId ?? 0);
@@ -738,7 +823,10 @@ export async function getBackupPayload(id: number) {
   const signedUrl = await storageGetSignedUrl(version.storageKey);
   const response = await fetch(signedUrl);
   if (!response.ok) throw new Error(`Não foi possível ler o backup (${response.status})`);
-  return { version, payload: await response.json() as Record<string, unknown> };
+  const raw = await response.text();
+  const checksum = createHash("sha256").update(raw).digest("hex");
+  if (version.checksum && checksum !== version.checksum) throw new Error("A integridade do backup não pôde ser confirmada.");
+  return { version, payload: decryptJson<Record<string, unknown>>(raw) };
 }
 
 function restoreDates(rows: unknown, dateFields: string[]) {
@@ -823,24 +911,25 @@ export async function updateBackupSchedule(id: number, data: Partial<typeof back
 export async function listMaterials() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(materials).orderBy(desc(materials.createdAt));
+  const rows = await db.select().from(materials).orderBy(desc(materials.createdAt));
+  return rows.map((row) => reveal(row, MATERIAL_PRIVATE_FIELDS));
 }
 
 export async function createMaterial(data: typeof materials.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(materials).values(data);
+  const result = await db.insert(materials).values(protect(data as Record<string, unknown>, MATERIAL_PRIVATE_FIELDS) as typeof data);
   const id = Number((result as { insertId?: number }).insertId ?? 0);
   const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
-  return rows[0] ?? { id, ...data };
+  return rows[0] ? reveal(rows[0], MATERIAL_PRIVATE_FIELDS) : { id, ...data };
 }
 
 export async function updateMaterial(id: number, data: Partial<typeof materials.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(materials).set(data).where(eq(materials.id, id));
+  await db.update(materials).set(protect(data as Record<string, unknown>, MATERIAL_PRIVATE_FIELDS) as Partial<typeof materials.$inferInsert>).where(eq(materials.id, id));
   const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
-  return rows[0] ?? null;
+  return rows[0] ? reveal(rows[0], MATERIAL_PRIVATE_FIELDS) : null;
 }
 
 export async function deleteMaterial(id: number) {
@@ -908,18 +997,18 @@ export async function syncLouvorMemberProjection(member: typeof members.$inferSe
   const existingByName = existingByMember[0] ? [] : await db.select().from(louvorMembers).where(eq(louvorMembers.name, member.name)).limit(1);
   const existing = existingByMember[0] ?? existingByName[0];
   const isLouvor = member.position === LOUVOR_POSITION;
-  const values = {
+  const values = protect({
     memberId: member.id,
     name: member.name,
     instrumentOrVoice: member.louvorRole?.trim() || existing?.instrumentOrVoice || "Vocal/Instrumento",
     phone: member.phoneOrange || member.phoneTelecel || existing?.phone || null,
     email: member.email || existing?.email || null,
     isActive: Boolean(member.isActive && isLouvor),
-  };
+  }, LOUVOR_PRIVATE_FIELDS);
 
   if (existing) {
     await db.update(louvorMembers).set(values).where(eq(louvorMembers.id, existing.id));
-    return { ...existing, ...values };
+    return reveal({ ...existing, ...values }, LOUVOR_PRIVATE_FIELDS);
   }
   if (!isLouvor) return null;
   const inserted = await db.insert(louvorMembers).values(values);
@@ -931,19 +1020,20 @@ export async function listLouvorMembers() {
   if (!db) throw new Error("Database not available");
   const mainMembers = await db.select().from(members).where(eq(members.position, LOUVOR_POSITION));
   for (const member of mainMembers) await syncLouvorMemberProjection(member);
-  return db.select().from(louvorMembers).where(eq(louvorMembers.isActive, true)).orderBy(desc(louvorMembers.createdAt));
+  const rows = await db.select().from(louvorMembers).where(eq(louvorMembers.isActive, true)).orderBy(desc(louvorMembers.createdAt));
+  return rows.map((row) => reveal(row, LOUVOR_PRIVATE_FIELDS));
 }
 
 export async function createLouvorMember(data: typeof louvorMembers.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return await db.insert(louvorMembers).values(data);
+  return await db.insert(louvorMembers).values(protect(data as Record<string, unknown>, LOUVOR_PRIVATE_FIELDS) as typeof data);
 }
 
 export async function updateLouvorMember(id: number, data: Partial<typeof louvorMembers.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return await db.update(louvorMembers).set(data).where(eq(louvorMembers.id, id));
+  return await db.update(louvorMembers).set(protect(data as Record<string, unknown>, LOUVOR_PRIVATE_FIELDS) as Partial<typeof louvorMembers.$inferInsert>).where(eq(louvorMembers.id, id));
 }
 
 export async function deleteLouvorMember(id: number) {

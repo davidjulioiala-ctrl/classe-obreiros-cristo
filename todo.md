@@ -6390,3 +6390,9 @@
 - [x] Implementar verificação de inatividade no middleware de autenticação
 - [x] Adicionar componente frontend de aviso de inatividade e encerramento de sessão
 - [x] Criar testes unitários para validar a rejeição de sessões inativas após 20 minutos
+
+## Fase 15: Cifragem de Dados e Proteção de Backups
+- [x] Criar utilitário de cifragem/decifragem AES-256-GCM server-side usando chave derivada do JWT_SECRET
+- [x] Aplicar cifragem em campos sensíveis (contactos, emails, moradas, notas, detalhes de despesas/receitas)
+- [x] Cifrar os payloads e arquivos de backup gerados localmente e na nuvem
+- [x] Criar testes unitários para o módulo de cifragem e validar build e testes gerais

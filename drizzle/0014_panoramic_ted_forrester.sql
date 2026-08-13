@@ -1,0 +1,1 @@
+ALTER TABLE `quotas` MODIFY COLUMN `responsibleName` text;

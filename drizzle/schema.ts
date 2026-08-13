@@ -41,14 +41,14 @@ export const members = mysqlTable("members", {
   name: varchar("name", { length: 255 }).notNull(),
   sex: mysqlEnum("sex", ["M", "F"]).notNull(),
   birthDate: date("birthDate"),
-  father: varchar("father", { length: 255 }),
-  mother: varchar("mother", { length: 255 }),
-  nationality: varchar("nationality", { length: 255 }),
-  region: varchar("region", { length: 255 }),
-  residence: varchar("residence", { length: 255 }),
-  phoneOrange: varchar("phoneOrange", { length: 20 }),
-  phoneTelecel: varchar("phoneTelecel", { length: 20 }),
-  email: varchar("email", { length: 320 }),
+  father: text("father"),
+  mother: text("mother"),
+  nationality: text("nationality"),
+  region: text("region"),
+  residence: text("residence"),
+  phoneOrange: text("phoneOrange"),
+  phoneTelecel: text("phoneTelecel"),
+  email: text("email"),
   groupId: int("groupId"),
   position: varchar("position", { length: 255 }), // Valores permitidos: Líder, Oficial, Membro de Ministério de Louvor, Convidado, Membro, Outros
   leaderRole: varchar("leaderRole", { length: 255 }), // Specific leader role when position is 'Líder'
@@ -95,9 +95,9 @@ export const activities = mysqlTable("activities", {
   hasCommission: boolean("hasCommission").default(false).notNull(),
   speakerName: varchar("speakerName", { length: 255 }),
   speakerSex: mysqlEnum("speakerSex", ["M", "F"]),
-  speakerPhoneOrange: varchar("speakerPhoneOrange", { length: 20 }),
-  speakerPhoneTelecel: varchar("speakerPhoneTelecel", { length: 20 }),
-  speakerResidence: varchar("speakerResidence", { length: 255 }),
+  speakerPhoneOrange: text("speakerPhoneOrange"),
+  speakerPhoneTelecel: text("speakerPhoneTelecel"),
+  speakerResidence: text("speakerResidence"),
   theme: varchar("theme", { length: 255 }),
   biblicalReference: varchar("biblicalReference", { length: 255 }), // For religious themes
   isReligious: boolean("isReligious").default(true).notNull(),
@@ -117,7 +117,7 @@ export const commissionMembers = mysqlTable("commissionMembers", {
   activityId: int("activityId").notNull(),
   memberId: int("memberId").notNull(),
   role: varchar("role", { length: 100 }), // e.g., "coordenador", "secretário"
-  phone: varchar("phone", { length: 30 }), // optional contact number
+  phone: text("phone"), // optional contact number; encrypted at rest
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -152,7 +152,7 @@ export const quotas = mysqlTable("quotas", {
   isPaid: boolean("isPaid").default(false).notNull(),
   paidAt: timestamp("paidAt"),
   paidBy: int("paidBy"), // User who recorded the payment
-  responsibleName: varchar("responsibleName", { length: 255 }),
+  responsibleName: text("responsibleName"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -165,11 +165,11 @@ export type InsertQuota = typeof quotas.$inferInsert;
  */
 export const otherIncome = mysqlTable("otherIncome", {
   id: int("id").autoincrement().primaryKey(),
-  description: varchar("description", { length: 255 }).notNull(),
+  description: text("description").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
   recordedBy: int("recordedBy").notNull(),
-  responsibleName: varchar("responsibleName", { length: 255 }),
+  responsibleName: text("responsibleName"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -182,13 +182,13 @@ export type InsertOtherIncome = typeof otherIncome.$inferInsert;
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
   sequence: int("sequence").notNull(),
-  designation: varchar("designation", { length: 255 }).notNull(),
+  designation: text("designation").notNull(),
   quantity: int("quantity").notNull(),
   unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
   recordedBy: int("recordedBy").notNull(),
-  responsibleName: varchar("responsibleName", { length: 255 }),
+  responsibleName: text("responsibleName"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -203,7 +203,7 @@ export const transfers = mysqlTable("transfers", {
   memberId: int("memberId").notNull(),
   fromGroupId: int("fromGroupId"),
   toGroupId: int("toGroupId"),
-  toChurch: varchar("toChurch", { length: 255 }), // Name of destination church
+  toChurch: text("toChurch"), // Name of destination church; encrypted at rest
   reason: text("reason"),
   status: mysqlEnum("status", ["pendente", "aprovada", "concluida", "cancelada"]).default("pendente").notNull(),
   approvedBy: int("approvedBy"),
@@ -270,8 +270,8 @@ export const louvorMembers = mysqlTable("louvorMembers", {
   memberId: int("memberId"),
   name: varchar("name", { length: 255 }).notNull(),
   instrumentOrVoice: varchar("instrumentOrVoice", { length: 255 }).notNull(), // e.g., "Vocal Principal", "Guitarra", "Teclado"
-  phone: varchar("phone", { length: 30 }),
-  email: varchar("email", { length: 320 }),
+  phone: text("phone"),
+  email: text("email"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -307,8 +307,8 @@ export const materials = mysqlTable("materials", {
   category: varchar("category", { length: 100 }).notNull(),
   quantity: int("quantity").default(1).notNull(),
   condition: mysqlEnum("condition", ["Bom", "Regular", "Precário", "Manutenção"]).default("Bom").notNull(),
-  custodian: varchar("custodian", { length: 255 }).notNull(),
-  location: varchar("location", { length: 255 }),
+  custodian: text("custodian").notNull(),
+  location: text("location"),
   purchaseDate: date("purchaseDate"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
