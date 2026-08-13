@@ -6624,3 +6624,9 @@
 - [x] Garantir que a notificação é acessível e não substitui as mensagens de erro.
 - [x] Validar o comportamento com testes, build e publicação.
 
+
+## Fase 14: Adição do Cargo 'Membro' no Cadastro — 2026-08-13
+- [x] Incluir 'Membro' na lista de opções do campo Cargo eclesiástico em Members.tsx.
+- [x] Validar o comportamento de seleção e salvamento do cargo 'Membro'.
+- [x] Executar testes, build e publicação da alteração.
+
