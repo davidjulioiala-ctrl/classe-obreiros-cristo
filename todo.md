@@ -6447,3 +6447,12 @@
 - [x] Confirmar que as listas de todos os submenus exibem o ID próprio da tabela, iniciado em 1 quando a tabela está vazia.
 - [x] Auditar o bundle e os componentes legados para garantir que não há prompts ou textos de OAuth/Google na experiência de login local.
 - [x] Executar typecheck, testes Vitest, build e verificação visual responsiva antes do checkpoint.
+
+
+## Estabilização das operações nas páginas — 2026-08-13
+- [x] Reproduzir os erros de operações e recolher o nome dos procedimentos tRPC afectados.
+- [x] Auditar formulários, mutações e invalidação de cache nos módulos de membros, actividades, presença, finanças, materiais, louvor, utilizadores, relatórios e configurações.
+- [x] Corrigir contratos inconsistentes entre frontend, router, helpers de base de dados e schema sem apagar dados existentes.
+- [x] Garantir tratamento de erro, estados de carregamento e actualização das listas após criar, editar ou apagar.
+- [x] Acrescentar testes de regressão para as operações corrigidas e validar fluxos críticos no navegador.
+- [x] Executar typecheck, testes, build e revisão responsiva antes de guardar o checkpoint.

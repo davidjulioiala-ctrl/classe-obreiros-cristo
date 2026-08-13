@@ -65,3 +65,12 @@ A captura desktop (1280×720) confirmou um cartão de login centrado, campos vaz
 - A base de dados contém também o administrador local activo `dany` (`isActive=1`); a palavra-passe não foi consultada nem exposta.
 - `pnpm check` passou; `pnpm test` passou com 15 ficheiros e 40 testes; `pnpm build` passou.
 - O teste de adulteração AES-256-GCM foi corrigido para alterar um carácter significativo do payload Base64URL, evitando os bits de preenchimento não autenticados do último carácter.
+
+
+## Estabilização das operações — 2026-08-13
+
+Os logs anteriores mostravam `TRPCClientError: Please login (10001)` durante consultas protegidas e `JWSInvalid: Invalid Compact JWS` no servidor. A causa foi confirmada no transporte: o cliente lia `sessionStorage.manus-cookie` e enviava o valor como `Authorization: Bearer`, enquanto a autenticação local usa um token HMAC próprio no cookie `app_session_id`, não um JWT Compact JWS.
+
+A correcção removeu esse fallback do cliente tRPC, centralizou a política em `client/src/lib/localTrpcHeaders.ts` e alterou `server/_core/context.ts` para resolver exclusivamente `getLocalUserFromRequest`. Assim, as chamadas protegidas usam apenas o cookie local enviado por `credentials: include`, sem tentativa de validação OAuth.
+
+Após a correcção, `pnpm check`, `pnpm test` e `pnpm build` passaram. A suite ficou com 17 ficheiros e 44 testes aprovados. O servidor reiniciado arrancou sem novos erros de transformação; os erros JWS e `Please login` observados no log são anteriores ao reinício/correcção. Foi acrescentada uma regressão em `server/loginTransition.test.ts` e um teste directo de `localTrpcHeaders`.

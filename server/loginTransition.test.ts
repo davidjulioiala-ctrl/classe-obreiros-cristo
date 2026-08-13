@@ -40,4 +40,17 @@ describe("login transition regression guards", () => {
     expect(loginSource).not.toContain('window.location.assign("/dashboard")');
     expect(loginSource).toContain('navigate("/dashboard")');
   });
+
+  it("keeps protected tRPC operations on the local cookie session", () => {
+    const mainSource = readProjectFile("client/src/main.tsx");
+    const headerSource = readProjectFile("client/src/lib/localTrpcHeaders.ts");
+    const contextSource = readProjectFile("server/_core/context.ts");
+
+    expect(mainSource).toContain("localTrpcHeaders");
+    expect(headerSource).toContain("return {};");
+    expect(headerSource).not.toMatch(/return \{[^}]*Authorization/s);
+    expect(headerSource).not.toMatch(/return \{[^}]*sessionStorage/s);
+    expect(contextSource).toContain("getLocalUserFromRequest");
+    expect(contextSource).not.toContain('from "./sdk"');
+  });
 });
