@@ -6469,3 +6469,10 @@
 - [x] Garantir que o Error Boundary envolve toda a árvore React desde o ponto de entrada da aplicação.
 - [x] Adicionar testes de regressão para captura de erros de renderização e acções de recuperação.
 - [x] Executar typecheck, testes, build e verificação visual antes do checkpoint.
+
+
+## Página de estado do sistema — 2026-08-13
+- [x] Criar página pública de estado com estados operacional, manutenção e verificação em curso.
+- [x] Integrar a página ao endpoint público de manutenção sem expor detalhes internos ou dados sensíveis.
+- [x] Adicionar acesso por rota e ligação a partir do ecrã de manutenção.
+- [x] Adicionar testes para os estados do endpoint e validar typecheck, build e responsividade.

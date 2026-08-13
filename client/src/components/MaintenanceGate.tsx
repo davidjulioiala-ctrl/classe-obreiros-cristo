@@ -63,7 +63,7 @@ export default function MaintenanceGate({ user, children }: MaintenanceGateProps
         <p className="mt-4 leading-7 text-slate-300">As operações foram interrompidas para proteger os dados e permitir a investigação ou actualização do sistema.</p>
         {state.reason && <p className="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-200">Motivo: {state.reason}</p>}
         {state.incidentId && <p className="mt-3 text-xs text-slate-500">Incidente #{state.incidentId}</p>}
-        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap"><Button type="button" variant="outline" className="border-slate-600 text-slate-100 hover:bg-slate-800" onClick={() => void checkState()}><RefreshCw className="mr-2 h-4 w-4" />Verificar novamente</Button><a className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700" href="/login"><ShieldCheck className="mr-2 h-4 w-4" />Voltar ao login</a></div>
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap"><Button type="button" variant="outline" className="border-slate-600 text-slate-100 hover:bg-slate-800" onClick={() => void checkState()}><RefreshCw className="mr-2 h-4 w-4" />Verificar novamente</Button><a className="inline-flex h-10 items-center justify-center rounded-md border border-slate-600 px-4 text-sm font-medium text-slate-100 hover:bg-slate-800" href="/status">Ver estado do sistema</a><a className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700" href="/login"><ShieldCheck className="mr-2 h-4 w-4" />Voltar ao login</a></div>
       </section>
     </main>
   );

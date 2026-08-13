@@ -17,15 +17,22 @@ import AuditAndBackup from "@/pages/AuditAndBackup";
 import MemberHistoryPage from "@/pages/MemberHistory";
 import IncompleteMembers from "@/pages/IncompleteMembers";
 import Materials from "@/pages/Materials";
+import SystemStatus from "@/pages/SystemStatus";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import MaintenanceGate from "./components/MaintenanceGate";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LocalAuthProvider, useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
 
 function Router() {
+  const [location] = useLocation();
   const { user, loading, logout } = useLocalAuth();
+
+  // O estado deve continuar acessível sem sessão e durante manutenção.
+  if (location === "/status") {
+    return <SystemStatus />;
+  }
 
   if (loading) {
     return (
