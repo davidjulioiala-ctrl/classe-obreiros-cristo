@@ -9,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
 import { positiveId, safeEmail, safeText } from "./_core/security";
+import { buildIncidentDiagnosis } from "./_core/incidentDiagnostics";
 
 // ============ MIDDLEWARE ============
 
@@ -614,22 +615,18 @@ const incidentRouter = router({
   }),
 
   diagnose: adminProcedure.query(async () => {
-    const [maintenance, incidents, recentAudit] = await Promise.all([
+    const [maintenance, globalSessionRevokedAt, incidents, recentAudit] = await Promise.all([
       db.getSystemMaintenanceState(),
-      db.listSecurityIncidents(20),
-      db.listAuditLogs(50),
+      db.getGlobalSessionRevokedAt(),
+      db.listSecurityIncidents(50),
+      db.listAuditLogs(250),
     ]);
     return {
       maintenance,
+      globalSessionRevokedAt,
       incidents,
       recentAudit,
-      checkedAt: new Date().toISOString(),
-      recommendations: [
-        "Rever os últimos logs de auditoria e tentativas de login.",
-        "Revogar todas as sessões se houver suspeita de token comprometido.",
-        "Criar um backup cifrado antes de restaurar uma versão anterior.",
-        "Manter o modo de manutenção activo até concluir a validação pós-incidente.",
-      ],
+      diagnostics: buildIncidentDiagnosis({ maintenance, globalSessionRevokedAt, incidents, auditLogs: recentAudit }),
     };
   }),
 });

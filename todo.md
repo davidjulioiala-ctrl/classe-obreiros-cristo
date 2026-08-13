@@ -6408,13 +6408,13 @@
 - [x] Mitigar IDOR validando autenticação, perfis autorizados, IDs positivos e limites dos recursos; o sistema é actualmente de organização única, sem fronteira multi-tenant
 
 ## Fase 17: Módulo de Resposta a Incidentes, Diagnóstico e Manutenção de Emergência
-- [ ] Criar tabela e helpers para registo de incidentes de segurança e estado de manutenção global
-- [ ] Implementar o Modo de Manutenção no servidor para bloquear/cortar todas as mutações e requisições de escrita em andamento
-- [ ] Criar a ferramenta de detecção de problemas e diagnóstico baseada em logs de auditoria e falhas
-- [ ] Implementar a identificação forense do incidente (origem, utilizador envolvido, registos afectados)
-- [ ] Implementar a revogação global de sessões para garantir que o invasor perde o acesso imediatamente
-- [ ] Criar procedimentos de restauro rápido e recuperação de dados a partir de backups cifrados
-- [ ] Criar testes unitários para o modo de manutenção, revogação de emergência e diagnóstico de incidentes
+- [x] Criar tabela e helpers para registo de incidentes de segurança e estado de manutenção global
+- [x] Implementar o Modo de Manutenção no servidor para bloquear/cortar todas as mutações e requisições de escrita em andamento
+- [x] Criar a ferramenta de detecção de problemas e diagnóstico baseada em logs de auditoria e falhas
+- [x] Implementar a identificação forense do incidente (origem, utilizador envolvido, registos afectados)
+- [x] Implementar a revogação global de sessões para garantir que o invasor perde o acesso imediatamente
+- [x] Criar procedimentos de restauro rápido e recuperação de dados a partir de backups cifrados
+- [x] Criar testes unitários para o modo de manutenção, revogação de emergência e diagnóstico de incidentes
 
 ## Continuação de segurança — ciclo herdado
 - [x] Corrigir o teste de geração de PDF de transferências para autenticação administrativa e stream PassThrough

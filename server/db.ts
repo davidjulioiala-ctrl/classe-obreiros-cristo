@@ -28,6 +28,7 @@ import {
 import { ENV } from "./_core/env";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { decryptFields, decryptJson, encryptFields, encryptJson } from "./_core/fieldEncryption";
+import { filterRestorableSettings } from "./_core/backupRecovery";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -769,7 +770,7 @@ export async function deleteCommissionMember(id: number) {
 export async function getBackupSnapshot() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [userRows, memberRows, groupRows, activityRows, attendanceRows, quotaRows, incomeRows, expenseRows, transferRows, reportRows, commissionRows, auditRows, louvorMemberRows, louvorScaleRows, historyRows, settingRows] = await Promise.all([
+  const [userRows, memberRows, groupRows, activityRows, attendanceRows, quotaRows, incomeRows, expenseRows, transferRows, reportRows, commissionRows, auditRows, louvorMemberRows, louvorScaleRows, historyRows, settingRows, securityIncidentRows] = await Promise.all([
     db.select({ id: users.id, openId: users.openId, name: users.name, email: users.email, loginMethod: users.loginMethod, role: users.role, churchRole: users.churchRole, isActive: users.isActive, createdAt: users.createdAt, updatedAt: users.updatedAt, lastSignedIn: users.lastSignedIn }).from(users),
     db.select().from(members),
     db.select().from(groups),
@@ -786,8 +787,9 @@ export async function getBackupSnapshot() {
     db.select().from(louvorScales),
     db.select().from(memberHistory),
     db.select().from(appSettings),
+    db.select().from(securityIncidents),
   ]);
-  return { exportedAt: new Date(), version: 2, users: userRows, members: memberRows, groups: groupRows, activities: activityRows, attendance: attendanceRows, quotas: quotaRows, otherIncome: incomeRows, expenses: expenseRows, transfers: transferRows, reports: reportRows, commissionMembers: commissionRows, auditLog: auditRows.map((row) => ({ ...row, details: sanitizeAuditDetails(row.details) })), louvorMembers: louvorMemberRows, louvorScales: louvorScaleRows, memberHistory: historyRows, appSettings: settingRows };
+  return { exportedAt: new Date(), version: 3, users: userRows, members: memberRows, groups: groupRows, activities: activityRows, attendance: attendanceRows, quotas: quotaRows, otherIncome: incomeRows, expenses: expenseRows, transfers: transferRows, reports: reportRows, commissionMembers: commissionRows, auditLog: auditRows.map((row) => ({ ...row, details: sanitizeAuditDetails(row.details) })), louvorMembers: louvorMemberRows, louvorScales: louvorScaleRows, memberHistory: historyRows, appSettings: settingRows, securityIncidents: securityIncidentRows };
 }
 
 export async function createBackupVersion(input: { createdBy: number; destination: "local" | "drive"; cloudEmail?: string; versionLabel?: string }) {
@@ -845,6 +847,8 @@ export async function restoreBackupVersion(id: number) {
   const backup = await getBackupPayload(id);
   if (!backup) throw new Error("Versão de backup não encontrada");
   const data = backup.payload;
+  const currentSettings = await db.select().from(appSettings);
+  const protectedSettings = currentSettings.filter((setting) => setting.keyName === "system_maintenance" || setting.keyName === "global_session_revoked_at");
   await db.transaction(async (tx) => {
     await tx.delete(attendance);
     await tx.delete(commissionMembers);
@@ -860,6 +864,7 @@ export async function restoreBackupVersion(id: number) {
     await tx.delete(members);
     await tx.delete(groups);
     await tx.delete(appSettings);
+    await tx.delete(securityIncidents);
     await tx.delete(auditLog);
 
     if (Array.isArray(data.groups) && data.groups.length) await tx.insert(groups).values(data.groups as any);
@@ -875,7 +880,12 @@ export async function restoreBackupVersion(id: number) {
     if (Array.isArray(data.louvorMembers) && data.louvorMembers.length) await tx.insert(louvorMembers).values(restoreDates(data.louvorMembers, ["createdAt", "updatedAt"]) as any);
     if (Array.isArray(data.louvorScales) && data.louvorScales.length) await tx.insert(louvorScales).values(restoreDates(data.louvorScales, ["createdAt", "updatedAt"]) as any);
     if (Array.isArray(data.memberHistory) && data.memberHistory.length) await tx.insert(memberHistory).values(restoreDates(data.memberHistory, ["startDate", "endDate", "createdAt"]) as any);
-    if (Array.isArray(data.appSettings) && data.appSettings.length) await tx.insert(appSettings).values(restoreDates(data.appSettings, ["updatedAt"]) as any);
+    if (Array.isArray(data.appSettings) && data.appSettings.length) {
+      const safeSettings = filterRestorableSettings(data.appSettings as Array<{ keyName?: string | null }>);
+      if (safeSettings.length) await tx.insert(appSettings).values(restoreDates(safeSettings, ["updatedAt"]) as any);
+    }
+    if (protectedSettings.length) await tx.insert(appSettings).values(protectedSettings as any);
+    if (Array.isArray(data.securityIncidents) && data.securityIncidents.length) await tx.insert(securityIncidents).values(restoreDates(data.securityIncidents, ["detectedAt", "containedAt", "resolvedAt", "updatedAt", "createdAt"]) as any);
     if (Array.isArray(data.auditLog) && data.auditLog.length) await tx.insert(auditLog).values(restoreDates(data.auditLog, ["createdAt", "updatedAt"]) as any);
   });
   return { restoredVersionId: id, restoredAt: new Date() };

@@ -67,6 +67,14 @@ describe("autenticação local", () => {
     expect(verifyLocalSessionToken(token, now + 8 * 24 * 60 * 60 * 1_000)).toBeNull();
   });
 
+  it("rejeita sessões emitidas antes da revogação global", async () => {
+    const issuedAt = Date.now() - 60_000;
+    const token = createLocalSessionToken(1, 1, issuedAt);
+    getGlobalSessionRevokedAtMock.mockResolvedValue(new Date().toISOString());
+    const request = { headers: { cookie: `${COOKIE_NAME}=${token}` } } as any;
+    await expect(getLocalUserFromRequest(request)).resolves.toBeNull();
+  });
+
   it("resolve o utilizador pela sessão assinada e rejeita cookie adulterado", async () => {
     const token = createLocalSessionToken(1, 1);
     const request = {
