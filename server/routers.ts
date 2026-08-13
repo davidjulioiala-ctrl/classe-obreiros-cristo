@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { authRouter } from "./routers/auth";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -21,6 +22,31 @@ const oficialProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+const financialProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ctx.user.role === "admin" || ctx.user.churchRole === "financeiro" || ctx.user.churchRole === "financeira";
+  if (!allowed) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores e perfis financeiros podem alterar dados financeiros." });
+  }
+  return next({ ctx });
+});
+
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem realizar esta operação." });
+  }
+  return next({ ctx });
+});
+
+async function writeAudit(ctx: { user: { id: number } }, action: string, entityType: string, entityId?: number, details?: unknown) {
+  await db.createAuditLog({
+    userId: ctx.user.id,
+    action,
+    entityType,
+    entityId,
+    details: details ? JSON.stringify(details).slice(0, 10000) : null,
+  });
+}
 
 // ============ MEMBERS ROUTER ============
 
@@ -58,14 +84,16 @@ const membersRouter = router({
         guestOf: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const groupId = await assignGroupAutomatically(input.sex);
 
-      return await db.createMember({
+      const result = await db.createMember({
         ...input,
         groupId,
         birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
       });
+      await writeAudit(ctx, "criar", "member", undefined, { name: input.name, isGuest: input.isGuest });
+      return result;
     }),
 
   update: liderProcedure
@@ -89,12 +117,22 @@ const membersRouter = router({
         }),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const updateData = {
         ...input.data,
         birthDate: input.data.birthDate ? new Date(input.data.birthDate) : undefined,
       };
-      return await db.updateMember(input.id, updateData);
+      const result = await db.updateMember(input.id, updateData);
+      await writeAudit(ctx, "editar", "member", input.id, input.data);
+      return result;
+    }),
+
+  delete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteMember(input.id);
+      await writeAudit(ctx, "apagar", "member", input.id);
+      return result;
     }),
 
   getByGroup: protectedProcedure
@@ -136,12 +174,14 @@ const activitiesRouter = router({
         isReligious: z.boolean().default(true),
       })
     )
-    .mutation(async ({ input }) => {
-      return await db.createActivity({
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createActivity({
         ...input,
         date: new Date(input.date),
         status: "planejada",
       });
+      await writeAudit(ctx, "criar", "activity", undefined, { name: input.name, type: input.type });
+      return result;
     }),
 
   list: protectedProcedure.query(async () => {
@@ -157,6 +197,55 @@ const activitiesRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getActivityById(input.id);
+    }),
+
+  update: liderProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1),
+      date: z.string(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      location: z.string().optional(),
+      type: z.string().optional(),
+      audience: z.string().optional(),
+      hasCommission: z.boolean(),
+      theme: z.string().optional(),
+      isReligious: z.boolean(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, date, ...data } = input;
+      const result = await db.updateActivity(id, { ...data, date: new Date(date) });
+      await writeAudit(ctx, "editar", "activity", id, { name: input.name, type: input.type });
+      return result;
+    }),
+
+  delete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteActivity(input.id);
+      await writeAudit(ctx, "apagar", "activity", input.id);
+      return result;
+    }),
+
+  commissionList: protectedProcedure
+    .input(z.object({ activityId: z.number() }))
+    .query(({ input }) => db.getCommissionMembersByActivity(input.activityId)),
+
+  commissionAdd: liderProcedure
+    .input(z.object({ activityId: z.number(), memberId: z.number(), role: z.string().min(1), phone: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createCommissionMember(input);
+      await writeAudit(ctx, "criar", "commissionMember", undefined, input);
+      return result;
+    }),
+
+  commissionDelete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteCommissionMember(input.id);
+      await writeAudit(ctx, "apagar", "commissionMember", input.id);
+      return result;
     }),
 
   recordAttendance: oficialProcedure
@@ -178,6 +267,22 @@ const activitiesRouter = router({
     .input(z.object({ activityId: z.number() }))
     .query(async ({ input }) => {
       return await db.getAttendanceByActivity(input.activityId);
+    }),
+
+  updateAttendance: oficialProcedure
+    .input(z.object({ id: z.number(), isPresent: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.updateAttendance(input.id, { isPresent: input.isPresent });
+      await writeAudit(ctx, "editar", "attendance", input.id, { isPresent: input.isPresent });
+      return result;
+    }),
+
+  deleteAttendance: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteAttendance(input.id);
+      await writeAudit(ctx, "apagar", "attendance", input.id);
+      return result;
     }),
 
   getAttendanceStats: protectedProcedure
@@ -228,16 +333,130 @@ const quotasRouter = router({
       });
     }),
 
-  getByMonthYear: liderProcedure
+  getByMonthYear: protectedProcedure
     .input(z.object({ month: z.number(), year: z.number() }))
     .query(async ({ input }) => {
       return await db.getQuotasByMonthYear(input.month, input.year);
     }),
+
+  list: protectedProcedure.query(() => db.listQuotas()),
+
+  update: financialProcedure
+    .input(z.object({ id: z.number(), isPaid: z.boolean().optional(), amount: z.string().optional(), month: z.number().optional(), year: z.number().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateQuota(id, data);
+      await writeAudit(ctx, "editar", "quota", id, data);
+      return result;
+    }),
+
+  delete: financialProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteQuota(input.id);
+      await writeAudit(ctx, "apagar", "quota", input.id);
+      return result;
+    }),
+});
+
+// ============ OTHER INCOME ROUTER ============
+
+const otherIncomeRouter = router({
+  list: protectedProcedure.query(() => db.listOtherIncome()),
+  create: financialProcedure
+    .input(z.object({ description: z.string().trim().min(1), amount: z.string().min(1), date: z.coerce.date() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createOtherIncome({ ...input, recordedBy: ctx.user.id });
+      await writeAudit(ctx, "criar", "otherIncome", undefined, { description: input.description, amount: input.amount, date: input.date });
+      return result;
+    }),
+  update: financialProcedure
+    .input(z.object({ id: z.number(), description: z.string().trim().min(1).optional(), amount: z.string().min(1).optional(), date: z.coerce.date().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateOtherIncome(id, data);
+      await writeAudit(ctx, "editar", "otherIncome", id, data);
+      return result;
+    }),
+  delete: financialProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteOtherIncome(input.id);
+      await writeAudit(ctx, "apagar", "otherIncome", input.id);
+      return result;
+    }),
+});
+
+// ============ EXPENSES ROUTER ============
+
+const expensesRouter = router({
+  list: protectedProcedure.query(() => db.listExpenses()),
+  create: financialProcedure
+    .input(z.object({ designation: z.string().trim().min(1), quantity: z.number().int().positive(), unitPrice: z.string().min(1), date: z.coerce.date() }))
+    .mutation(async ({ input, ctx }) => {
+      const totalPrice = (input.quantity * Number(input.unitPrice)).toFixed(2);
+      const result = await db.createExpense({ ...input, totalPrice, recordedBy: ctx.user.id });
+      await writeAudit(ctx, "criar", "expense", undefined, { designation: input.designation, quantity: input.quantity, totalPrice, date: input.date });
+      return result;
+    }),
+  update: financialProcedure
+    .input(z.object({ id: z.number(), designation: z.string().trim().min(1).optional(), quantity: z.number().int().positive().optional(), unitPrice: z.string().min(1).optional(), date: z.coerce.date().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const totalPrice = data.quantity !== undefined && data.unitPrice !== undefined ? (data.quantity * Number(data.unitPrice)).toFixed(2) : undefined;
+      const result = await db.updateExpense(id, { ...data, ...(totalPrice ? { totalPrice } : {}) });
+      await writeAudit(ctx, "editar", "expense", id, { ...data, ...(totalPrice ? { totalPrice } : {}) });
+      return result;
+    }),
+  delete: financialProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteExpense(input.id);
+      await writeAudit(ctx, "apagar", "expense", input.id);
+      return result;
+    }),
+});
+
+// ============ REPORTS ROUTER ============
+
+const reportsRouter = router({
+  list: protectedProcedure.query(() => db.listReports()),
+  getByActivity: protectedProcedure.input(z.object({ activityId: z.number() })).query(({ input }) => db.getReportByActivity(input.activityId)),
+  create: oficialProcedure
+    .input(z.object({ activityId: z.number(), type: z.enum(["ata", "relatorio"]), content: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createReport({ ...input, generatedBy: ctx.user.id });
+      await writeAudit(ctx, "criar", "report", undefined, { activityId: input.activityId, type: input.type });
+      return result;
+    }),
+  update: oficialProcedure
+    .input(z.object({ id: z.number(), type: z.enum(["ata", "relatorio"]).optional(), content: z.string().min(1).optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateReport(id, data);
+      await writeAudit(ctx, "editar", "report", id, data);
+      return result;
+    }),
+  delete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteReport(input.id);
+      await writeAudit(ctx, "apagar", "report", input.id);
+      return result;
+    }),
+});
+
+// ============ AUDIT ROUTER ============
+
+const auditRouter = router({
+  list: liderProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(({ input }) => db.listAuditLogs(input?.limit)),
 });
 
 // ============ TRANSFERS ROUTER ============
 
 const transfersRouter = router({
+  list: protectedProcedure.query(() => db.listTransfers()),
+
   create: liderProcedure
     .input(
       z.object({
@@ -248,11 +467,13 @@ const transfersRouter = router({
         reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      return await db.createTransfer({
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createTransfer({
         ...input,
         status: "pendente",
       });
+      await writeAudit(ctx, "criar", "transfer", undefined, input);
+      return result;
     }),
 
   getById: protectedProcedure
@@ -264,11 +485,13 @@ const transfersRouter = router({
   approve: liderProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      return await db.updateTransfer(input.id, {
+      const result = await db.updateTransfer(input.id, {
         status: "aprovada" as const,
         approvedBy: ctx.user.id,
         approvedAt: new Date(),
       });
+      await writeAudit(ctx, "editar", "transfer", input.id, { status: "aprovada" });
+      return result;
     }),
 
   complete: liderProcedure
@@ -284,16 +507,26 @@ const transfersRouter = router({
         groupId: transfer.toGroupId || undefined,
       });
 
-      return await db.updateTransfer(input.id, {
+      const result = await db.updateTransfer(input.id, {
         status: "concluida" as const,
         completedAt: new Date(),
       });
+      await writeAudit(ctx, "editar", "transfer", input.id, { status: "concluida" });
+      return result;
     }),
 
   getByMember: protectedProcedure
     .input(z.object({ memberId: z.number() }))
     .query(async ({ input }) => {
       return await db.getTransfersByMember(input.memberId);
+    }),
+
+  delete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteTransfer(input.id);
+      await writeAudit(ctx, "apagar", "transfer", input.id);
+      return result;
     }),
 });
 
@@ -321,25 +554,31 @@ async function assignGroupAutomatically(sex: "M" | "F"): Promise<number | null> 
   return group?.id || null;
 }
 
+// ============ BACKUP ROUTER ============
+
+const backupRouter = router({
+  export: adminProcedure.mutation(async ({ ctx }) => {
+    const snapshot = await db.getBackupSnapshot();
+    await writeAudit(ctx, "exportar", "backup", undefined, { version: snapshot.version });
+    return snapshot;
+  }),
+});
+
 // ============ MAIN ROUTER ============
 
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
   members: membersRouter,
   groups: groupsRouter,
   activities: activitiesRouter,
   quotas: quotasRouter,
   transfers: transfersRouter,
+  otherIncome: otherIncomeRouter,
+  expenses: expensesRouter,
+  reports: reportsRouter,
+  audit: auditRouter,
+  backup: backupRouter,
 });
 
 export type AppRouter = typeof appRouter;

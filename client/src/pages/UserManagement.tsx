@@ -1,585 +1,232 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  Search,
-  ChevronDown,
-  Save,
-  X,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Edit2, Eye, EyeOff, Loader2, Plus, Search, Trash2, UsersRound, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
-interface User {
+const churchRoles = [
+  { value: "membro", label: "Membro" },
+  { value: "louvor", label: "Líder de Louvor" },
+  { value: "oficial", label: "Oficial" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "financeira", label: "Financeira" },
+  { value: "lider", label: "Líder" },
+] as const;
+
+type ChurchRole = (typeof churchRoles)[number]["value"];
+type SystemRole = "user" | "admin";
+type UserItem = {
   id: number;
   username: string;
+  name: string | null;
+  email: string | null;
+  role: SystemRole;
+  churchRole: ChurchRole;
+  isActive: boolean;
+  createdAt: Date | string;
+};
+
+type FormData = {
+  username: string;
+  password: string;
   name: string;
   email: string;
-  role: "user" | "admin";
-  churchRole: "lider" | "oficial" | "louvor" | "membro";
+  role: SystemRole;
+  churchRole: ChurchRole;
   isActive: boolean;
-  createdAt: Date;
-}
+};
+
+const emptyForm: FormData = {
+  username: "",
+  password: "",
+  name: "",
+  email: "",
+  role: "user",
+  churchRole: "membro",
+  isActive: true,
+};
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    name: "",
-    email: "",
-    role: "user" as "user" | "admin",
-    churchRole: "membro" as "lider" | "oficial" | "louvor" | "membro",
-    isActive: true,
+  const utils = trpc.useUtils();
+  const usersQuery = trpc.auth.getAllUsers.useQuery(undefined, { retry: false });
+  const createUser = trpc.auth.createUser.useMutation({
+    onSuccess: async () => {
+      await utils.auth.getAllUsers.invalidate();
+      toast.success("Utilizador criado com sucesso.");
+      closeDialog();
+    },
+    onError: (error) => toast.error(error.message || "Não foi possível criar o utilizador."),
+  });
+  const updateUser = trpc.auth.updateUser.useMutation({
+    onSuccess: async () => {
+      await utils.auth.getAllUsers.invalidate();
+      toast.success("Utilizador atualizado com sucesso.");
+      closeDialog();
+    },
+    onError: (error) => toast.error(error.message || "Não foi possível atualizar o utilizador."),
+  });
+  const deleteUser = trpc.auth.deleteUser.useMutation({
+    onSuccess: async () => {
+      await utils.auth.getAllUsers.invalidate();
+      toast.success("Utilizador eliminado com sucesso.");
+    },
+    onError: (error) => toast.error(error.message || "Não foi possível eliminar o utilizador."),
   });
 
-  // Fetch users
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/trpc/auth.getAllUsers");
-        const data = await response.json();
-        if (data.result?.data) {
-          setUsers(data.result.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast.error("Erro ao carregar utilizadores");
-      }
-    };
+  const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState<FormData>(emptyForm);
 
-    fetchUsers();
-  }, []);
-
-  const handleOpenDialog = (user?: User) => {
-    if (user) {
-      setEditingUser(user);
-      setFormData({
-        username: user.username,
-        password: "",
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        churchRole: user.churchRole,
-        isActive: user.isActive,
-      });
-    } else {
-      setEditingUser(null);
-      setFormData({
-        username: "",
-        password: "",
-        name: "",
-        email: "",
-        role: "user",
-        churchRole: "membro",
-        isActive: true,
-      });
-    }
-    setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
+  function closeDialog() {
+    setDialogOpen(false);
     setEditingUser(null);
+    setFormData(emptyForm);
     setShowPassword(false);
-  };
+  }
 
-  const handleSaveUser = async () => {
-    if (!formData.username || !formData.name || !formData.email) {
-      toast.error("Preencha todos os campos obrigatórios");
+  function openDialog(user?: UserItem) {
+    if (!user) {
+      setEditingUser(null);
+      setFormData(emptyForm);
+      setDialogOpen(true);
       return;
     }
+    setEditingUser(user);
+    const safeChurchRole = churchRoles.some((item) => item.value === user.churchRole) ? user.churchRole : "membro";
+    setFormData({
+      username: user.username,
+      password: "",
+      name: user.name ?? "",
+      email: user.email ?? "",
+      role: user.role === "admin" ? "admin" : "user",
+      churchRole: safeChurchRole,
+      isActive: user.isActive !== false,
+    });
+    setDialogOpen(true);
+  }
 
-    if (!editingUser && !formData.password) {
-      toast.error("Senha é obrigatória para novos utilizadores");
+  function saveUser() {
+    const username = formData.username.trim().toLowerCase();
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    if (!name || !email || (!editingUser && !username)) {
+      toast.error("Preencha nome, email e utilizador.");
       return;
     }
-
-    try {
-      if (editingUser) {
-        // Update user
-        const response = await fetch("/api/trpc/auth.updateUser", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: editingUser.id,
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-            churchRole: formData.churchRole,
-            isActive: formData.isActive,
-            ...(formData.password && { password: formData.password }),
-          }),
-        });
-
-        if (response.ok) {
-          toast.success("Utilizador atualizado com sucesso!");
-          // Refresh users list
-          const allResponse = await fetch("/api/trpc/auth.getAllUsers");
-          const data = await allResponse.json();
-          if (data.result?.data) {
-            setUsers(data.result.data);
-          }
-          handleCloseDialog();
-        } else {
-          toast.error("Erro ao atualizar utilizador");
-        }
-      } else {
-        // Create new user
-        const response = await fetch("/api/trpc/auth.createUser", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: formData.username,
-            password: formData.password,
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-            churchRole: formData.churchRole,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success("Utilizador criado com sucesso!");
-          // Refresh users list
-          const allResponse = await fetch("/api/trpc/auth.getAllUsers");
-          const data = await allResponse.json();
-          if (data.result?.data) {
-            setUsers(data.result.data);
-          }
-          handleCloseDialog();
-        } else {
-          toast.error("Erro ao criar utilizador");
-        }
-      }
-    } catch (error) {
-      console.error("Error saving user:", error);
-      toast.error("Erro ao guardar utilizador");
-    }
-  };
-
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm("Tem a certeza que deseja eliminar este utilizador?")) {
+    if (!editingUser && formData.password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
-
-    try {
-      const response = await fetch("/api/trpc/auth.deleteUser", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+    if (editingUser) {
+      updateUser.mutate({
+        userId: editingUser.id,
+        name,
+        email,
+        role: formData.role,
+        churchRole: formData.churchRole,
+        isActive: formData.isActive,
+        ...(formData.password ? { password: formData.password } : {}),
       });
-
-      if (response.ok) {
-        toast.success("Utilizador eliminado com sucesso!");
-        setUsers(users.filter((u) => u.id !== userId));
-      } else {
-        toast.error("Erro ao eliminar utilizador");
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error("Erro ao eliminar utilizador");
+      return;
     }
-  };
+    createUser.mutate({
+      username,
+      password: formData.password,
+      name,
+      email,
+      role: formData.role,
+      churchRole: formData.churchRole,
+    });
+  }
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const users = (usersQuery.data ?? []) as UserItem[];
+    if (!term) return users;
+    return users.filter((user) =>
+      [user.username, user.name ?? "", user.email ?? "", user.churchRole]
+        .join(" ")
+        .toLowerCase()
+        .includes(term),
+    );
+  }, [search, usersQuery.data]);
 
-  const getRoleLabel = (role: string) => {
-    const labels: Record<string, string> = {
-      lider: "Líder",
-      oficial: "Oficial",
-      louvor: "Louvor",
-      membro: "Membro",
-    };
-    return labels[role] || role;
-  };
+  const saving = createUser.isPending || updateUser.isPending;
+  const roleLabel = (value: string | null | undefined) => churchRoles.find((role) => role.value === value)?.label ?? "Membro";
 
   return (
     <DashboardLayoutCustom>
-      <motion.div
-        className="space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                Gestão de Utilizadores
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Crie, edite e gerencie utilizadores do sistema
-              </p>
-            </div>
-            <Button
-              onClick={() => handleOpenDialog()}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Utilizador
-            </Button>
+      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Administração</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gestão de utilizadores</h1>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">Crie, edite, desative e remova acessos da plataforma.</p>
           </div>
-        </motion.div>
+          <Button onClick={() => openDialog()} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" /> Novo utilizador
+          </Button>
+        </div>
 
-        {/* Search bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <Card className="border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
           <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
-            <Input
-              placeholder="Pesquisar por utilizador, nome ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-            />
+            <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar utilizador, nome, email ou função" className="pl-10" />
           </div>
-        </motion.div>
+        </Card>
 
-        {/* Users table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="overflow-hidden bg-white dark:bg-slate-800">
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[980px]">
-                <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Utilizador
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Nome
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Função
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Papel
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                      Estado
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
+        {usersQuery.isLoading ? (
+          <Card className="flex items-center justify-center gap-3 p-12"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /> A carregar utilizadores…</Card>
+        ) : usersQuery.isError ? (
+          <Card className="p-8 text-center text-red-600">{usersQuery.error.message || "Não foi possível carregar os utilizadores."}</Card>
+        ) : (
+          <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[920px]">
+                <thead className="bg-slate-50 dark:bg-slate-700"><tr>{["Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "Ações"].map((heading) => <th key={heading} className="px-5 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200">{heading}</th>)}</tr></thead>
                 <tbody>
-                  {filteredUsers.map((user, idx) => (
-                    <motion.tr
-                      key={user.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                    >
-                      <td className="px-6 py-4">
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {user.username}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        {user.name}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded">
-                          {getRoleLabel(user.churchRole)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded ${
-                            user.role === "admin"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-                          }`}
-                        >
-                          {user.role === "admin" ? "Admin" : "Utilizador"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded ${
-                            user.isActive
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                          }`}
-                        >
-                          {user.isActive ? "Ativo" : "Inativo"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenDialog(user)}
-                            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </motion.tr>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="border-t border-slate-200 dark:border-slate-700">
+                      <td className="px-5 py-4 font-semibold">@{user.username}</td>
+                      <td className="px-5 py-4">{user.name || "—"}</td>
+                      <td className="px-5 py-4">{user.email || "—"}</td>
+                      <td className="px-5 py-4"><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{roleLabel(user.churchRole)}</span></td>
+                      <td className="px-5 py-4">{user.role === "admin" ? "Administrador" : "Utilizador"}</td>
+                      <td className="px-5 py-4">{user.isActive ? "Ativo" : "Inativo"}</td>
+                      <td className="px-5 py-4"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => openDialog(user)} aria-label={`Editar ${user.username}`}><Edit2 className="h-4 w-4" /></Button><Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button></div></td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            <div className="space-y-3 p-4 sm:hidden">
-              {filteredUsers.map((user) => (
-                <div key={user.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                      <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">@{user.username}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${user.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}>
-                      {user.isActive ? "Ativo" : "Inativo"}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                    <p className="break-words">{user.email}</p>
-                    <p>{getRoleLabel(user.churchRole)} · {user.role === "admin" ? "Admin" : "Utilizador"}</p>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenDialog(user)} className="flex-1">
-                      <Edit2 className="mr-2 h-4 w-4" /> Editar
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-700 dark:text-red-400">
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Eliminar</span>
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-3 p-4 md:hidden">
+              {filteredUsers.map((user) => <div key={user.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold">{user.name || user.username}</p><p className="truncate text-sm text-slate-500">@{user.username}</p></div><span className="shrink-0 text-xs font-semibold">{user.isActive ? "Ativo" : "Inativo"}</span></div><p className="mt-3 break-words text-sm text-slate-600 dark:text-slate-300">{user.email || "Sem email"}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{roleLabel(user.churchRole)} · {user.role === "admin" ? "Administrador" : "Utilizador"}</p><div className="mt-4 flex gap-2"><Button className="flex-1" variant="outline" onClick={() => openDialog(user)}><Edit2 className="mr-2 h-4 w-4" /> Editar</Button><Button variant="outline" onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button></div></div>)}
             </div>
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-slate-500 dark:text-slate-400">
-                  Nenhum utilizador encontrado
-                </p>
-              </div>
-            )}
+            {!filteredUsers.length && <div className="p-12 text-center text-slate-500"><UsersRound className="mx-auto mb-3 h-8 w-8" />Nenhum utilizador encontrado.</div>}
           </Card>
-        </motion.div>
+        )}
       </motion.div>
 
-      {/* Dialog for creating/editing user */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-white">
-              {editingUser ? "Editar Utilizador" : "Novo Utilizador"}
-            </DialogTitle>
-          </DialogHeader>
-
+      <Dialog open={dialogOpen} onOpenChange={(open) => open ? setDialogOpen(true) : closeDialog()}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-lg">
+          <DialogHeader><DialogTitle>{editingUser ? "Editar utilizador" : "Novo utilizador"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Utilizador
-              </label>
-              <Input
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-                disabled={!!editingUser}
-                placeholder="username"
-                className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Senha {editingUser && "(deixe em branco para não alterar)"}
-              </label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  placeholder="Senha"
-                  className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Nome
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="Nome completo"
-                className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Email
-              </label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                placeholder="email@example.com"
-                className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600"
-              />
-            </div>
-
-            {/* Church Role */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Função Eclesiástica
-              </label>
-              <Select
-                value={formData.churchRole}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, churchRole: value })
-                }
-              >
-                <SelectTrigger className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600">
-                  <SelectItem value="membro">Membro</SelectItem>
-                  <SelectItem value="louvor">Líder de Louvor</SelectItem>
-                  <SelectItem value="oficial">Oficial</SelectItem>
-                  <SelectItem value="lider">Líder</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* System Role */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Papel no Sistema
-              </label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600">
-                  <SelectItem value="user">Utilizador</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Active status */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-                className="w-4 h-4 rounded border-slate-300"
-              />
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Utilizador Ativo
-              </label>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={handleSaveUser}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Guardar
-              </Button>
-              <Button
-                onClick={handleCloseDialog}
-                variant="outline"
-                className="flex-1"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-            </div>
+            <div><label className="mb-1 block text-sm font-medium">Utilizador</label><Input value={formData.username} disabled={Boolean(editingUser)} onChange={(event) => setFormData({ ...formData, username: event.target.value })} placeholder="username" /></div>
+            <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+            <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} placeholder="Nome completo" /></div>
+            <div><label className="mb-1 block text-sm font-medium">Email</label><Input type="email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} placeholder="email@exemplo.com" /></div>
+            <div><label className="mb-1 block text-sm font-medium">Função eclesiástica</label><Select value={formData.churchRole} onValueChange={(value) => setFormData({ ...formData, churchRole: value as ChurchRole })}><SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger><SelectContent>{churchRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}</SelectContent></Select></div>
+            <div><label className="mb-1 block text-sm font-medium">Papel no sistema</label><Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as SystemRole })}><SelectTrigger><SelectValue placeholder="Selecione o papel" /></SelectTrigger><SelectContent><SelectItem value="user">Utilizador</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
+            <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} /> Utilizador ativo</label>
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeDialog}><X className="mr-2 h-4 w-4" /> Cancelar</Button><Button type="button" disabled={saving} onClick={saveUser} className="bg-emerald-600 text-white hover:bg-emerald-700">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingUser ? "Guardar alterações" : "Criar utilizador"}</Button></div>
           </div>
         </DialogContent>
       </Dialog>

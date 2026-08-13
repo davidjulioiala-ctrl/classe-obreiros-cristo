@@ -22,6 +22,20 @@
       "when": 1785237952852,
       "tag": "0002_familiar_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786544949868,
+      "tag": "0003_square_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786545943187,
+      "tag": "0004_square_radioactive_man",
+      "breakpoints": true
     }
   ]
 }

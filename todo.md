@@ -6173,7 +6173,7 @@
 - [x] Testar rotas principais em desktop, tablet e telemóvel
 - [x] Testar menus e navegação direta por URL
 - [x] Executar verificação TypeScript, testes e build
-- [ ] Guardar checkpoint da correção somente após validação
+- [x] Guardar checkpoint da correção somente após validação
 
 > Nota: esta lista documenta a nova correção solicitada e não remove o histórico anterior.
 
@@ -6294,3 +6294,38 @@
 > Nota: pronto para implementação.
 
 > Nota: fim.
+
+
+## Ciclo de funcionalidades e correções — agosto 2026
+- [ ] Corrigir a quebra do campo Função Eclesiástica na criação e edição de utilizadores
+- [ ] Corrigir lançamento e edição de outras receitas e despesas
+- [ ] Implementar CRUD completo de quotas, outras receitas e despesas
+- [ ] Implementar CRUD completo de transferências, utilizadores, atividades, membros, presenças e relatórios
+- [ ] Corrigir pré-visualização e download de relatórios
+- [ ] Gerar ficheiro PDF ao confirmar a geração de relatório
+- [ ] Implementar ferramentas funcionais do menu Louvor
+- [ ] Adicionar opção de tipo de atividade Outros com descrição personalizada
+- [ ] Adicionar comissão dinâmica com nome e cargo por pessoa e número opcional
+- [ ] Implementar permissões financeiras para administrador e perfil financeiro/financeira
+- [ ] Registar automaticamente operações de criação, edição e eliminação em log de operações
+- [ ] Implementar backup para download no aparelho e integração com Google Drive
+- [ ] Validar responsividade dos novos fluxos em telemóvel, tablet e desktop
+- [ ] Escrever ou atualizar testes Vitest para os fluxos críticos
+- [ ] Executar check, testes e build antes do checkpoint final
+- [ ] Guardar checkpoint final somente após validação funcional completa
+
+> Este ciclo não deve apagar o histórico anterior. Não marcar os itens como concluídos por inferência; marcar apenas depois de testar cada requisito.
+
+> O backup para Google Drive depende de autorização/conector Google disponível; se não houver autorização, entregar primeiro o backup local e deixar o fluxo Google preparado com indicação clara de ligação necessária.
+
+> O log deve excluir dados sensíveis como passwords, tokens e hashes, e as permissões financeiras devem ser aplicadas no servidor, não apenas ocultadas no menu.
+
+> O PDF deve ser gerado no servidor ou por uma biblioteca instalada no projeto e disponibilizado para download pelo utilizador autorizado.
+
+> A opção Outros deve exigir descrição quando selecionada. O número de telefone dos membros de comissão deve ser opcional.
+
+> Não inserir dados de negócio fictícios permanentes na base de dados durante os testes.
+
+> Manter a interface em Português Europeu e preservar a autenticação local como porta de entrada do sistema.
+
+> Continuar a execução até concluir o ciclo, sem entregar apenas uma mensagem de progresso.

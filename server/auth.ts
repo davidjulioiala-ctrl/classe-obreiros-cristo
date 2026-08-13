@@ -43,7 +43,7 @@ export async function authenticateUser(
     }
 
     const foundUser = user[0];
-    if (!foundUser.password) {
+    if (!foundUser.password || !foundUser.isActive) {
       return null;
     }
 
@@ -64,7 +64,7 @@ export async function createUser(
   password: string,
   name: string,
   email: string,
-  churchRole: "lider" | "oficial" | "louvor" | "membro" = "membro",
+  churchRole: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro" = "membro",
   role: "user" | "admin" = "user"
 ): Promise<typeof users.$inferSelect | null> {
   const db = await getDb();
@@ -76,11 +76,11 @@ export async function createUser(
   try {
     const hashedPassword = await hashPassword(password);
 
-    const result = await db.insert(users).values({
-      username,
+    await db.insert(users).values({
+      username: username.trim().toLowerCase(),
       password: hashedPassword,
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       loginMethod: "local",
       role,
       churchRole,
@@ -91,7 +91,7 @@ export async function createUser(
     const createdUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username))
+      .where(eq(users.username, username.trim().toLowerCase()))
       .limit(1);
 
     return createdUser.length > 0 ? createdUser[0] : null;
@@ -106,7 +106,7 @@ export async function updateUser(
   updates: {
     name?: string;
     email?: string;
-    churchRole?: "lider" | "oficial" | "louvor" | "membro";
+    churchRole?: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro";
     role?: "user" | "admin";
     isActive?: boolean;
     password?: string;

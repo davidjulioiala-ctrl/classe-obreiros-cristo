@@ -1,83 +1,37 @@
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, Music2, Users, ArrowRight, Mic2 } from "lucide-react";
+import { CalendarDays, Check, Loader2, Mic2, Music2, Plus, Users } from "lucide-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function Louvor() {
-  return (
-    <DashboardLayoutCustom>
-      <motion.div
-        className="mx-auto w-full max-w-6xl space-y-6"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Ministério</p>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Louvor</h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600 sm:text-base dark:text-slate-400">
-              Organize escalas, equipas e atividades musicais da congregação num único espaço.
-            </p>
-          </div>
-          <Link href="/activities">
-            <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-              Ver atividades
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Escalas</CardTitle>
-              <CalendarDays className="h-5 w-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Consulte e prepare as próximas escalas de louvor.</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Equipa</CardTitle>
-              <Users className="h-5 w-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Mantenha a equipa de músicos e vocalistas organizada.</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Repertório</CardTitle>
-              <Music2 className="h-5 w-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Registe temas e referências para cada encontro.</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-0 shadow-sm dark:bg-slate-800">
-          <CardContent className="flex flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-900/30">
-              <Mic2 className="h-7 w-7 text-emerald-600 dark:text-emerald-300" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Comece a organizar o próximo momento de louvor</h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Crie uma atividade no calendário para associar data, equipa responsável e informações do encontro.
-            </p>
-            <Link href="/activities">
-              <Button variant="outline" className="mt-6">
-                Criar atividade
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </DashboardLayoutCustom>
-  );
+  const utils = trpc.useUtils();
+  const activitiesQuery = trpc.activities.list.useQuery();
+  const createActivity = trpc.activities.create.useMutation();
+  const membersQuery = trpc.members.list.useQuery();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", date: "", startTime: "", endTime: "", location: "", type: "louvor", audience: "geral" });
+  const worshipActivities = useMemo(() => (activitiesQuery.data ?? []).filter((activity) => (activity.type ?? "").toLowerCase().includes("louvor") || (activity.name ?? "").toLowerCase().includes("louvor")), [activitiesQuery.data]);
+  const submit = async () => {
+    if (!form.name.trim() || !form.date) return toast.error("Indique o nome e a data da escala.");
+    try {
+      await createActivity.mutateAsync({ ...form, name: form.name.trim(), type: "louvor", date: form.date, startTime: form.startTime || undefined, endTime: form.endTime || undefined, location: form.location || undefined, audience: form.audience || undefined, hasCommission: false, isReligious: true });
+      await utils.activities.list.invalidate();
+      setForm({ name: "", date: "", startTime: "", endTime: "", location: "", type: "louvor", audience: "geral" }); setOpen(false); toast.success("Escala de louvor criada.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível criar a escala."); }
+  };
+  return <DashboardLayoutCustom><motion.div className="mx-auto w-full max-w-6xl space-y-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Ministério</p><h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Louvor</h1><p className="mt-1 max-w-2xl text-sm text-slate-600 sm:text-base dark:text-slate-400">Organize escalas, equipas e encontros musicais da congregação.</p></div><Button onClick={() => setOpen((value) => !value)} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Nova escala</Button></div>
+    {open && <Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader><CardTitle>Nova escala de louvor</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Nome</Label><Input className="mt-1" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Culto de domingo — louvor" /></div><div><Label>Data</Label><Input className="mt-1" type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></div><div><Label>Hora inicial</Label><Input className="mt-1" type="time" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></div><div><Label>Hora final</Label><Input className="mt-1" type="time" value={form.endTime} onChange={(event) => setForm({ ...form, endTime: event.target.value })} /></div><div><Label>Local</Label><Input className="mt-1" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Templo principal" /></div><div><Label>Público</Label><Select value={form.audience} onValueChange={(value) => setForm({ ...form, audience: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="geral">Geral</SelectItem><SelectItem value="jovens">Jovens</SelectItem><SelectItem value="mulheres">Mulheres</SelectItem><SelectItem value="homens">Homens</SelectItem></SelectContent></Select></div><div className="flex flex-col gap-2 pt-2 sm:col-span-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createActivity.isPending} onClick={submit}>{createActivity.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Guardar escala</Button></div></CardContent></Card>}
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3"><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Escalas</CardTitle><CalendarDays className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-2xl font-bold">{worshipActivities.length}</p><p className="text-sm text-slate-500">Atividades de louvor registadas</p></CardContent></Card><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Equipa</CardTitle><Users className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-2xl font-bold">{membersQuery.data?.filter((member) => (member.position ?? "").toLowerCase().includes("louvor")).length ?? 0}</p><p className="text-sm text-slate-500">Membros associados ao louvor</p></CardContent></Card><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Repertório</CardTitle><Music2 className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Use o campo de tema das atividades para registar o repertório e a referência do encontro.</p></CardContent></Card></div>
+    <Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader><CardTitle className="flex items-center gap-2"><Mic2 className="h-5 w-5 text-emerald-600" /> Próximas escalas</CardTitle></CardHeader><CardContent className="space-y-3">{activitiesQuery.isLoading ? <p className="text-sm text-slate-500">A carregar…</p> : worshipActivities.map((activity) => <div key={activity.id} className="flex flex-col gap-2 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700"><div><p className="font-semibold">{activity.name}</p><p className="text-sm text-slate-500">{new Date(activity.date).toLocaleDateString("pt-PT")} {activity.startTime ? `· ${activity.startTime}` : ""} {activity.location ? `· ${activity.location}` : ""}</p></div><span className="inline-flex items-center gap-1 text-sm text-emerald-700"><Check className="h-4 w-4" /> Planeada</span></div>)}{!activitiesQuery.isLoading && !worshipActivities.length && <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem escalas. Crie a primeira acima.</p>}</CardContent></Card>
+    <div className="flex flex-wrap gap-2"><Link href="/activities"><Button variant="outline">Ver atividades</Button></Link><Link href="/members"><Button variant="outline">Gerir membros da equipa</Button></Link></div>
+  </motion.div></DashboardLayoutCustom>;
 }

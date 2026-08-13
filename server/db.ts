@@ -13,6 +13,7 @@ import {
   transfers,
   reports,
   commissionMembers,
+  auditLog,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -427,4 +428,185 @@ export async function getCommissionByActivity(activityId: number) {
     .select()
     .from(commissionMembers)
     .where(eq(commissionMembers.activityId, activityId));
+}
+
+
+// ============ FINANCIAL CRUD EXTENSIONS ============
+
+export async function listQuotas() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(quotas).orderBy(desc(quotas.createdAt));
+}
+
+export async function deleteQuota(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(quotas).where(eq(quotas.id, id));
+}
+
+export async function listOtherIncome() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(otherIncome).orderBy(desc(otherIncome.date), desc(otherIncome.createdAt));
+}
+
+export async function updateOtherIncome(id: number, data: Partial<typeof otherIncome.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(otherIncome).set(data).where(eq(otherIncome.id, id));
+}
+
+export async function deleteOtherIncome(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(otherIncome).where(eq(otherIncome.id, id));
+}
+
+export async function listExpenses() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(expenses).orderBy(desc(expenses.date), desc(expenses.sequence));
+}
+
+export async function updateExpense(id: number, data: Partial<typeof expenses.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(expenses).set(data).where(eq(expenses.id, id));
+}
+
+export async function deleteExpense(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(expenses).where(eq(expenses.id, id));
+}
+
+// ============ REPORT CRUD ============
+
+export async function listReports() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(reports).orderBy(desc(reports.createdAt));
+}
+
+export async function updateReport(id: number, data: Partial<typeof reports.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(reports).set(data).where(eq(reports.id, id));
+}
+
+export async function deleteReport(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(reports).where(eq(reports.id, id));
+}
+
+// ============ AUDIT LOG ============
+
+export async function createAuditLog(data: typeof auditLog.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(auditLog).values({
+    ...data,
+    details: data.details ? String(data.details).slice(0, 10000) : null,
+  });
+}
+
+export async function listAuditLogs(limit = 250) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(Math.min(Math.max(limit, 1), 500));
+}
+
+
+export async function getReportById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+
+export async function listTransfers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(transfers).orderBy(desc(transfers.createdAt));
+}
+
+export async function deleteTransfer(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(transfers).where(eq(transfers.id, id));
+}
+
+
+export async function deleteActivity(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(commissionMembers).where(eq(commissionMembers.activityId, id));
+  await db.delete(attendance).where(eq(attendance.activityId, id));
+  return await db.delete(activities).where(eq(activities.id, id));
+}
+
+export async function createCommissionMember(data: typeof commissionMembers.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(commissionMembers).values(data);
+}
+
+export async function getCommissionMembersByActivity(activityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.select().from(commissionMembers).where(eq(commissionMembers.activityId, activityId));
+}
+
+export async function deleteCommissionMember(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(commissionMembers).where(eq(commissionMembers.id, id));
+}
+
+
+
+export async function getBackupSnapshot() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [userRows, memberRows, groupRows, activityRows, attendanceRows, quotaRows, incomeRows, expenseRows, transferRows, reportRows, commissionRows, auditRows] = await Promise.all([
+    db.select({ id: users.id, openId: users.openId, name: users.name, email: users.email, loginMethod: users.loginMethod, role: users.role, churchRole: users.churchRole, isActive: users.isActive, createdAt: users.createdAt, updatedAt: users.updatedAt, lastSignedIn: users.lastSignedIn }).from(users),
+    db.select().from(members),
+    db.select().from(groups),
+    db.select().from(activities),
+    db.select().from(attendance),
+    db.select().from(quotas),
+    db.select().from(otherIncome),
+    db.select().from(expenses),
+    db.select().from(transfers),
+    db.select().from(reports),
+    db.select().from(commissionMembers),
+    db.select().from(auditLog),
+  ]);
+  return { exportedAt: new Date(), version: 1, users: userRows, members: memberRows, groups: groupRows, activities: activityRows, attendance: attendanceRows, quotas: quotaRows, otherIncome: incomeRows, expenses: expenseRows, transfers: transferRows, reports: reportRows, commissionMembers: commissionRows, auditLog: auditRows };
+}
+
+
+export async function deleteMember(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(attendance).where(eq(attendance.memberId, id));
+  await db.delete(commissionMembers).where(eq(commissionMembers.memberId, id));
+  await db.delete(quotas).where(eq(quotas.memberId, id));
+  await db.delete(transfers).where(eq(transfers.memberId, id));
+  return db.delete(members).where(eq(members.id, id));
+}
+
+export async function deleteAttendance(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(attendance).where(eq(attendance.id, id));
+}
+
+export async function updateAttendance(id: number, data: Partial<typeof attendance.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(attendance).set(data).where(eq(attendance.id, id));
 }

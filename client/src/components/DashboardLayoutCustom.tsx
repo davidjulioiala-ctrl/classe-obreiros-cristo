@@ -19,6 +19,7 @@ import {
   Search,
   ChevronDown,
   UserCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
@@ -44,6 +45,7 @@ const menuItems: MenuItem[] = [
   { icon: Music, label: "Louvor", href: "/louvor" },
   { icon: Settings, label: "Configurações", href: "/settings" },
   { icon: Users, label: "Utilizadores", href: "/users" },
+  { icon: ShieldCheck, label: "Auditoria e backup", href: "/audit-backup" },
 ];
 
 export default function DashboardLayoutCustom({ children }: DashboardLayoutCustomProps) {
@@ -54,6 +56,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const [location, navigate] = useLocation();
 
   const filteredMenuItems = menuItems.filter((item) => {
+    if (item.href === "/audit-backup" && user?.role !== "admin") return false;
     if (user?.churchRole === "oficial") {
       return !["Finanças", "Transferências", "Configurações", "Utilizadores"].includes(item.label);
     }

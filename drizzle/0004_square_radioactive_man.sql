@@ -1,0 +1,1 @@
+ALTER TABLE `commissionMembers` ADD `phone` varchar(30);

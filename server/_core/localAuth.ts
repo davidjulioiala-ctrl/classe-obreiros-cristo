@@ -71,7 +71,7 @@ export function registerLocalAuthRoutes(app: Express) {
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     try {
       const cookieOptions = getSessionCookieOptions(req);
-      res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      res.clearCookie(COOKIE_NAME, cookieOptions);
 
       return res.json({
         success: true,

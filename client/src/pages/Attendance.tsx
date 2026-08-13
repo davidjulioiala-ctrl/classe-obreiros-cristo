@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Users, Check, X, Download } from "lucide-react";
+import { useEffect } from "react";
+import { Calendar, Users, Check, X, Download, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
@@ -16,17 +17,31 @@ export default function Attendance() {
   const { data: activities, isLoading: activitiesLoading } =
     trpc.activities.list.useQuery();
   const { data: members } = trpc.members.list.useQuery();
-  const { data: attendance } = selectedActivity
+  const { data: attendance, refetch: refetchAttendance } = selectedActivity
     ? trpc.activities.getAttendance.useQuery({ activityId: selectedActivity })
-    : { data: undefined };
+    : { data: undefined, refetch: async () => undefined };
+
+  useEffect(() => {
+    if (!attendance) return;
+    setAttendanceRecords(Object.fromEntries(attendance.map((record) => [record.memberId, record.isPresent])));
+  }, [attendance]);
 
   const recordAttendanceMutation = trpc.activities.recordAttendance.useMutation({
     onSuccess: () => {
       toast.success("Presença registada!");
+      void refetchAttendance();
     },
     onError: (error) => {
       toast.error(`Erro: ${error.message}`);
     },
+  });
+
+  const deleteAttendanceMutation = trpc.activities.deleteAttendance.useMutation({
+    onSuccess: () => {
+      toast.success("Registo de presença eliminado.");
+      void refetchAttendance();
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   const handleToggleAttendance = (memberId: number) => {
@@ -195,7 +210,9 @@ export default function Attendance() {
               Membros
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {members.map((member, idx) => (
+              {members.map((member, idx) => {
+                const existingRecord = attendance?.find((record) => record.memberId === member.id);
+                return (
                 <motion.div
                   key={member.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -219,7 +236,23 @@ export default function Attendance() {
                           {member.position || "Sem cargo"}
                         </p>
                       </div>
-                      <div
+                      <div className="flex items-center gap-2">
+                        {existingRecord && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Eliminar presença de ${member.name}`}
+                            disabled={deleteAttendanceMutation.isPending}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              deleteAttendanceMutation.mutate({ id: existingRecord.id });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                        <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           attendanceRecords[member.id]
                             ? "bg-green-500 text-white"
@@ -231,11 +264,13 @@ export default function Attendance() {
                         ) : (
                           <X className="w-5 h-5" />
                         )}
+                        </div>
                       </div>
                     </div>
                   </Card>
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}

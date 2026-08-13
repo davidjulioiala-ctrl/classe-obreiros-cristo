@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-interface LocalUser {
+export interface LocalUser {
   id: number;
   username: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   role: "user" | "admin";
-  churchRole: "lider" | "oficial" | "louvor" | "membro";
+  churchRole: "lider" | "oficial" | "louvor" | "membro" | "financeiro" | "financeira";
+}
+
+async function readResponse(response: Response) {
+  const payload = await response.json().catch(() => ({} as { message?: string; user?: LocalUser }));
+  if (!response.ok) throw new Error(payload.message || "Não foi possível concluir a operação.");
+  return payload as { user: LocalUser };
 }
 
 export function useLocalAuth() {
@@ -15,90 +21,76 @@ export function useLocalAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/auth/me");
-        
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user || null);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const login = useCallback(
-    async (username: string, password: string) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Utilizador ou senha incorretos");
-        }
-
-        const data = await response.json();
-        setUser(data.user);
-        toast.success("Login realizado com sucesso!");
-        return data.user;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Erro ao fazer login";
-        setError(err instanceof Error ? err : new Error(message));
-        toast.error(message);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  const logout = useCallback(async () => {
+  const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      await fetch("/api/auth/logout", { method: "POST" });
+      const response = await fetch("/api/auth/me", { credentials: "include" });
+      if (response.ok) {
+        const data = await response.json() as { user?: LocalUser };
+        setUser(data.user || null);
+      } else {
+        setUser(null);
+      }
+      setError(null);
+    } catch (cause) {
+      const nextError = cause instanceof Error ? cause : new Error("Falha ao verificar a sessão.");
+      setError(nextError);
       setUser(null);
-      toast.success("Logout realizado com sucesso!");
-    } catch (err) {
-      console.error("Logout failed:", err);
-      toast.error("Erro ao fazer logout");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const state = useMemo(
-    () => ({
-      user,
-      loading,
-      error,
-      isAuthenticated: Boolean(user),
-    }),
-    [user, loading, error]
-  );
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
-  return {
-    ...state,
+  const login = useCallback(async (username: string, password: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await readResponse(response);
+      setUser(data.user);
+      toast.success("Login realizado com sucesso!");
+      return data.user;
+    } catch (cause) {
+      const nextError = cause instanceof Error ? cause : new Error("Erro ao fazer login.");
+      setError(nextError);
+      toast.error(nextError.message);
+      throw nextError;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      setLoading(true);
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      setUser(null);
+      toast.success("Sessão terminada.");
+    } catch (cause) {
+      const nextError = cause instanceof Error ? cause : new Error("Erro ao terminar a sessão.");
+      setError(nextError);
+      toast.error(nextError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return useMemo(() => ({
+    user,
+    loading,
+    error,
+    isAuthenticated: Boolean(user),
     login,
     logout,
-  };
+    refresh,
+  }), [user, loading, error, login, logout, refresh]);
 }

@@ -23,7 +23,7 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).unique(),
   loginMethod: varchar("loginMethod", { length: 64 }).default("local"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  churchRole: mysqlEnum("churchRole", ["lider", "oficial", "louvor", "membro"]).default("membro").notNull(),
+  churchRole: mysqlEnum("churchRole", ["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).default("membro").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -115,6 +115,7 @@ export const commissionMembers = mysqlTable("commissionMembers", {
   activityId: int("activityId").notNull(),
   memberId: int("memberId").notNull(),
   role: varchar("role", { length: 100 }), // e.g., "coordenador", "secretário"
+  phone: varchar("phone", { length: 30 }), // optional contact number
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

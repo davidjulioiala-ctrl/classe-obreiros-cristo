@@ -14,6 +14,7 @@ import LocalLogin from "@/pages/LocalLogin";
 import UserManagement from "@/pages/UserManagement";
 import Louvor from "@/pages/Louvor";
 import Profile from "@/pages/Profile";
+import AuditAndBackup from "@/pages/AuditAndBackup";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -57,6 +58,7 @@ function Router() {
       <Route path={"/settings"} component={Settings} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/users"} component={UserManagement} />
+      <Route path={"/audit-backup"} component={AuditAndBackup} />
       <Route path={"/login"} component={LocalLogin} />
       <Route path={"/404"} component={NotFound} />
       <Route path={"/"} component={Dashboard} />

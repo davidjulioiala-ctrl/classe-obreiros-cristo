@@ -1,359 +1,71 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { FileText, Download, Eye, Trash2, Plus, Calendar } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Plus, Trash2, X } from "lucide-react";
+import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+type ReportItem = { id: number; activityId: number; type: "ata" | "relatorio"; content: string | null; createdAt: Date };
 
 export default function Reports() {
-  const [showGenerateReport, setShowGenerateReport] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<string>("");
+  const [showGenerate, setShowGenerate] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [activityId, setActivityId] = useState("");
+  const [type, setType] = useState<"ata" | "relatorio">("ata");
+  const [content, setContent] = useState("");
+  const reportsQuery = trpc.reports.list.useQuery();
+  const activitiesQuery = trpc.activities.list.useQuery();
+  const utils = trpc.useUtils();
+  const createReport = trpc.reports.create.useMutation({ onSuccess: async () => { await utils.reports.list.invalidate(); setShowGenerate(false); setActivityId(""); setContent(""); toast.success("Relatório preparado com sucesso."); }, onError: (error) => toast.error(error.message) });
+  const deleteReport = trpc.reports.delete.useMutation({ onSuccess: async () => { await utils.reports.list.invalidate(); setSelectedReport(null); toast.success("Relatório eliminado."); }, onError: (error) => toast.error(error.message) });
 
-  // Sample reports data
-  const reports = [
-    {
-      id: 1,
-      activity: "Culto Dominical",
-      type: "ata",
-      date: "2026-07-25",
-      generatedBy: "Líder João",
-      members: 72,
-      downloads: 5,
-    },
-    {
-      id: 2,
-      activity: "Estudo Bíblico",
-      type: "relatorio",
-      date: "2026-07-23",
-      generatedBy: "Oficial Maria",
-      members: 45,
-      downloads: 3,
-    },
-    {
-      id: 3,
-      activity: "Reunião de Líderes",
-      type: "ata",
-      date: "2026-07-21",
-      generatedBy: "Líder João",
-      members: 12,
-      downloads: 8,
-    },
-    {
-      id: 4,
-      activity: "Conferência Especial",
-      type: "relatorio",
-      date: "2026-07-18",
-      generatedBy: "Líder Pedro",
-      members: 150,
-      downloads: 15,
-    },
-  ];
+  function openGenerate() {
+    setShowGenerate(true);
+    setActivityId("");
+    setContent("");
+    setType("ata");
+  }
 
-  const activities = [
-    { id: 1, name: "Culto Dominical", date: "2026-07-25", duration: "1 dia" },
-    { id: 2, name: "Estudo Bíblico", date: "2026-07-23", duration: "1 dia" },
-    { id: 3, name: "Conferência Especial", date: "2026-07-18", duration: "3 dias" },
-    { id: 4, name: "Retiro Espiritual", date: "2026-07-10", duration: "2 dias" },
-  ];
+  function generate() {
+    const activity = (activitiesQuery.data ?? []).find((item) => item.id === Number(activityId));
+    if (!activity) return toast.error("Selecione uma atividade.");
+    const finalContent = content.trim() || `Atividade: ${activity.name}\nData: ${new Date(activity.date).toLocaleDateString("pt-PT")}\nTipo: ${activity.type}\nPreletor: ${activity.speakerName || "Não indicado"}\n\nRegisto gerado a partir da atividade selecionada.`;
+    createReport.mutate({ activityId: activity.id, type, content: finalContent });
+  }
 
-  const getReportTypeLabel = (type: string) => {
-    return type === "ata" ? "Ata de Atividade" : "Relatório";
-  };
-
-  const getReportTypeColor = (type: string) => {
-    return type === "ata"
-      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
-  };
-
-  const handleGenerateReport = () => {
-    if (!selectedActivity) {
-      toast.error("Selecione uma atividade");
-      return;
+  async function downloadPdf(id: number) {
+    try {
+      const response = await fetch(`/api/reports/${id}/pdf`, { credentials: "include" });
+      if (!response.ok) throw new Error("Não foi possível gerar o PDF.");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `relatorio-${id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("PDF descarregado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível descarregar o PDF.");
     }
-    toast.success("Relatório gerado com sucesso!");
-    setShowGenerateReport(false);
-    setSelectedActivity("");
-  };
+  }
 
-  const handleDownload = (reportId: number) => {
-    toast.success("Relatório descarregado!");
-  };
+  const reports = reportsQuery.data ?? [];
+  return <DashboardLayoutCustom>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Documentação</p><h1 className="text-3xl font-bold text-slate-900 dark:text-white">Relatórios e atas</h1><p className="mt-1 text-slate-600 dark:text-slate-400">Crie, pré-visualize e descarregue documentos em PDF.</p></div><Button onClick={openGenerate} className="bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" /> Gerar relatório</Button></div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3"><Card className="p-4"><p className="text-sm text-slate-500">Total</p><p className="text-2xl font-bold">{reports.length}</p></Card><Card className="p-4"><p className="text-sm text-slate-500">Atas</p><p className="text-2xl font-bold">{reports.filter((item) => item.type === "ata").length}</p></Card><Card className="p-4"><p className="text-sm text-slate-500">Relatórios</p><p className="text-2xl font-bold">{reports.filter((item) => item.type === "relatorio").length}</p></Card></div>
+      {reportsQuery.isLoading ? <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin text-emerald-600" /></div> : reports.length === 0 ? <Card className="p-10 text-center text-slate-500"><FileText className="mx-auto mb-2 h-8 w-8" />Ainda não existem relatórios.</Card> : <div className="space-y-3">{reports.map((report) => <Card key={report.id} className="p-4"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="flex items-center gap-3"><div className="rounded-lg bg-emerald-50 p-3 text-emerald-600"><FileText className="h-5 w-5" /></div><div><h2 className="font-semibold text-slate-900 dark:text-white">{report.type === "ata" ? "Ata de atividade" : "Relatório"} #{report.id}</h2><p className="text-sm text-slate-500">Atividade #{report.activityId} · {new Date(report.createdAt).toLocaleString("pt-PT")}</p></div></div><p className="mt-3 line-clamp-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{report.content}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedReport(report)}><Eye className="mr-1 h-4 w-4" /> Pré-visualizar</Button><Button size="sm" variant="outline" onClick={() => downloadPdf(report.id)}><Download className="mr-1 h-4 w-4" /> PDF</Button><Button size="sm" variant="outline" className="text-red-600" onClick={() => { if (confirm("Eliminar este relatório?")) deleteReport.mutate({ id: report.id }); }}><Trash2 className="h-4 w-4" /></Button></div></div></Card>)}</div>}
 
-  return (
-    <DashboardLayoutCustom>
-      <motion.div
-        className="space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        {/* Header */}
-        <motion.div
-          className="flex items-center justify-between"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Relatórios
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Gerencie atas e relatórios de atividades
-            </p>
-          </div>
-          <Button
-            onClick={() => setShowGenerateReport(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Gerar Relatório
-          </Button>
-        </motion.div>
-
-        {/* Summary Cards */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ staggerChildren: 0.1 }}
-        >
-          {[
-            { label: "Total de Relatórios", value: reports.length },
-            { label: "Atas", value: reports.filter((r) => r.type === "ata").length },
-            { label: "Relatórios", value: reports.filter((r) => r.type === "relatorio").length },
-          ].map((stat, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-            >
-              <Card className="p-4 bg-white dark:bg-slate-800">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {stat.label}
-                </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                  {stat.value}
-                </p>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Reports List */}
-        <motion.div
-          className="space-y-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {reports.map((report, idx) => (
-            <motion.div
-              key={report.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <Card className="p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                        <FileText className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">
-                          {report.activity}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {new Date(report.date).toLocaleDateString("pt-PT")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
-                          Tipo
-                        </p>
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded ${getReportTypeColor(
-                            report.type
-                          )}`}
-                        >
-                          {getReportTypeLabel(report.type)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
-                          Membros
-                        </p>
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          {report.members}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
-                          Gerado por
-                        </p>
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          {report.generatedBy}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
-                          Descarregamentos
-                        </p>
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          {report.downloads}x
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => toast.info("Pré-visualização do relatório")}
-                    >
-                      <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDownload(report.id)}
-                    >
-                      <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Generate Report Dialog */}
-        <Dialog open={showGenerateReport} onOpenChange={setShowGenerateReport}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Gerar Novo Relatório</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                  Selecione a atividade
-                </label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {activities.map((activity) => (
-                    <motion.div
-                      key={activity.id}
-                      onClick={() => setSelectedActivity(activity.id.toString())}
-                      className={`p-4 rounded-lg cursor-pointer transition-all border-2 ${
-                        selectedActivity === activity.id.toString()
-                          ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500"
-                          : "bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white">
-                            {activity.name}
-                          </h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            {new Date(activity.date).toLocaleDateString("pt-PT")} • {activity.duration}
-                          </p>
-                        </div>
-                        {selectedActivity === activity.id.toString() && (
-                          <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-sm">✓</span>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-
-              {selectedActivity && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <Card className="p-4 bg-slate-50 dark:bg-slate-700">
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-3">
-                      Tipo de documento
-                    </h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="reportType"
-                          value="ata"
-                          defaultChecked
-                          className="w-4 h-4"
-                        />
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          Ata de Atividade
-                        </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                          (para atividades de 1 dia)
-                        </span>
-                      </label>
-                      <label className="flex items-center gap-3 p-3 rounded-lg border-2 border-slate-200 dark:border-slate-600 cursor-pointer hover:border-slate-300 dark:hover:border-slate-500">
-                        <input
-                          type="radio"
-                          name="reportType"
-                          value="relatorio"
-                          className="w-4 h-4"
-                        />
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          Relatório Completo
-                        </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                          (para atividades com mais de 1 dia)
-                        </span>
-                      </label>
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowGenerateReport(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleGenerateReport}
-                disabled={!selectedActivity}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                Gerar Relatório
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-    </DashboardLayoutCustom>
-  );
+      <Dialog open={showGenerate} onOpenChange={setShowGenerate}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>Gerar documento</DialogTitle></DialogHeader><div className="space-y-4"><Select value={activityId} onValueChange={setActivityId}><SelectTrigger><SelectValue placeholder="Escolha a atividade" /></SelectTrigger><SelectContent>{(activitiesQuery.data ?? []).map((activity) => <SelectItem key={activity.id} value={String(activity.id)}>{activity.name} — {new Date(activity.date).toLocaleDateString("pt-PT")}</SelectItem>)}</SelectContent></Select><Select value={type} onValueChange={(value: "ata" | "relatorio") => setType(value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ata">Ata de atividade</SelectItem><SelectItem value="relatorio">Relatório completo</SelectItem></SelectContent></Select><Textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="Conteúdo do documento (opcional; será criado um resumo automático se ficar vazio)" className="min-h-40" /></div><DialogFooter><Button variant="outline" onClick={() => setShowGenerate(false)}>Cancelar</Button><Button disabled={createReport.isPending || !activityId} onClick={generate} className="bg-emerald-600 text-white hover:bg-emerald-700">{createReport.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} Gerar e guardar</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>Pré-visualização do documento</DialogTitle></DialogHeader>{selectedReport && <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm leading-7 whitespace-pre-line dark:border-slate-700 dark:bg-slate-900">{selectedReport.content}</div>}<DialogFooter><Button variant="outline" onClick={() => setSelectedReport(null)}><X className="mr-2 h-4 w-4" /> Fechar</Button>{selectedReport && <Button onClick={() => downloadPdf(selectedReport.id)} className="bg-emerald-600 text-white hover:bg-emerald-700"><Download className="mr-2 h-4 w-4" /> Descarregar PDF</Button>}</DialogFooter></DialogContent></Dialog>
+    </div>
+  </DashboardLayoutCustom>;
 }
