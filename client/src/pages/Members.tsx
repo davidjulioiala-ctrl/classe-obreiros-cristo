@@ -21,6 +21,8 @@ const emptyForm = {
   phoneTelecel: "",
   email: "",
   position: "",
+  leaderRole: "",
+  louvorRole: "",
   isGuest: false,
   groupId: undefined as number | undefined,
 };
@@ -116,6 +118,8 @@ export default function Members() {
       phoneTelecel: member.phoneTelecel ?? "",
       email: member.email ?? "",
       position: member.position ?? "",
+      leaderRole: member.leaderRole ?? "",
+      louvorRole: member.louvorRole ?? "",
       isGuest: member.isGuest ?? false,
       groupId: member.groupId ?? undefined,
     });
@@ -179,13 +183,14 @@ export default function Members() {
               <Input placeholder="Nome completo" value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
               <select value={formData.sex} onChange={(event) => setFormData({ ...formData, sex: event.target.value as "M" | "F" })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"><option value="M">Masculino</option><option value="F">Feminino</option></select>
               <Input type="date" value={formData.birthDate} onChange={(event) => setFormData({ ...formData, birthDate: event.target.value })} />
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Cargo Eclesiástico</label>
                 <select value={["Líder", "Oficial", "Membro de Ministério de Louvor", "Convidado"].includes(formData.position) ? formData.position : (formData.position ? "Outros" : "Líder")} onChange={(event) => {
                   const val = event.target.value;
                   if (val === "Outros") {
-                    setFormData({ ...formData, position: "" });
+                    setFormData({ ...formData, position: "", leaderRole: "", louvorRole: "" });
                   } else {
-                    setFormData({ ...formData, position: val });
+                    setFormData({ ...formData, position: val, leaderRole: val === "Líder" ? formData.leaderRole : "", louvorRole: val === "Membro de Ministério de Louvor" ? formData.louvorRole : "" });
                   }
                 }} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
                   <option value="Líder">Líder</option>
@@ -196,6 +201,40 @@ export default function Members() {
                 </select>
                 {(!["Líder", "Oficial", "Membro de Ministério de Louvor", "Convidado"].includes(formData.position) || formData.position === "") && (
                   <Input placeholder="Escreva o cargo personalizado" value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })} required />
+                )}
+
+                {/* Se for Líder, abrir campo para especificar a função dos líderes */}
+                {formData.position === "Líder" && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Especificar Função de Líder</label>
+                    <Input placeholder="Ex: Pastor Líder, Tesoureiro Geral, Secretário, Líder de Jovens…" value={formData.leaderRole} onChange={(e) => setFormData({ ...formData, leaderRole: e.target.value })} required />
+                  </div>
+                )}
+
+                {/* Se for Membro de Ministério de Louvor, abrir opção de papel com opção Outros */}
+                {formData.position === "Membro de Ministério de Louvor" && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Papel no Ministério de Louvor</label>
+                    <select value={["Vocal Principal", "Coro / Voz", "Guitarra", "Teclado", "Bateria", "Baixo"].includes(formData.louvorRole) ? formData.louvorRole : (formData.louvorRole ? "Outro" : "Vocal Principal")} onChange={(event) => {
+                      const val = event.target.value;
+                      if (val === "Outro") {
+                        setFormData({ ...formData, louvorRole: "" });
+                      } else {
+                        setFormData({ ...formData, louvorRole: val });
+                      }
+                    }} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                      <option value="Vocal Principal">Vocal Principal</option>
+                      <option value="Coro / Voz">Coro / Voz</option>
+                      <option value="Guitarra">Guitarra</option>
+                      <option value="Teclado">Teclado</option>
+                      <option value="Bateria">Bateria</option>
+                      <option value="Baixo">Baixo</option>
+                      <option value="Outro">Outro (Especificar)</option>
+                    </select>
+                    {(!["Vocal Principal", "Coro / Voz", "Guitarra", "Teclado", "Bateria", "Baixo"].includes(formData.louvorRole) || formData.louvorRole === "") && (
+                      <Input placeholder="Especifique o papel ou instrumento musical" value={formData.louvorRole} onChange={(e) => setFormData({ ...formData, louvorRole: e.target.value })} required />
+                    )}
+                  </div>
                 )}
               </div>
               <Input placeholder="Pai" value={formData.father} onChange={(event) => setFormData({ ...formData, father: event.target.value })} />

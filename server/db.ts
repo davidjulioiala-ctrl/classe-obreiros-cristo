@@ -17,6 +17,8 @@ import {
   louvorMembers,
   louvorScales,
   appSettings,
+  memberHistory,
+  InsertMemberHistory,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -749,6 +751,37 @@ export async function updateAuditLog(id: number, data: { action?: string; entity
 
 export async function deleteAuditLog(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return await db.delete(auditLog).where(eq(auditLog.id, id));
+  if (!db) return;
+  await db.delete(auditLog).where(eq(auditLog.id, id));
+}
+
+// Member History Helpers
+export async function getMemberHistory(memberId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(memberHistory).where(eq(memberHistory.memberId, memberId)).orderBy(desc(memberHistory.startDate));
+}
+
+export async function addMemberHistory(data: InsertMemberHistory) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(memberHistory).values(data);
+}
+
+export async function closeMemberHistory(memberId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(memberHistory).set({ isActive: false, endDate: new Date() }).where(and(eq(memberHistory.memberId, memberId), eq(memberHistory.isActive, true)));
+}
+
+export async function getAllMemberHistory() {
+  const db = await getDb();
+  if (!db) return [];
+  const histories = await db.select().from(memberHistory).orderBy(desc(memberHistory.startDate));
+  const allMembers = await db.select().from(members);
+  const memberMap = new Map(allMembers.map(m => [m.id, m]));
+  return histories.map(h => ({
+    ...h,
+    member: memberMap.get(h.memberId) || null,
+  }));
 }

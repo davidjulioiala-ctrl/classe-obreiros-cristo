@@ -51,6 +51,8 @@ export const members = mysqlTable("members", {
   email: varchar("email", { length: 320 }),
   groupId: int("groupId"),
   position: varchar("position", { length: 255 }),
+  leaderRole: varchar("leaderRole", { length: 255 }), // Specific leader role when position is 'Líder'
+  louvorRole: varchar("louvorRole", { length: 255 }), // Specific louvor role when position is 'Membro de Ministério de Louvor'
   isGuest: boolean("isGuest").default(false).notNull(),
   guestOf: int("guestOf"), // Reference to the member who invited this guest
   isActive: boolean("isActive").default(true).notNull(),
@@ -290,3 +292,20 @@ export const louvorScales = mysqlTable("louvorScales", {
 
 export type LouvorScale = typeof louvorScales.$inferSelect;
 export type InsertLouvorScale = typeof louvorScales.$inferInsert;
+
+/**
+ * Member History table - tracking history of positions and status changes
+ */
+export const memberHistory = mysqlTable("memberHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId").notNull(),
+  position: varchar("position", { length: 255 }).notNull(),
+  details: text("details"),
+  startDate: timestamp("startDate").defaultNow().notNull(),
+  endDate: timestamp("endDate"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MemberHistory = typeof memberHistory.$inferSelect;
+export type InsertMemberHistory = typeof memberHistory.$inferInsert;

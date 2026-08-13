@@ -80,6 +80,8 @@ const membersRouter = router({
         phoneTelecel: z.string().optional(),
         email: z.string().email().optional(),
         position: z.string().optional(),
+        leaderRole: z.string().optional(),
+        louvorRole: z.string().optional(),
         isGuest: z.boolean().default(false),
         guestOf: z.number().optional(),
         groupId: z.number().optional(),
@@ -97,6 +99,31 @@ const membersRouter = router({
         groupId,
         birthDate: input.birthDate ? new Date(input.birthDate) : undefined,
       });
+      // Registrar no histórico de cargos
+      const createdMember = (await db.getAllMembers()).find(m => m.name === input.name && m.groupId === groupId);
+      if (createdMember) {
+        await db.addMemberHistory({
+          memberId: createdMember.id,
+          position: input.position || "Membro",
+          details: `Cargo inicial: ${input.position || "Membro"}${input.leaderRole ? ' (' + input.leaderRole + ')' : ''}${input.louvorRole ? ' (' + input.louvorRole + ')' : ''}`,
+          isActive: true,
+        });
+        
+        // Se for do Ministério de Louvor, adicionar automaticamente aos membros de louvor se ainda não existir
+        if (input.position === "Membro de Ministério de Louvor") {
+          const louvorList = await db.listLouvorMembers();
+          const exists = louvorList.find(l => l.name.toLowerCase() === input.name.toLowerCase());
+          if (!exists) {
+            await db.createLouvorMember({
+              name: input.name,
+              instrumentOrVoice: input.louvorRole || "Vocal/Instrumento",
+              phone: input.phoneOrange || input.phoneTelecel || undefined,
+              email: input.email || undefined,
+            });
+          }
+        }
+      }
+
       await writeAudit(ctx, "criar", "member", undefined, { name: input.name, isGuest: input.isGuest, groupId });
       return result;
     }),
@@ -649,6 +676,17 @@ const louvorRouter = router({
     }),
 });
 
+// ============ HISTORY ROUTER ============
+
+const historyRouter = router({
+  list: protectedProcedure.query(async () => {
+    return await db.getAllMemberHistory();
+  }),
+  getByMember: protectedProcedure.input(z.object({ memberId: z.number() })).query(async ({ input }) => {
+    return await db.getMemberHistory(input.memberId);
+  }),
+});
+
 // ============ BACKUP ROUTER ============
 
 const backupRouter = router({
@@ -682,6 +720,7 @@ export const appRouter = router({
   backup: backupRouter,
   louvor: louvorRouter,
   settings: settingsRouter,
+  history: historyRouter,
 });
 
 export type AppRouter = typeof appRouter;
