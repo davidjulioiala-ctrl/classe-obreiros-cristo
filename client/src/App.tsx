@@ -23,7 +23,7 @@ import MaintenanceGate from "./components/MaintenanceGate";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
+import { LocalAuthProvider, useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
 
 function Router() {
@@ -82,10 +82,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light" switchable>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <LocalAuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </LocalAuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

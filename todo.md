@@ -6425,7 +6425,13 @@
 - [x] Executar a validação final de TypeScript, testes, build e revisão visual antes do checkpoint
 
 ## Correcção de regressão no login — 2026-08-13
-- [ ] Reproduzir o erro React `removeChild` na transição do login
-- [ ] Corrigir a desmontagem/navegação do fluxo de autenticação sem remover nós fora do React
-- [ ] Adicionar teste de regressão e validar login desktop/mobile
-- [ ] Executar typecheck, testes, build e guardar checkpoint da correcção
+- [x] Reproduzir o erro React `removeChild` na transição do login
+- [x] Corrigir a desmontagem/navegação do fluxo de autenticação sem remover nós fora do React
+- [x] Adicionar teste de regressão e validar login desktop/mobile
+- [x] Executar typecheck, testes, build e guardar checkpoint da correcção
+
+## Regressão pós-login — sessão aceite sem navegação — 2026-08-13
+- [x] Reproduzir a aceitação do login e identificar porque o estado da sessão não muda no cliente
+- [x] Corrigir a sincronização entre cookie, hook local e navegação para o dashboard
+- [x] Adicionar teste de regressão para login aceite e validar desktop/mobile
+- [x] Executar typecheck, testes, build e guardar checkpoint da correcção

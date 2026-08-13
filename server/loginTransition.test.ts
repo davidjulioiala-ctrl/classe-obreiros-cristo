@@ -24,6 +24,16 @@ describe("login transition regression guards", () => {
     expect(dashboardSource).not.toContain("<Toaster");
   });
 
+  it("shares one authentication state between Router and LocalLogin", () => {
+    const appSource = readProjectFile("client/src/App.tsx");
+    const hookSource = readProjectFile("client/src/_core/hooks/useLocalAuth.ts");
+
+    expect(appSource).toContain("<LocalAuthProvider>");
+    expect(appSource).toContain("<Router />");
+    expect(hookSource).toContain("createContext<LocalAuthContextValue | undefined>");
+    expect(hookSource).toContain("useContext(LocalAuthContext)");
+  });
+
   it("does not force a full document reload after local login or 2FA", () => {
     const loginSource = readProjectFile("client/src/pages/LocalLogin.tsx");
 

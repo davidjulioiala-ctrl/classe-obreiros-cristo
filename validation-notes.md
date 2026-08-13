@@ -50,3 +50,9 @@ A captura desktop (1280×720) confirmou um cartão de login centrado, campos vaz
 - Typecheck, testes de autenticação/logout e build de produção passaram após as correcções.
 
 - Após o alinhamento do Sonner com o ThemeProvider local, as capturas desktop (1280×720) e mobile (375×812) mostram o login estável, legível, sem overflow e sem credenciais predefinidas visíveis.
+
+## Regressão pós-login — sessão partilhada — 2026-08-13
+- A causa identificada foi a existência de duas instâncias independentes de `useLocalAuth`: o `Router` mantinha `user=null` enquanto `LocalLogin` actualizava apenas o seu próprio estado após a resposta 200.
+- Foi criado `LocalAuthProvider` com contexto único e o provider foi colocado na raiz do `App`, permitindo que o `Router` e o `LocalLogin` partilhem a mesma sessão.
+- Typecheck, testes de autenticação/2FA, teste de regressão do fluxo e build passaram. As capturas desktop (1280×720) e mobile (375×812) continuam legíveis, sem overflow e com os campos de login vazios.
+- A validação funcional de credenciais válidas no browser depende de uma credencial administrativa fornecida pelo responsável; os testes automatizados cobrem a resposta de login, a criação do estado de sessão e a navegação SPA sem usar credenciais fictícias.

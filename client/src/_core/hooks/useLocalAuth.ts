@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export interface LocalUser {
@@ -14,13 +14,24 @@ export interface LocalUser {
 type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; message?: string; error?: string };
 type LoginResult = { twoFactorRequired: boolean; user?: LocalUser };
 
+export interface LocalAuthContextValue {
+  user: LocalUser | null;
+  loading: boolean;
+  error: Error | null;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => Promise<LoginResult>;
+  verifyTwoFactor: (code: string) => Promise<LocalUser>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
 async function readResponse(response: Response) {
   const payload = await response.json().catch(() => ({} as AuthResponse));
   if (!response.ok) throw new Error(payload.error || payload.message || "Não foi possível concluir a operação.");
   return payload as AuthResponse;
 }
 
-export function useLocalAuth() {
+function useLocalAuthState(): LocalAuthContextValue {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -125,4 +136,17 @@ export function useLocalAuth() {
     logout,
     refresh,
   }), [user, loading, error, login, verifyTwoFactor, logout, refresh]);
+}
+
+const LocalAuthContext = createContext<LocalAuthContextValue | undefined>(undefined);
+
+export function LocalAuthProvider({ children }: { children: React.ReactNode }) {
+  const auth = useLocalAuthState();
+  return createElement(LocalAuthContext.Provider, { value: auth }, children);
+}
+
+export function useLocalAuth() {
+  const context = useContext(LocalAuthContext);
+  if (!context) throw new Error("useLocalAuth must be used within LocalAuthProvider");
+  return context;
 }
