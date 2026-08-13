@@ -19,6 +19,8 @@ export default function Settings() {
   const [logoUrl, setLogoUrl] = useState("");
   const [logoKey, setLogoKey] = useState("");
   const [logoName, setLogoName] = useState("");
+  const [logoAlignment, setLogoAlignment] = useState<"left" | "center" | "right">("center");
+  const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [notifActivities, setNotifActivities] = useState(true);
   const [notifAttendance, setNotifAttendance] = useState(true);
@@ -46,6 +48,8 @@ export default function Settings() {
         if (parsed.logoUrl) setLogoUrl(parsed.logoUrl);
         if (parsed.logoKey) setLogoKey(parsed.logoKey);
         if (parsed.logoName) setLogoName(parsed.logoName);
+        if (parsed.logoAlignment === "left" || parsed.logoAlignment === "center" || parsed.logoAlignment === "right") setLogoAlignment(parsed.logoAlignment);
+        if (parsed.logoSize === "small" || parsed.logoSize === "medium" || parsed.logoSize === "large") setLogoSize(parsed.logoSize);
       } catch {}
     }
   }, [orgQuery.data]);
@@ -76,7 +80,7 @@ export default function Settings() {
   }, [appearanceQuery.data]);
 
   const handleSaveOrganization = () => {
-    setSettingsMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey }) });
+    setSettingsMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
   };
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -170,6 +174,25 @@ export default function Settings() {
                         {logoName ? <span className="max-w-full truncate text-sm text-slate-600 dark:text-slate-300">{logoName}</span> : <span className="text-sm text-slate-500 dark:text-slate-400">Nenhum logótipo configurado</span>}
                       </div>
                       {logoUrl ? <img src={logoUrl} alt="Pré-visualização do logótipo da congregação" className="mt-4 h-20 max-w-[220px] rounded-lg border border-slate-200 bg-white object-contain p-2 dark:border-slate-700" /> : null}
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="pdf-logo-alignment" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Alinhamento no cabeçalho PDF</label>
+                          <select id="pdf-logo-alignment" value={logoAlignment} onChange={(event) => setLogoAlignment(event.target.value as "left" | "center" | "right")} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                            <option value="left">À esquerda</option>
+                            <option value="center">Centrado</option>
+                            <option value="right">À direita</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="pdf-logo-size" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Tamanho no cabeçalho PDF</label>
+                          <select id="pdf-logo-size" value={logoSize} onChange={(event) => setLogoSize(event.target.value as "small" | "medium" | "large")} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                            <option value="small">Pequeno</option>
+                            <option value="medium">Médio</option>
+                            <option value="large">Grande</option>
+                          </select>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">As opções são aplicadas a novos PDFs exportados. O sistema mantém a proporção original do logótipo.</p>
                     </div>
                   </div>
                 </div>

@@ -6582,3 +6582,13 @@
 - [x] Criar painel de definições na interface para upload seguro do logótipo e definição do nome
 - [x] Atualizar geradores de PDF para incluir o cabeçalho personalizado com o logótipo e o nome da congregação
 - [x] Executar testes unitários e build de produção para validar a congregação nos PDFs
+
+## Fase 9: Personalização do Logótipo em PDFs — 2026-08-13
+- [x] Adicionar alinhamento configurável do logótipo (esquerda, centrado e direita) nas Definições.
+- [x] Adicionar tamanho configurável do logótipo (pequeno, médio e grande) nas Definições.
+- [x] Aplicar as preferências de alinhamento e tamanho a todos os cabeçalhos PDF sem distorcer a imagem.
+- [x] Validar os controlos, testes unitários, build e publicação.
+
+### Histórico de implementação da Fase 9
+- [x] Validação final concluída após integração dos controlos de branding.
+
