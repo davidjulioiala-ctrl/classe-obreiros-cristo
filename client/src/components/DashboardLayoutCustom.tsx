@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
   Bell,
   Search,
   ChevronDown,
-  UserCircle,
   ShieldCheck,
   History,
   AlertTriangle,
@@ -89,47 +88,31 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <AnimatePresence>
-        {mobileSidebarOpen && (
-          <motion.button
-            type="button"
-            aria-label="Fechar menu"
-            className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
 
-      <motion.aside
+      <aside
         aria-label="Navegação principal"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(84vw,280px)] flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`} 
-        animate={{ width: sidebarExpanded ? 280 : 80 }}
-        initial={false}
-        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white shadow-lg transition-[width,transform] duration-200 dark:border-slate-800 dark:bg-slate-900 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} ${sidebarExpanded ? "w-[min(84vw,280px)]" : "w-20"}`}
       >
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
-          <AnimatePresence mode="wait">
-            {sidebarExpanded && (
-              <motion.div
-                key="logo"
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                className="flex min-w-0 items-center gap-2"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
-                  <span className="text-lg font-bold text-white">C</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">COC</p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">Gestão eclesiástica</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {sidebarExpanded && (
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <span className="text-lg font-bold text-white">C</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">COC</p>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">Gestão eclesiástica</p>
+              </div>
+            </div>
+          )}
 
           <Button
             variant="ghost"
@@ -148,40 +131,30 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <motion.button
+                <button
                   key={item.href}
                   type="button"
                   aria-current={active ? "page" : undefined}
                   title={sidebarExpanded ? undefined : item.label}
                   onClick={() => goTo(item.href)}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors sm:px-4 ${item.nested ? "pl-8 text-xs" : ""} ${
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-all active:scale-[0.98] sm:px-4 ${item.nested ? "pl-8 text-xs" : ""} ${
                     active
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400 hover:translate-x-1"
                   }`}
-                  whileHover={{ x: 3 }}
-                  whileTap={{ scale: 0.98 }}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  <AnimatePresence mode="wait">
-                    {sidebarExpanded && (
-                      <motion.span
-                        key="label"
-                        initial={{ opacity: 0, x: -4 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -4 }}
-                        className="truncate text-sm font-medium"
-                      >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
+                  {sidebarExpanded && (
+                    <span className="truncate text-sm font-medium">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
         </nav>
-      </motion.aside>
+      </aside>
 
       <div className={`min-h-screen transition-[padding] duration-200 ${sidebarExpanded ? "lg:pl-[280px]" : "lg:pl-20"}`}>
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 shadow-sm backdrop-blur sm:min-h-20 sm:px-6 lg:px-8 dark:border-slate-800 dark:bg-slate-900/95">
@@ -236,56 +209,32 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
               </button>
 
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                    className="absolute right-0 mt-2 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                  <div className="border-b border-slate-100 px-3 py-2 sm:hidden dark:border-slate-700">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{user?.name || "Utilizador"}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {user?.churchRole === "lider" ? "Líder" : user?.churchRole === "oficial" ? "Oficial" : "Louvor"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
                   >
-                    <button
-                      type="button"
-                      onClick={() => goTo("/profile")}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                    >
-                      <UserCircle className="h-4 w-4" />
-                      Meu perfil
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => goTo("/settings")}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Configurações
-                    </button>
-                    <div className="border-t border-slate-200 dark:border-slate-700" />
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sair
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <LogOut className="h-4 w-4" />
+                    <span>Terminar sessão</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
-        <motion.main
-          className="min-w-0 p-4 sm:p-6 lg:p-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.25 }}
-        >
+        <main className="p-4 sm:p-6 lg:p-8" id="main-content">
           {children}
-        </motion.main>
+        </main>
       </div>
-
     </div>
   );
 }

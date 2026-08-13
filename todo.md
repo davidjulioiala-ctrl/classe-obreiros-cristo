@@ -6456,3 +6456,9 @@
 - [x] Garantir tratamento de erro, estados de carregamento e actualização das listas após criar, editar ou apagar.
 - [x] Acrescentar testes de regressão para as operações corrigidas e validar fluxos críticos no navegador.
 - [x] Executar typecheck, testes, build e revisão responsiva antes de guardar o checkpoint.
+
+## Correção da excepção DOM insertBefore (React 19) — 2026-08-13
+- [x] Reproduzir e rastrear o componente ou transição de rota que provoca o erro `NotFoundError: Failed to execute 'insertBefore' on 'Node'`.
+- [x] Auditar aninhamento de tabelas, listas dinâmicas com chaves instáveis, Framer Motion e portais.
+- [x] Corrigir a reconciliação e adicionar testes de regressão de DOM.
+- [x] Validar navegação SPA e compilação de produção.
