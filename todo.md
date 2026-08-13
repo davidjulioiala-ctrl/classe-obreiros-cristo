@@ -6501,13 +6501,20 @@
 
 
 ## Correções operacionais nos seis menus — 2026-08-13
-- [ ] Investigar procedimentos tRPC, rotas e formulários dos menus Materiais, Membros, Relatórios, Transferências, Finanças e Presenças.
-- [ ] Corrigir falhas de schema, tipos, mutações ou tratamento de erros em cada um dos 6 módulos.
-- [ ] Validar testes unitários e build de produção sem erros.
-- [ ] Guardar checkpoint e publicar os menus corrigidos.
+- [x] Investigar procedimentos tRPC, rotas e formulários dos menus Materiais, Membros, Relatórios, Transferências, Finanças e Presenças.
+- [x] Corrigir falhas de schema, tipos, mutações ou tratamento de erros em cada um dos 6 módulos.
+- [x] Validar testes unitários e build de produção sem erros.
+- [x] Guardar checkpoint e publicar os menus corrigidos.
 
 
 ## Revisão administrativa de incidentes — 2026-08-13
-- [ ] Expor no painel administrativo os anexos de capturas de ecrã associados aos reportes públicos, sem quebrar o acesso seguro ao storage.
-- [ ] Adicionar regressão para preservar a referência do anexo no fluxo de revisão de incidentes.
-- [ ] Validar novamente typecheck, testes, build e checkpoint publicado.
+- [x] Expor no painel administrativo os anexos de capturas de ecrã associados aos reportes públicos, sem quebrar o acesso seguro ao storage.
+- [x] Adicionar regressão para preservar a referência do anexo no fluxo de revisão de incidentes.
+- [x] Validar novamente typecheck, testes, build e checkpoint publicado.
+
+
+## Exportação de Membros e Relatórios em PDF e CSV — 2026-08-13
+- [ ] Criar botões de exportação (PDF e CSV) nas páginas de Membros e Relatórios.
+- [ ] Implementar geradores cliente/servidor para exportar dados formatados com IDs sequenciais, filtros aplicados e codificação UTF-8 correta.
+- [ ] Adicionar testes unitários para validar a geração dos ficheiros de exportação.
+- [ ] Executar typecheck, testes, build e guardar checkpoint.

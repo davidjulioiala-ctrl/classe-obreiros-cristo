@@ -18,6 +18,7 @@ import { requireSameOrigin, SECURITY_LIMITS, securityHeaders } from "./security"
 import { maintenanceGate } from "./maintenance";
 import { getSystemMaintenanceState } from "../db";
 import { registerStatusReportRoute } from "../statusReportRoute";
+import { registerListExportRoutes } from "../listExportRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -60,6 +61,7 @@ async function startServer() {
   registerLocalAuthRoutes(app);
   registerAdminBootstrapRoute(app);
   registerStatusReportRoute(app);
+  registerListExportRoutes(app);
   app.get("/api/maintenance", async (_req, res) => {
     try {
       const state = await getSystemMaintenanceState();

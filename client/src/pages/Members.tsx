@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Edit2, Trash2, Eye, X } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { downloadProtectedFile } from "@/lib/fileDownload";
 
 const emptyForm = {
   name: "",
@@ -49,6 +50,7 @@ export default function Members() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<MemberForm>(emptyForm);
   const [editingGroup, setEditingGroup] = useState<{ id: number; name: string; description?: string } | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "csv" | null>(null);
   const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
   const { data: groups, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -143,6 +145,19 @@ export default function Members() {
     if (window.confirm(`Eliminar o membro ${name}?`)) deleteMemberMutation.mutate({ id });
   };
 
+  const exportMembers = async (format: "pdf" | "csv") => {
+    setExportingFormat(format);
+    try {
+      const query = searchQuery.trim() ? `?search=${encodeURIComponent(searchQuery.trim())}` : "";
+      await downloadProtectedFile(`/api/members/export/${format}${query}`, `membros${searchQuery.trim() ? "-pesquisa" : ""}.${format}`);
+      toast.success(`Lista de membros exportada em ${format.toUpperCase()}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar os membros.");
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
   const isSaving = createMemberMutation.isPending || updateMemberMutation.isPending;
 
   return (
@@ -153,7 +168,13 @@ export default function Members() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Membros</h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Gira todos os membros da congregação.</p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            <Button onClick={() => void exportMembers("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+              <Download className="mr-2 h-4 w-4" /> PDF
+            </Button>
+            <Button onClick={() => void exportMembers("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV
+            </Button>
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
               {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
             </Button>
