@@ -14,6 +14,8 @@ import {
   reports,
   commissionMembers,
   auditLog,
+  louvorMembers,
+  louvorScales,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -300,6 +302,8 @@ export async function getAttendanceByActivity(activityId: number) {
     .from(attendance)
     .where(eq(attendance.activityId, activityId));
 }
+
+
 
 export async function getAttendanceStats(activityId: number) {
   const db = await getDb();
@@ -660,4 +664,58 @@ export async function updateAttendance(id: number, data: Partial<typeof attendan
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.update(attendance).set(data).where(eq(attendance.id, id));
+}
+
+// ============ LOUVOR MODULE ============
+
+export async function listLouvorMembers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(louvorMembers).orderBy(desc(louvorMembers.createdAt));
+}
+
+export async function createLouvorMember(data: typeof louvorMembers.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(louvorMembers).values(data);
+}
+
+export async function updateLouvorMember(id: number, data: Partial<typeof louvorMembers.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(louvorMembers).set(data).where(eq(louvorMembers.id, id));
+}
+
+export async function deleteLouvorMember(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(louvorScales).where(eq(louvorScales.louvorMemberId, id));
+  return await db.delete(louvorMembers).where(eq(louvorMembers.id, id));
+}
+
+export async function listLouvorScales(activityId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (activityId) {
+    return db.select().from(louvorScales).where(eq(louvorScales.activityId, activityId));
+  }
+  return db.select().from(louvorScales).orderBy(desc(louvorScales.createdAt));
+}
+
+export async function createLouvorScale(data: typeof louvorScales.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(louvorScales).values(data);
+}
+
+export async function updateLouvorScale(id: number, data: Partial<typeof louvorScales.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(louvorScales).set(data).where(eq(louvorScales.id, id));
+}
+
+export async function deleteLouvorScale(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(louvorScales).where(eq(louvorScales.id, id));
 }

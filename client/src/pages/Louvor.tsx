@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, Check, Loader2, Mic2, Music2, Plus, Users } from "lucide-react";
-import { Link } from "wouter";
+import { CalendarDays, Check, Loader2, Mic2, Music2, Plus, Trash2, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,25 +12,225 @@ import { toast } from "sonner";
 
 export default function Louvor() {
   const utils = trpc.useUtils();
+  const [activeTab, setActiveTab] = useState<"membros" | "escalas">("membros");
+  const [showMemberForm, setShowMemberForm] = useState(false);
+  const [memberForm, setMemberForm] = useState({ name: "", instrumentOrVoice: "Vocal Principal", phone: "", email: "" });
+
+  const [showScaleForm, setShowScaleForm] = useState(false);
+  const [scaleForm, setScaleForm] = useState({ activityId: 0, louvorMemberId: 0, roleInScale: "Vocal", songs: "", status: "escalado" as const });
+
+  const membersQuery = trpc.louvor.listMembers.useQuery();
+  const scalesQuery = trpc.louvor.listScales.useQuery();
   const activitiesQuery = trpc.activities.list.useQuery();
-  const createActivity = trpc.activities.create.useMutation();
-  const membersQuery = trpc.members.list.useQuery();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", date: "", startTime: "", endTime: "", location: "", type: "louvor", audience: "geral" });
-  const worshipActivities = useMemo(() => (activitiesQuery.data ?? []).filter((activity) => (activity.type ?? "").toLowerCase().includes("louvor") || (activity.name ?? "").toLowerCase().includes("louvor")), [activitiesQuery.data]);
-  const submit = async () => {
-    if (!form.name.trim() || !form.date) return toast.error("Indique o nome e a data da escala.");
-    try {
-      await createActivity.mutateAsync({ ...form, name: form.name.trim(), type: "louvor", date: form.date, startTime: form.startTime || undefined, endTime: form.endTime || undefined, location: form.location || undefined, audience: form.audience || undefined, hasCommission: false, isReligious: true });
-      await utils.activities.list.invalidate();
-      setForm({ name: "", date: "", startTime: "", endTime: "", location: "", type: "louvor", audience: "geral" }); setOpen(false); toast.success("Escala de louvor criada.");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível criar a escala."); }
-  };
-  return <DashboardLayoutCustom><motion.div className="mx-auto w-full max-w-6xl space-y-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Ministério</p><h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Louvor</h1><p className="mt-1 max-w-2xl text-sm text-slate-600 sm:text-base dark:text-slate-400">Organize escalas, equipas e encontros musicais da congregação.</p></div><Button onClick={() => setOpen((value) => !value)} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Nova escala</Button></div>
-    {open && <Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader><CardTitle>Nova escala de louvor</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><div><Label>Nome</Label><Input className="mt-1" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Culto de domingo — louvor" /></div><div><Label>Data</Label><Input className="mt-1" type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></div><div><Label>Hora inicial</Label><Input className="mt-1" type="time" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></div><div><Label>Hora final</Label><Input className="mt-1" type="time" value={form.endTime} onChange={(event) => setForm({ ...form, endTime: event.target.value })} /></div><div><Label>Local</Label><Input className="mt-1" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Templo principal" /></div><div><Label>Público</Label><Select value={form.audience} onValueChange={(value) => setForm({ ...form, audience: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="geral">Geral</SelectItem><SelectItem value="jovens">Jovens</SelectItem><SelectItem value="mulheres">Mulheres</SelectItem><SelectItem value="homens">Homens</SelectItem></SelectContent></Select></div><div className="flex flex-col gap-2 pt-2 sm:col-span-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createActivity.isPending} onClick={submit}>{createActivity.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Guardar escala</Button></div></CardContent></Card>}
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3"><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Escalas</CardTitle><CalendarDays className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-2xl font-bold">{worshipActivities.length}</p><p className="text-sm text-slate-500">Atividades de louvor registadas</p></CardContent></Card><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Equipa</CardTitle><Users className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-2xl font-bold">{membersQuery.data?.filter((member) => (member.position ?? "").toLowerCase().includes("louvor")).length ?? 0}</p><p className="text-sm text-slate-500">Membros associados ao louvor</p></CardContent></Card><Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader className="flex flex-row items-center justify-between space-y-0"><CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">Repertório</CardTitle><Music2 className="h-5 w-5 text-emerald-600" /></CardHeader><CardContent><p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Use o campo de tema das atividades para registar o repertório e a referência do encontro.</p></CardContent></Card></div>
-    <Card className="border-0 shadow-sm dark:bg-slate-800"><CardHeader><CardTitle className="flex items-center gap-2"><Mic2 className="h-5 w-5 text-emerald-600" /> Próximas escalas</CardTitle></CardHeader><CardContent className="space-y-3">{activitiesQuery.isLoading ? <p className="text-sm text-slate-500">A carregar…</p> : worshipActivities.map((activity) => <div key={activity.id} className="flex flex-col gap-2 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700"><div><p className="font-semibold">{activity.name}</p><p className="text-sm text-slate-500">{new Date(activity.date).toLocaleDateString("pt-PT")} {activity.startTime ? `· ${activity.startTime}` : ""} {activity.location ? `· ${activity.location}` : ""}</p></div><span className="inline-flex items-center gap-1 text-sm text-emerald-700"><Check className="h-4 w-4" /> Planeada</span></div>)}{!activitiesQuery.isLoading && !worshipActivities.length && <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem escalas. Crie a primeira acima.</p>}</CardContent></Card>
-    <div className="flex flex-wrap gap-2"><Link href="/activities"><Button variant="outline">Ver atividades</Button></Link><Link href="/members"><Button variant="outline">Gerir membros da equipa</Button></Link></div>
-  </motion.div></DashboardLayoutCustom>;
+
+  const createMember = trpc.louvor.createMember.useMutation({
+    onSuccess: () => {
+      toast.success("Membro de Louvor registado com sucesso!");
+      setMemberForm({ name: "", instrumentOrVoice: "Vocal Principal", phone: "", email: "" });
+      setShowMemberForm(false);
+      void utils.louvor.listMembers.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteMember = trpc.louvor.deleteMember.useMutation({
+    onSuccess: () => {
+      toast.success("Membro removido do Louvor.");
+      void utils.louvor.listMembers.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const createScale = trpc.louvor.createScale.useMutation({
+    onSuccess: () => {
+      toast.success("Escala de música guardada com sucesso!");
+      setScaleForm({ activityId: 0, louvorMemberId: 0, roleInScale: "Vocal", songs: "", status: "escalado" });
+      setShowScaleForm(false);
+      void utils.louvor.listScales.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteScale = trpc.louvor.deleteScale.useMutation({
+    onSuccess: () => {
+      toast.success("Escala removida.");
+      void utils.louvor.listScales.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const scales = useMemo(() => scalesQuery.data ?? [], [scalesQuery.data]);
+  const activities = useMemo(() => activitiesQuery.data ?? [], [activitiesQuery.data]);
+
+  return (
+    <DashboardLayoutCustom>
+      <motion.div className="mx-auto w-full max-w-6xl space-y-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Ministério Musical</p>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Ministério de Louvor</h1>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600 sm:text-base dark:text-slate-400">Gira os membros exclusivos do louvor e defina as escalas musicais antes ou depois de cada atividade.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant={activeTab === "membros" ? "default" : "outline"} onClick={() => setActiveTab("membros")} className={activeTab === "membros" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>
+              Membros de Louvor
+            </Button>
+            <Button variant={activeTab === "escalas" ? "default" : "outline"} onClick={() => setActiveTab("escalas")} className={activeTab === "escalas" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>
+              Escalas Musicais
+            </Button>
+          </div>
+        </div>
+
+        {activeTab === "membros" && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Equipa de Música</h2>
+              <Button onClick={() => setShowMemberForm((v) => !v)} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                <Plus className="mr-2 h-4 w-4" /> Novo membro de louvor
+              </Button>
+            </div>
+
+            {showMemberForm && (
+              <Card className="border-0 shadow-sm dark:bg-slate-800">
+                <CardHeader><CardTitle>Adicionar membro ao louvor</CardTitle></CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Nome completo</Label>
+                    <Input className="mt-1" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} placeholder="Nome do cantor ou músico" />
+                  </div>
+                  <div>
+                    <Label>Instrumento ou Voz</Label>
+                    <Select value={memberForm.instrumentOrVoice} onValueChange={(val) => setMemberForm({ ...memberForm, instrumentOrVoice: val })}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Vocal Principal">Vocal Principal</SelectItem>
+                        <SelectItem value="Coro / Backing Vocal">Coro / Backing Vocal</SelectItem>
+                        <SelectItem value="Teclado / Piano">Teclado / Piano</SelectItem>
+                        <SelectItem value="Violão / Guitarra">Violão / Guitarra</SelectItem>
+                        <SelectItem value="Baixo">Baixo</SelectItem>
+                        <SelectItem value="Bateria / Percussão">Bateria / Percussão</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Telefone (Opcional)</Label>
+                    <Input className="mt-1" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} placeholder="+244..." />
+                  </div>
+                  <div>
+                    <Label>Email (Opcional)</Label>
+                    <Input className="mt-1" type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} placeholder="email@exemplo.com" />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
+                    <Button variant="outline" onClick={() => setShowMemberForm(false)}>Cancelar</Button>
+                    <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createMember.isPending} onClick={() => {
+                      if (!memberForm.name.trim()) return toast.error("Indique o nome do membro.");
+                      createMember.mutate(memberForm);
+                    }}>
+                      {createMember.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {membersQuery.isLoading ? <p className="text-sm text-slate-500">A carregar...</p> : members.length === 0 ? <p className="col-span-full rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem membros registados no ministério de louvor.</p> : members.map((m) => (
+                <Card key={m.id} className="border-0 shadow-sm dark:bg-slate-800">
+                  <CardContent className="p-4 flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white">{m.name}</h3>
+                      <p className="text-sm text-emerald-600 font-medium">{m.instrumentOrVoice}</p>
+                      {m.phone && <p className="text-xs text-slate-500 mt-1">{m.phone}</p>}
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => deleteMember.mutate({ id: m.id })}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "escalas" && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Escalas por Atividade (Pré ou Pós-evento)</h2>
+              <Button onClick={() => setShowScaleForm((v) => !v)} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                <Plus className="mr-2 h-4 w-4" /> Adicionar à escala
+              </Button>
+            </div>
+
+            {showScaleForm && (
+              <Card className="border-0 shadow-sm dark:bg-slate-800">
+                <CardHeader><CardTitle>Escalar membro para atividade</CardTitle></CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Atividade</Label>
+                    <select className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={scaleForm.activityId || ""} onChange={(e) => setScaleForm({ ...scaleForm, activityId: Number(e.target.value) })}>
+                      <option value="">Selecione a atividade...</option>
+                      {activities.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name} ({new Date(a.date).toLocaleDateString("pt-PT")})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Membro do Louvor</Label>
+                    <select className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={scaleForm.louvorMemberId || ""} onChange={(e) => setScaleForm({ ...scaleForm, louvorMemberId: Number(e.target.value) })}>
+                      <option value="">Selecione o membro...</option>
+                      {members.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.instrumentOrVoice})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Função na Escala</Label>
+                    <Input className="mt-1" value={scaleForm.roleInScale} onChange={(e) => setScaleForm({ ...scaleForm, roleInScale: e.target.value })} placeholder="Ex: Voz principal, Teclado" />
+                  </div>
+                  <div>
+                    <Label>Hinos / Músicas (Opcional)</Label>
+                    <Input className="mt-1" value={scaleForm.songs} onChange={(e) => setScaleForm({ ...scaleForm, songs: e.target.value })} placeholder="Ex: Hino 150, Grandioso És Tu" />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
+                    <Button variant="outline" onClick={() => setShowScaleForm(false)}>Cancelar</Button>
+                    <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createScale.isPending} onClick={() => {
+                      if (!scaleForm.activityId || !scaleForm.louvorMemberId) return toast.error("Selecione a atividade e o membro.");
+                      createScale.mutate(scaleForm);
+                    }}>
+                      {createScale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar Escala
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="space-y-3">
+              {scalesQuery.isLoading ? <p className="text-sm text-slate-500">A carregar escalas...</p> : scales.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem escalas musicais registadas.</p> : scales.map((sc) => {
+                const act = activities.find((a) => a.id === sc.activityId);
+                const mem = members.find((m) => m.id === sc.louvorMemberId);
+                return (
+                  <div key={sc.id} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white">{mem ? mem.name : `Membro #${sc.louvorMemberId}`}</h3>
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">{sc.roleInScale}</span>
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                        Atividade: <strong className="text-slate-900 dark:text-white">{act ? act.name : `#${sc.activityId}`}</strong> {act ? `(${new Date(act.date).toLocaleDateString("pt-PT")})` : ""}
+                      </p>
+                      {sc.songs && <p className="text-xs text-slate-500 mt-1">Hinos: {sc.songs}</p>}
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => deleteScale.mutate({ id: sc.id })}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </DashboardLayoutCustom>
+  );
 }

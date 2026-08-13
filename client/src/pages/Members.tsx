@@ -30,10 +30,22 @@ type MemberForm = typeof emptyForm;
 export default function Members() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showGroupManager, setShowGroupManager] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<MemberForm>(emptyForm);
+  const [editingGroup, setEditingGroup] = useState<{ id: number; name: string; description?: string } | null>(null);
   const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
-  const { data: groups } = trpc.groups.list.useQuery();
+  const { data: groups, refetch: refetchGroups } = trpc.groups.list.useQuery();
+  const utils = trpc.useUtils();
+  const updateGroupMutation = trpc.groups.update.useMutation({
+    onSuccess: () => {
+      toast.success("Grupo atualizado com sucesso!");
+      setEditingGroup(null);
+      void refetchGroups();
+      void utils.groups.list.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const createMemberMutation = trpc.members.create.useMutation({
     onSuccess: () => {
       toast.success("Membro criado com sucesso!");
@@ -124,11 +136,41 @@ export default function Members() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Membros</h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Gira todos os membros da congregação.</p>
           </div>
-          <Button onClick={() => { if (showForm) closeForm(); else { setFormData(emptyForm); setEditingId(null); setShowForm(true); } }} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-            {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-            {showForm ? "Fechar" : "Novo membro"}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
+              {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
+            </Button>
+            <Button onClick={() => { if (showForm) closeForm(); else { setFormData(emptyForm); setEditingId(null); setShowForm(true); } }} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-initial">
+              {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {showForm ? "Fechar" : "Novo membro"}
+            </Button>
+          </div>
         </motion.div>
+
+        {showGroupManager && (
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6 space-y-4">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Gestão e Renomeação dos 5 Grupos Base</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Pode alterar o nome e a descrição de qualquer grupo a qualquer altura sem perder os dados dos membros associados.</p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {(groups ?? []).map((grp) => (
+                <Card key={grp.id} className="p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="space-y-3">
+                    <Input defaultValue={grp.name} id={`group-name-${grp.id}`} placeholder="Nome do grupo" />
+                    <Input defaultValue={grp.description || ""} id={`group-desc-${grp.id}`} placeholder="Descrição" />
+                    <Button size="sm" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => {
+                      const nameInput = document.getElementById(`group-name-${grp.id}`) as HTMLInputElement;
+                      const descInput = document.getElementById(`group-desc-${grp.id}`) as HTMLInputElement;
+                      if (!nameInput?.value.trim()) return toast.error("O nome do grupo não pode estar vazio.");
+                      updateGroupMutation.mutate({ id: grp.id, name: nameInput.value.trim(), description: descInput?.value.trim() });
+                    }}>
+                      Atualizar grupo
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
@@ -137,7 +179,12 @@ export default function Members() {
               <Input placeholder="Nome completo" value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
               <select value={formData.sex} onChange={(event) => setFormData({ ...formData, sex: event.target.value as "M" | "F" })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"><option value="M">Masculino</option><option value="F">Feminino</option></select>
               <Input type="date" value={formData.birthDate} onChange={(event) => setFormData({ ...formData, birthDate: event.target.value })} />
-              <Input placeholder="Cargo" value={formData.position} onChange={(event) => setFormData({ ...formData, position: event.target.value })} />
+              <select value={formData.position || "Membro"} onChange={(event) => setFormData({ ...formData, position: event.target.value })} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                <option value="Líder">Líder</option>
+                <option value="Oficial">Oficial</option>
+                <option value="Membro de Ministério de Louvor">Membro de Ministério de Louvor</option>
+                <option value="Convidado">Convidado</option>
+              </select>
               <Input placeholder="Pai" value={formData.father} onChange={(event) => setFormData({ ...formData, father: event.target.value })} />
               <Input placeholder="Mãe" value={formData.mother} onChange={(event) => setFormData({ ...formData, mother: event.target.value })} />
               <Input placeholder="Nacionalidade" value={formData.nationality} onChange={(event) => setFormData({ ...formData, nationality: event.target.value })} />

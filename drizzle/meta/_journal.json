@@ -43,6 +43,13 @@
       "when": 1786621723409,
       "tag": "0005_keen_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786623922278,
+      "tag": "0006_wise_amazoness",
+      "breakpoints": true
     }
   ]
 }

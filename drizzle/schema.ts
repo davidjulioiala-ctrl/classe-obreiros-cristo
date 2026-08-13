@@ -242,3 +242,37 @@ export const auditLog = mysqlTable("auditLog", {
 
 export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
+
+/**
+ * Louvor Members - dedicated members for the music ministry
+ */
+export const louvorMembers = mysqlTable("louvorMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  instrumentOrVoice: varchar("instrumentOrVoice", { length: 255 }).notNull(), // e.g., "Vocal Principal", "Guitarra", "Teclado"
+  phone: varchar("phone", { length: 30 }),
+  email: varchar("email", { length: 320 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LouvorMember = typeof louvorMembers.$inferSelect;
+export type InsertLouvorMember = typeof louvorMembers.$inferInsert;
+
+/**
+ * Louvor Scales - music ministry schedule for activities
+ */
+export const louvorScales = mysqlTable("louvorScales", {
+  id: int("id").autoincrement().primaryKey(),
+  activityId: int("activityId").notNull(),
+  louvorMemberId: int("louvorMemberId").notNull(),
+  roleInScale: varchar("roleInScale", { length: 255 }).notNull(), // e.g., "Vocal", "Instrumentista"
+  songs: text("songs"), // Optional song list or notes
+  status: mysqlEnum("status", ["escalado", "confirmado", "realizado", "ausente"]).default("escalado").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LouvorScale = typeof louvorScales.$inferSelect;
+export type InsertLouvorScale = typeof louvorScales.$inferInsert;

@@ -576,6 +576,57 @@ async function assignGroupAutomatically(isGuest: boolean): Promise<number | unde
   return targetGroup?.id;
 }
 
+// ============ LOUVOR ROUTER ============
+
+const louvorRouter = router({
+  listMembers: protectedProcedure.query(() => db.listLouvorMembers()),
+  createMember: liderProcedure
+    .input(z.object({ name: z.string().trim().min(1), instrumentOrVoice: z.string().trim().min(1), phone: z.string().optional(), email: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createLouvorMember(input);
+      await writeAudit(ctx, "criar", "louvorMember", undefined, input);
+      return result;
+    }),
+  updateMember: liderProcedure
+    .input(z.object({ id: z.number(), name: z.string().trim().min(1).optional(), instrumentOrVoice: z.string().trim().min(1).optional(), phone: z.string().optional(), email: z.string().optional(), isActive: z.boolean().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateLouvorMember(id, data);
+      await writeAudit(ctx, "editar", "louvorMember", id, data);
+      return result;
+    }),
+  deleteMember: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteLouvorMember(input.id);
+      await writeAudit(ctx, "apagar", "louvorMember", input.id);
+      return result;
+    }),
+  listScales: protectedProcedure.input(z.object({ activityId: z.number().optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
+  createScale: oficialProcedure
+    .input(z.object({ activityId: z.number(), louvorMemberId: z.number(), roleInScale: z.string().trim().min(1), songs: z.string().optional(), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.createLouvorScale(input);
+      await writeAudit(ctx, "criar", "louvorScale", undefined, input);
+      return result;
+    }),
+  updateScale: oficialProcedure
+    .input(z.object({ id: z.number(), roleInScale: z.string().trim().min(1).optional(), songs: z.string().optional(), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const result = await db.updateLouvorScale(id, data);
+      await writeAudit(ctx, "editar", "louvorScale", id, data);
+      return result;
+    }),
+  deleteScale: oficialProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.deleteLouvorScale(input.id);
+      await writeAudit(ctx, "apagar", "louvorScale", input.id);
+      return result;
+    }),
+});
+
 // ============ BACKUP ROUTER ============
 
 const backupRouter = router({
@@ -607,6 +658,7 @@ export const appRouter = router({
   reports: reportsRouter,
   audit: auditRouter,
   backup: backupRouter,
+  louvor: louvorRouter,
 });
 
 export type AppRouter = typeof appRouter;
