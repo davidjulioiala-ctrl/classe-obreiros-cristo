@@ -290,6 +290,7 @@ const activitiesRouter = router({
   commissionAdd: liderProcedure
     .input(z.object({ activityId: positiveId, memberId: positiveId, role: safeText(100), phone: safeText(40, false) }))
     .mutation(async ({ input, ctx }) => {
+      await requireMainMember(input.memberId);
       const result = await db.createCommissionMember(input);
       await writeAudit(ctx, "criar", "commissionMember", undefined, input);
       return result;
@@ -312,6 +313,7 @@ const activitiesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await requireMainMember(input.memberId);
       return await db.recordAttendance({
         ...input,
         recordedBy: ctx.user.id,
@@ -720,6 +722,7 @@ const transfersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await requireMainMember(input.memberId);
       const result = await db.createTransfer({
         ...input,
         status: "pendente",
@@ -784,6 +787,23 @@ const transfersRouter = router({
 
 // ============ HELPER FUNCTIONS ============
 
+async function requireMainMember(memberId: number) {
+  const member = await db.getMemberById(memberId);
+  if (!member) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "O membro indicado não existe no cadastro principal." });
+  }
+  return member;
+}
+
+async function requireLouvorMember(louvorMemberId: number) {
+  const louvorMember = await db.getLouvorMemberById(louvorMemberId);
+  if (!louvorMember?.memberId) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "O membro de Louvor indicado não está ligado ao cadastro principal." });
+  }
+  await requireMainMember(louvorMember.memberId);
+  return louvorMember;
+}
+
 async function assignGroupAutomatically(isGuest: boolean): Promise<number | undefined> {
   await db.ensureDefaultGroups();
   const allGroups = await db.getAllGroups();
@@ -820,6 +840,7 @@ const louvorRouter = router({
   createScale: oficialProcedure
     .input(z.object({ activityId: positiveId, louvorMemberId: positiveId, roleInScale: safeText(120), songs: safeText(4000, false), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
     .mutation(async ({ input, ctx }) => {
+      await requireLouvorMember(input.louvorMemberId);
       const result = await db.createLouvorScale(input);
       await writeAudit(ctx, "criar", "louvorScale", undefined, input);
       return result;

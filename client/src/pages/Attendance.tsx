@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
-import { Calendar, Users, Check, X, Download, Trash2 } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { Calendar, Users, Check, X, Download, Search, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { matchesMemberSearch } from "@shared/memberSearch";
 
 export default function Attendance() {
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null);
-  const [attendanceRecords, setAttendanceRecords] = useState<
-    Record<number, boolean>
-  >({});
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<number, boolean>>({});
+  const [memberSearch, setMemberSearch] = useState("");
 
   const { data: activities, isLoading: activitiesLoading } =
     trpc.activities.list.useQuery();
@@ -67,6 +68,7 @@ export default function Attendance() {
   };
 
   const selectedActivityData = activities?.find((a) => a.id === selectedActivity);
+  const filteredMembers = useMemo(() => (members ?? []).filter((member) => matchesMemberSearch(member, memberSearch)), [members, memberSearch]);
   const presentCount = Object.values(attendanceRecords).filter(Boolean).length;
   const totalMembers = members?.length || 0;
 
@@ -207,11 +209,15 @@ export default function Attendance() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-              Membros
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {members.map((member, idx) => {
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Membros</h3>
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                <Input value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Pesquisar por ID ou nome…" className="pl-9" aria-label="Pesquisar membros por ID ou nome" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {filteredMembers.map((member, idx) => {
                 const existingRecord = attendance?.find((record) => record.memberId === member.id);
                 return (
                 <motion.div
@@ -230,7 +236,7 @@ export default function Attendance() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2">{existingRecord && <RecordIdBadge id={existingRecord.id} />}<p className="font-medium text-slate-900 dark:text-white">
+                        <div className="flex flex-wrap items-center gap-2"><RecordIdBadge id={member.id} label="Membro" />{existingRecord && <RecordIdBadge id={existingRecord.id} label="Presença" />}<p className="font-medium text-slate-900 dark:text-white">
                           {member.name}
                         </p></div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">

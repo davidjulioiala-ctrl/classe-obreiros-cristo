@@ -63,6 +63,14 @@ describe("login transition regression guards", () => {
     expect(layoutSource).not.toContain("useAuth()");
   });
 
+  it("does not register legacy OAuth routes in the server startup", () => {
+    const serverSource = readProjectFile("server/_core/index.ts");
+
+    expect(serverSource).toContain('registerLocalAuthRoutes(app)');
+    expect(serverSource).not.toContain('registerOAuthRoutes');
+    expect(serverSource).not.toContain('"./oauth"');
+  });
+
   it("keeps public incident attachments visible to administrators", () => {
     const auditSource = readProjectFile("client/src/pages/AuditAndBackup.tsx");
 

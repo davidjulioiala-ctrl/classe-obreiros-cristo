@@ -6525,3 +6525,13 @@
 - [x] Adicionar modal ou selector de colunas nas páginas de Membros e Relatórios antes de iniciar a exportação.
 - [x] Atualizar os geradores e rotas no servidor para aceitar apenas colunas válidas e renderizar dinamicamente o PDF e o CSV.
 - [x] Adicionar testes unitários para a selecção de colunas e validar typecheck, build e checkpoint publicado.
+
+
+## Identificação Sequencial por Submenu e Pesquisa de Presença — 2026-08-13
+- [x] Auditar a apresentação do RecordIdBadge em todos os submenus (membros, finanças, quotas, receitas, despesas, transferências, relatórios, materiais, louvor, atividades).
+- [x] Garantir que o componente RecordIdBadge apresenta sempre IDs sequenciais por ordem de listagem (1, 2, 3...).
+- [x] Verificar e reforçar a dependência de todos os registos do sistema em relação ao cadastro principal de membros.
+- [x] Implementar na página de Presença a pesquisa por ID de membro ou por nome.
+- [x] Adicionar testes unitários, validar typecheck, compilação de produção e guardar checkpoint.
+
+- [x] Remover a rota de callback OAuth residual do arranque do servidor e adicionar uma regressão que confirme que o sistema expõe apenas autenticação local.

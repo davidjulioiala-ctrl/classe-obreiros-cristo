@@ -10,6 +10,7 @@ import { ExportColumnDialog } from "@/components/ExportColumnDialog";
 import { MEMBER_EXPORT_COLUMN_KEYS, MEMBER_EXPORT_COLUMNS } from "@shared/exportColumns";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { matchesMemberSearch } from "@shared/memberSearch";
 import { downloadProtectedFile } from "@/lib/fileDownload";
 
 const emptyForm = {
@@ -97,7 +98,7 @@ export default function Members() {
   });
 
   const filteredMembers = searchQuery
-    ? members?.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? members?.filter((member) => matchesMemberSearch(member, searchQuery))
     : members;
 
   const closeForm = () => {

@@ -3,7 +3,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerLocalAuthRoutes } from "./localAuth";
 import { registerAdminBootstrapRoute } from "../adminBootstrap";
 import { registerStorageProxy } from "./storageProxy";
@@ -57,7 +56,6 @@ async function startServer() {
   app.use(express.json({ limit: SECURITY_LIMITS.maxJsonBody }));
   app.use(express.urlencoded({ limit: SECURITY_LIMITS.maxUrlEncodedBody, extended: true }));
   registerStorageProxy(app);
-  registerOAuthRoutes(app);
   registerLocalAuthRoutes(app);
   registerAdminBootstrapRoute(app);
   registerStatusReportRoute(app);

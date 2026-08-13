@@ -29,6 +29,7 @@ import { ENV } from "./_core/env";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { decryptFields, decryptJson, encryptFields, encryptJson } from "./_core/fieldEncryption";
 import { filterRestorableSettings } from "./_core/backupRecovery";
+import { normalizeMemberSearch } from "../shared/memberSearch";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -233,7 +234,11 @@ export async function searchMembers(query: string, isGuest?: boolean) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  let conditions: any[] = [like(members.name, `%${query}%`)];
+  const { normalized: normalizedQuery, numericId } = normalizeMemberSearch(query);
+  const memberSearch = numericId !== null
+    ? or(like(members.name, `%${normalizedQuery}%`), eq(members.id, numericId))
+    : like(members.name, `%${normalizedQuery}%`);
+  let conditions: any[] = [memberSearch];
 
   if (isGuest !== undefined) {
     conditions.push(eq(members.isGuest, isGuest));
@@ -243,7 +248,7 @@ export async function searchMembers(query: string, isGuest?: boolean) {
     .select()
     .from(members)
     .where(and(...conditions))
-    .orderBy(asc(members.name));
+    .orderBy(asc(members.id));
   return rows.map((row) => reveal(row, MEMBER_PRIVATE_FIELDS));
 }
 
@@ -259,7 +264,7 @@ export async function getAllMembers(activeOnly = true) {
   if (!db) throw new Error("Database not available");
 
   const conditions = activeOnly ? [eq(members.isActive, true)] : [];
-  const rows = await db.select().from(members).where(and(...conditions));
+  const rows = await db.select().from(members).where(and(...conditions)).orderBy(asc(members.id));
   return rows.map((row) => reveal(row, MEMBER_PRIVATE_FIELDS));
 }
 
@@ -1024,6 +1029,13 @@ export async function syncLouvorMemberProjection(member: typeof members.$inferSe
   if (!isLouvor) return null;
   const inserted = await db.insert(louvorMembers).values(values);
   return { id: Number(inserted[0].insertId), ...values };
+}
+
+export async function getLouvorMemberById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(louvorMembers).where(eq(louvorMembers.id, id)).limit(1);
+  return rows[0] ? reveal(rows[0], LOUVOR_PRIVATE_FIELDS) : null;
 }
 
 export async function listLouvorMembers() {
