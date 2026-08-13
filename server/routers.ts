@@ -534,6 +534,106 @@ const settingsRouter = router({
   }),
 });
 
+// ============ INCIDENT RESPONSE ROUTER ============
+
+const incidentRouter = router({
+  getState: adminProcedure.query(async () => ({
+    maintenance: await db.getSystemMaintenanceState(),
+    globalSessionRevokedAt: await db.getGlobalSessionRevokedAt(),
+  })),
+
+  list: adminProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(500).optional() }).optional())
+    .query(async ({ input }) => db.listSecurityIncidents(input?.limit ?? 100)),
+
+  create: adminProcedure
+    .input(z.object({
+      category: safeText(100),
+      severity: z.enum(["low", "medium", "high", "critical"]),
+      title: safeText(255),
+      description: safeText(10000),
+      source: safeText(255, false),
+      affectedRecords: safeText(10000, false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const incident = await db.createSecurityIncident({
+        category: input.category,
+        severity: input.severity,
+        title: input.title,
+        description: input.description,
+        source: input.source ?? null,
+        affectedRecords: input.affectedRecords ?? null,
+        createdBy: ctx.user.id,
+      });
+      await writeAudit(ctx, "criar", "security_incident", incident.id, { category: input.category, severity: input.severity, title: input.title });
+      return incident;
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: positiveId,
+      status: z.enum(["open", "investigating", "contained", "resolved"]).optional(),
+      severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+      containmentActions: safeText(10000, false),
+      resolution: safeText(10000, false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, status, severity, containmentActions, resolution } = input;
+      const now = new Date();
+      const update: Partial<typeof import("../drizzle/schema").securityIncidents.$inferInsert> = {
+        ...(status ? { status } : {}),
+        ...(severity ? { severity } : {}),
+        ...(containmentActions !== undefined ? { containmentActions: containmentActions ?? null } : {}),
+        ...(resolution !== undefined ? { resolution: resolution ?? null } : {}),
+        ...(status === "contained" ? { containedAt: now } : {}),
+        ...(status === "resolved" ? { resolvedAt: now } : {}),
+      };
+      await db.updateSecurityIncident(id, update);
+      await writeAudit(ctx, "atualizar", "security_incident", id, { status, severity });
+      return db.getSecurityIncident(id);
+    }),
+
+  setMaintenance: adminProcedure
+    .input(z.object({ enabled: z.boolean(), reason: safeText(500, false), incidentId: positiveId.optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const state = await db.setSystemMaintenanceState({
+        enabled: input.enabled,
+        reason: input.reason ?? (input.enabled ? "Manutenção de emergência activada pelo administrador." : ""),
+        incidentId: input.incidentId ?? null,
+        startedAt: input.enabled ? new Date().toISOString() : null,
+        updatedBy: ctx.user.id,
+      });
+      await writeAudit(ctx, input.enabled ? "activar" : "desactivar", "system_maintenance", input.incidentId, { reason: state.reason });
+      return state;
+    }),
+
+  revokeAllSessions: adminProcedure.mutation(async ({ ctx }) => {
+    const revokedAt = await db.revokeAllSessions();
+    await writeAudit(ctx, "revogar", "all_sessions", undefined, { revokedAt });
+    return { revokedAt };
+  }),
+
+  diagnose: adminProcedure.query(async () => {
+    const [maintenance, incidents, recentAudit] = await Promise.all([
+      db.getSystemMaintenanceState(),
+      db.listSecurityIncidents(20),
+      db.listAuditLogs(50),
+    ]);
+    return {
+      maintenance,
+      incidents,
+      recentAudit,
+      checkedAt: new Date().toISOString(),
+      recommendations: [
+        "Rever os últimos logs de auditoria e tentativas de login.",
+        "Revogar todas as sessões se houver suspeita de token comprometido.",
+        "Criar um backup cifrado antes de restaurar uma versão anterior.",
+        "Manter o modo de manutenção activo até concluir a validação pós-incidente.",
+      ],
+    };
+  }),
+});
+
 // ============ TRANSFERS ROUTER ============
 
 const transfersRouter = router({
@@ -890,6 +990,7 @@ export const appRouter = router({
   louvor: louvorRouter,
   settings: settingsRouter,
   history: historyRouter,
+  incident: incidentRouter,
 });
 
 export type AppRouter = typeof appRouter;

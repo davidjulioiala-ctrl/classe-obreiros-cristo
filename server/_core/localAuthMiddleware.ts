@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { parse } from "cookie";
 import { getUserById } from "../auth";
+import { getGlobalSessionRevokedAt } from "../db";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { refreshLocalSessionToken, verifyLocalSessionToken } from "./localSession";
@@ -27,6 +28,14 @@ export async function localAuthMiddleware(
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const globalRevokedAt = await getGlobalSessionRevokedAt();
+    if (globalRevokedAt) {
+      const revokedAtMs = Date.parse(globalRevokedAt);
+      if (Number.isFinite(revokedAtMs) && session.issuedAt * 1000 <= revokedAtMs) {
+        return res.status(401).json({ error: "Session revoked" });
+      }
+    }
+
     const user = await getUserById(session.userId);
     if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -41,6 +50,7 @@ export async function localAuthMiddleware(
       role: user.role,
       churchRole: user.churchRole,
       isActive: user.isActive,
+      twoFactorEnabled: user.role === "admin" ? Boolean(user.twoFactorEnabled) : false,
     };
 
     return next();
@@ -53,6 +63,11 @@ export async function localAuthMiddleware(
 export async function getLocalUserFromRequest(req: Request, res?: Response) {
   const session = getLocalSession(req);
   if (!session) return null;
+  const globalRevokedAt = await getGlobalSessionRevokedAt();
+  if (globalRevokedAt) {
+    const revokedAtMs = Date.parse(globalRevokedAt);
+    if (Number.isFinite(revokedAtMs) && session.issuedAt * 1000 <= revokedAtMs) return null;
+  }
   const user = await getUserById(session.userId);
   if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) return null;
   if (res) refreshSessionCookie(req, res, session);

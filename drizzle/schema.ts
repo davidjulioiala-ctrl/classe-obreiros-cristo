@@ -29,6 +29,10 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   sessionVersion: int("sessionVersion").default(1).notNull(),
+  twoFactorEnabled: boolean("twoFactorEnabled").default(false).notNull(),
+  twoFactorSecret: text("twoFactorSecret"),
+  twoFactorRecoveryCodes: text("twoFactorRecoveryCodes"),
+  twoFactorConfiguredAt: timestamp("twoFactorConfiguredAt"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -262,6 +266,32 @@ export const appSettings = mysqlTable("appSettings", {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+/**
+ * Security incidents - incident-response timeline and containment evidence.
+ */
+export const securityIncidents = mysqlTable("securityIncidents", {
+  id: int("id").autoincrement().primaryKey(),
+  incidentCode: varchar("incidentCode", { length: 64 }).notNull().unique(),
+  category: varchar("category", { length: 100 }).notNull(),
+  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["open", "investigating", "contained", "resolved"]).default("open").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  source: varchar("source", { length: 255 }),
+  affectedRecords: text("affectedRecords"),
+  containmentActions: text("containmentActions"),
+  resolution: text("resolution"),
+  detectedAt: timestamp("detectedAt").defaultNow().notNull(),
+  containedAt: timestamp("containedAt"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdBy: int("createdBy").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SecurityIncident = typeof securityIncidents.$inferSelect;
+export type InsertSecurityIncident = typeof securityIncidents.$inferInsert;
 
 /**
  * Louvor Members - dedicated members for the music ministry

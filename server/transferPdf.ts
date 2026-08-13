@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers } from "./db";
+import { notifySecurityEvent } from "./_core/securityAlerts";
 
 function calculateAge(value: unknown) {
   if (!value) return null;
@@ -73,6 +74,7 @@ export function registerTransferPdfRoute(app: Express) {
       document.moveDown(1);
       document.fontSize(8).fillColor("#64748b").text("Os registos originais permanecem guardados no sistema; a transferência altera apenas o estado operacional do membro.", 34, Math.min(y + 12, 550));
       document.end();
+      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de transferência concluída", actorId: user.id, resource: "transferencias-adultos-pdf", metadata: { registos: selected.length, formato: "pdf" } });
     } catch (error) {
       console.error("[Transfers] PDF generation error:", error);
       if (!res.headersSent) res.status(500).json({ error: "Não foi possível gerar o PDF" });

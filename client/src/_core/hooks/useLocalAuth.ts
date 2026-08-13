@@ -8,12 +8,16 @@ export interface LocalUser {
   email: string | null;
   role: "user" | "admin";
   churchRole: "lider" | "oficial" | "louvor" | "membro" | "financeiro" | "financeira";
+  twoFactorEnabled?: boolean;
 }
 
+type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; message?: string; error?: string };
+type LoginResult = { twoFactorRequired: boolean; user?: LocalUser };
+
 async function readResponse(response: Response) {
-  const payload = await response.json().catch(() => ({} as { message?: string; user?: LocalUser }));
-  if (!response.ok) throw new Error(payload.message || "Não foi possível concluir a operação.");
-  return payload as { user: LocalUser };
+  const payload = await response.json().catch(() => ({} as AuthResponse));
+  if (!response.ok) throw new Error(payload.error || payload.message || "Não foi possível concluir a operação.");
+  return payload as AuthResponse;
 }
 
 export function useLocalAuth() {
@@ -56,11 +60,38 @@ export function useLocalAuth() {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       const data = await readResponse(response);
+      if (data.twoFactorRequired) return { twoFactorRequired: true } satisfies LoginResult;
+      if (!data.user) throw new Error("Resposta de autenticação inválida.");
       setUser(data.user);
       toast.success("Login realizado com sucesso!");
-      return data.user;
+      return { twoFactorRequired: false, user: data.user } satisfies LoginResult;
     } catch (cause) {
       const nextError = cause instanceof Error ? cause : new Error("Erro ao fazer login.");
+      setError(nextError);
+      toast.error(nextError.message);
+      throw nextError;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyTwoFactor = useCallback(async (code: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+      const data = await readResponse(response);
+      if (!data.user) throw new Error("Resposta de autenticação inválida.");
+      setUser(data.user);
+      toast.success("Verificação em dois passos concluída.");
+      return data.user;
+    } catch (cause) {
+      const nextError = cause instanceof Error ? cause : new Error("Código 2FA inválido.");
       setError(nextError);
       toast.error(nextError.message);
       throw nextError;
@@ -90,7 +121,8 @@ export function useLocalAuth() {
     error,
     isAuthenticated: Boolean(user),
     login,
+    verifyTwoFactor,
     logout,
     refresh,
-  }), [user, loading, error, login, logout, refresh]);
+  }), [user, loading, error, login, verifyTwoFactor, logout, refresh]);
 }

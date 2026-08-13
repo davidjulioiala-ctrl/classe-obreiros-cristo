@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, Download, FileArchive, Loader2, Mail, RefreshCw, RotateCcw, ShieldCheck, Edit2, Trash2 } from "lucide-react";
+import { AlertTriangle, Clock3, Download, FileArchive, Loader2, Mail, RefreshCw, RotateCcw, ShieldAlert, ShieldCheck, Edit2, LockKeyhole, Trash2, UnlockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,12 @@ export default function AuditAndBackup() {
   const [editAction, setEditAction] = useState("");
   const [editEntityType, setEditEntityType] = useState("");
   const [editDetails, setEditDetails] = useState("");
+  const [incidentCategory, setIncidentCategory] = useState("suspeita de acesso");
+  const [incidentSeverity, setIncidentSeverity] = useState<"low" | "medium" | "high" | "critical">("high");
+  const [incidentTitle, setIncidentTitle] = useState("");
+  const [incidentDescription, setIncidentDescription] = useState("");
+  const [incidentSource, setIncidentSource] = useState("");
+  const [maintenanceReason, setMaintenanceReason] = useState("");
 
   const utils = trpc.useUtils();
   const auditQuery = trpc.audit.list.useQuery({ limit: 250 });
@@ -27,7 +33,15 @@ export default function AuditAndBackup() {
   const saveSchedule = trpc.backup.saveSchedule.useMutation();
   const updateLog = trpc.audit.update.useMutation();
   const deleteLog = trpc.audit.delete.useMutation();
+  const incidentStateQuery = trpc.incident.getState.useQuery();
+  const incidentQuery = trpc.incident.list.useQuery({ limit: 100 });
+  const incidentDiagnose = trpc.incident.diagnose.useQuery(undefined, { enabled: false });
+  const createIncident = trpc.incident.create.useMutation();
+  const updateIncident = trpc.incident.update.useMutation();
+  const setMaintenance = trpc.incident.setMaintenance.useMutation();
+  const revokeAllSessions = trpc.incident.revokeAllSessions.useMutation();
   const logs = useMemo(() => auditQuery.data ?? [], [auditQuery.data]);
+  const incidents = useMemo(() => incidentQuery.data ?? [], [incidentQuery.data]);
 
   useEffect(() => {
     const schedule = scheduleQuery.data;
@@ -41,6 +55,66 @@ export default function AuditAndBackup() {
 
   const refreshBackups = async () => {
     await Promise.all([versionsQuery.refetch(), auditQuery.refetch(), scheduleQuery.refetch()]);
+  };
+
+  const refreshIncidentData = async () => {
+    await Promise.all([incidentStateQuery.refetch(), incidentQuery.refetch(), auditQuery.refetch()]);
+  };
+
+  const handleCreateIncident = async () => {
+    if (!incidentTitle.trim() || !incidentDescription.trim()) {
+      toast.error("Indique um título e uma descrição para identificar o incidente.");
+      return;
+    }
+    try {
+      await createIncident.mutateAsync({
+        category: incidentCategory,
+        severity: incidentSeverity,
+        title: incidentTitle.trim(),
+        description: incidentDescription.trim(),
+        source: incidentSource.trim() || undefined,
+        affectedRecords: undefined,
+      });
+      toast.success("Incidente registado na linha do tempo.");
+      setIncidentTitle("");
+      setIncidentDescription("");
+      setIncidentSource("");
+      await refreshIncidentData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível registar o incidente.");
+    }
+  };
+
+  const handleMaintenance = async (enabled: boolean) => {
+    if (enabled && !window.confirm("Activar o modo de manutenção? As operações normais serão bloqueadas para todos os utilizadores.")) return;
+    try {
+      await setMaintenance.mutateAsync({ enabled, reason: maintenanceReason.trim() || undefined });
+      toast.success(enabled ? "Modo de manutenção activado." : "Modo de manutenção desactivado.");
+      await refreshIncidentData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível actualizar o modo de manutenção.");
+    }
+  };
+
+  const handleRevokeSessions = async () => {
+    if (!window.confirm("Revogar todas as sessões? Todos os utilizadores, incluindo o administrador actual, terão de iniciar sessão novamente.")) return;
+    try {
+      await revokeAllSessions.mutateAsync();
+      toast.success("Todas as sessões foram revogadas. Será necessário iniciar sessão novamente.");
+      window.setTimeout(() => { window.location.href = "/login"; }, 700);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível revogar as sessões.");
+    }
+  };
+
+  const handleIncidentStatus = async (id: number, status: "open" | "investigating" | "contained" | "resolved") => {
+    try {
+      await updateIncident.mutateAsync({ id, status, containmentActions: undefined, resolution: undefined });
+      toast.success("Estado do incidente actualizado.");
+      await refreshIncidentData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível actualizar o incidente.");
+    }
   };
 
   const handleBackup = async () => {
@@ -131,6 +205,34 @@ export default function AuditAndBackup() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-amber-300 bg-amber-50 shadow-sm dark:border-amber-900 dark:bg-amber-950/30">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100"><LockKeyhole className="h-5 w-5" /> Contenção e manutenção</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">Bloqueie operações de escrita enquanto investiga um incidente. O login, a consola administrativa de emergência e a recuperação de backups permanecem disponíveis.</p>
+              <div><label className="mb-2 block text-sm font-medium text-amber-950 dark:text-amber-100">Motivo apresentado aos utilizadores</label><Input value={maintenanceReason} onChange={(event) => setMaintenanceReason(event.target.value)} maxLength={500} placeholder="Actualização de segurança em curso" /></div>
+              <div className="flex flex-wrap gap-2"><Button type="button" className="bg-amber-600 text-white hover:bg-amber-700" disabled={setMaintenance.isPending || incidentStateQuery.data?.maintenance.enabled} onClick={() => void handleMaintenance(true)}><LockKeyhole className="mr-2 h-4 w-4" />Activar manutenção</Button><Button type="button" variant="outline" disabled={setMaintenance.isPending || !incidentStateQuery.data?.maintenance.enabled} onClick={() => void handleMaintenance(false)}><UnlockKeyhole className="mr-2 h-4 w-4" />Desactivar</Button></div>
+              {incidentStateQuery.data?.maintenance.enabled && <p className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200"><AlertTriangle className="h-4 w-4" />Manutenção activa: {incidentStateQuery.data.maintenance.reason || "sem motivo indicado"}</p>}
+              <Button type="button" variant="outline" className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30" disabled={revokeAllSessions.isPending} onClick={() => void handleRevokeSessions}><ShieldAlert className="mr-2 h-4 w-4" />Revogar todas as sessões</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm dark:bg-slate-800">
+            <CardHeader><CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-emerald-600" /> Detecção e identificação</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">Registe o que aconteceu, acompanhe a contenção e consulte uma fotografia dos incidentes, auditoria e recomendações de recuperação.</p>
+              <div className="grid gap-3 sm:grid-cols-2"><div><label className="mb-1 block text-xs font-medium">Categoria</label><Input value={incidentCategory} onChange={(event) => setIncidentCategory(event.target.value)} maxLength={100} placeholder="Ex.: acesso suspeito" /></div><div><label className="mb-1 block text-xs font-medium">Gravidade</label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={incidentSeverity} onChange={(event) => setIncidentSeverity(event.target.value as typeof incidentSeverity)}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="critical">Crítica</option></select></div></div>
+              <Input value={incidentTitle} onChange={(event) => setIncidentTitle(event.target.value)} maxLength={255} placeholder="Título do incidente" />
+              <textarea className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={incidentDescription} onChange={(event) => setIncidentDescription(event.target.value)} maxLength={10000} placeholder="Descreva os sintomas, a hora e os dados potencialmente afectados" />
+              <Input value={incidentSource} onChange={(event) => setIncidentSource(event.target.value)} maxLength={255} placeholder="Origem: log, utilizador, alerta ou observação" />
+              <div className="flex flex-wrap gap-2"><Button type="button" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createIncident.isPending} onClick={() => void handleCreateIncident}><ShieldCheck className="mr-2 h-4 w-4" />Registar incidente</Button><Button type="button" variant="outline" disabled={incidentDiagnose.isFetching} onClick={() => void incidentDiagnose.refetch()}><RefreshCw className="mr-2 h-4 w-4" />Executar diagnóstico</Button></div>
+              {incidentDiagnose.data && <div className="rounded-lg bg-slate-50 p-3 text-xs leading-5 dark:bg-slate-900"><p><strong>Verificado em:</strong> {new Date(incidentDiagnose.data.checkedAt).toLocaleString("pt-PT")}</p><p><strong>Incidentes recentes:</strong> {incidentDiagnose.data.incidents.length} · <strong>Logs recentes:</strong> {incidentDiagnose.data.recentAudit.length}</p><ul className="mt-2 list-disc pl-4">{incidentDiagnose.data.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul></div>}
+            </CardContent>
+          </Card>
+
+        <Card className="border-0 shadow-sm dark:bg-slate-800">
+          <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Linha do tempo de incidentes</CardTitle></CardHeader>
+          <CardContent>{incidentQuery.isLoading ? <p className="text-sm text-slate-500">A carregar incidentes…</p> : incidents.length === 0 ? <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500 dark:bg-slate-900">Nenhum incidente registado.</p> : <div className="space-y-3">{incidents.map((incident) => <div key={incident.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-semibold text-slate-900 dark:text-white">#{incident.id} · {incident.title}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{incident.category} · Gravidade {incident.severity} · {new Date(incident.createdAt).toLocaleString("pt-PT")}</p><p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{incident.description}</p></div><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={incident.status} onChange={(event) => void handleIncidentStatus(incident.id, event.target.value as "open" | "investigating" | "contained" | "resolved")}><option value="open">Aberto</option><option value="investigating">Em investigação</option><option value="contained">Contido</option><option value="resolved">Resolvido</option></select></div></div>)}</div>}</CardContent>
+        </Card>
           <Card className="border-0 shadow-sm dark:bg-slate-800">
             <CardHeader><CardTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5 text-emerald-600" /> Criar backup</CardTitle></CardHeader>
             <CardContent className="space-y-4">

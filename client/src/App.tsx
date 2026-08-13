@@ -19,6 +19,7 @@ import MemberHistoryPage from "@/pages/MemberHistory";
 import IncompleteMembers from "@/pages/IncompleteMembers";
 import Materials from "@/pages/Materials";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
+import MaintenanceGate from "./components/MaintenanceGate";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -50,7 +51,7 @@ function Router() {
   }
 
   return (
-    <>
+    <MaintenanceGate user={user}>
       <SessionInactivityGuard user={user} logout={logout} />
       <Switch>
       <Route path={"/dashboard"} component={Dashboard} />
@@ -73,7 +74,7 @@ function Router() {
       <Route path={"/"} component={Dashboard} />
       <Route component={NotFound} />
       </Switch>
-    </>
+    </MaintenanceGate>
   );
 }
 

@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerLocalAuthRoutes } from "./localAuth";
+import { registerAdminBootstrapRoute } from "../adminBootstrap";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -14,6 +15,8 @@ import { registerFinancialReportRoutes } from "../financialReportRoute";
 import { registerBackupRoutes } from "../backupRoutes";
 import { serveStatic, setupVite } from "./vite";
 import { requireSameOrigin, SECURITY_LIMITS, securityHeaders } from "./security";
+import { maintenanceGate } from "./maintenance";
+import { getSystemMaintenanceState } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -54,6 +57,16 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerLocalAuthRoutes(app);
+  registerAdminBootstrapRoute(app);
+  app.get("/api/maintenance", async (_req, res) => {
+    try {
+      const state = await getSystemMaintenanceState();
+      return res.json({ enabled: state.enabled, reason: state.reason, incidentId: state.incidentId });
+    } catch {
+      return res.status(503).json({ enabled: false });
+    }
+  });
+  app.use(maintenanceGate);
   registerReportPdfRoute(app);
   registerTransferPdfRoute(app);
   registerFinancialReportRoutes(app);

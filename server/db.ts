@@ -23,6 +23,7 @@ import {
   backupVersions,
   backupSchedules,
   materials,
+  securityIncidents,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storageGetSignedUrl, storagePut } from "./storage";
@@ -1088,6 +1089,84 @@ export async function setAppSetting(keyName: string, keyValue: string) {
   } else {
     return await db.insert(appSettings).values({ keyName, keyValue });
   }
+}
+
+export type SystemMaintenanceState = {
+  enabled: boolean;
+  reason: string;
+  incidentId: number | null;
+  startedAt: string | null;
+  updatedBy: number | null;
+};
+
+const DEFAULT_MAINTENANCE_STATE: SystemMaintenanceState = {
+  enabled: false,
+  reason: "",
+  incidentId: null,
+  startedAt: null,
+  updatedBy: null,
+};
+
+function parseMaintenanceState(value: string | null): SystemMaintenanceState {
+  if (!value) return DEFAULT_MAINTENANCE_STATE;
+  try {
+    const parsed = JSON.parse(value) as Partial<SystemMaintenanceState>;
+    return {
+      enabled: parsed.enabled === true,
+      reason: typeof parsed.reason === "string" ? parsed.reason : "",
+      incidentId: Number.isInteger(parsed.incidentId) ? (parsed.incidentId ?? null) : null,
+      startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : null,
+      updatedBy: Number.isInteger(parsed.updatedBy) ? (parsed.updatedBy ?? null) : null,
+    };
+  } catch {
+    return DEFAULT_MAINTENANCE_STATE;
+  }
+}
+
+export async function getSystemMaintenanceState(): Promise<SystemMaintenanceState> {
+  return parseMaintenanceState(await getAppSetting("system_maintenance"));
+}
+
+export async function setSystemMaintenanceState(state: SystemMaintenanceState) {
+  await setAppSetting("system_maintenance", JSON.stringify(state));
+  return state;
+}
+
+export async function getGlobalSessionRevokedAt() {
+  return await getAppSetting("global_session_revoked_at");
+}
+
+export async function revokeAllSessions() {
+  const revokedAt = new Date().toISOString();
+  await setAppSetting("global_session_revoked_at", revokedAt);
+  return revokedAt;
+}
+
+export async function createSecurityIncident(data: Omit<typeof securityIncidents.$inferInsert, "id" | "incidentCode" | "createdAt" | "updatedAt" | "detectedAt"> & { detectedAt?: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const incidentCode = `INC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const result = await db.insert(securityIncidents).values({ ...data, incidentCode });
+  return { id: Number(result[0].insertId), incidentCode };
+}
+
+export async function listSecurityIncidents(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(securityIncidents).orderBy(desc(securityIncidents.createdAt)).limit(Math.min(Math.max(limit, 1), 500));
+}
+
+export async function getSecurityIncident(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(securityIncidents).where(eq(securityIncidents.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateSecurityIncident(id: number, data: Partial<typeof securityIncidents.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(securityIncidents).set(data).where(eq(securityIncidents.id, id));
 }
 
 export async function updateAuditLog(id: number, data: { action?: string; entityType?: string; details?: string }) {

@@ -31,3 +31,13 @@ A página autenticada de Transferências está acessível, mostra o botão `Proc
 - 2026-08-13: Actividades abriu com uma actividade real em estado Planeada e com os controlos Editar, Finalizar e Eliminar. O formulário Nova actividade mostrou nome, data, horários, local, tipo, público-alvo, tema, Pregador/Preletor, referência bíblica, opção religiosa e comissão.
 
 - 2026-08-13: Louvor abriu com as abas Membros de Louvor e Escalas Musicais. A aba de escalas mostrou a descrição de selecção múltipla e validação individual de comparecimento, o botão Adicionar à escala e o estado vazio sem dados fictícios.
+
+## Validação visual — ciclo de segurança — 13/08/2026
+
+A pré-visualização abriu em `/` com o login local como primeira página. Os campos de utilizador e senha aparecem vazios, sem credenciais fixas visíveis. O cartão central apresenta boa hierarquia visual, contraste adequado, foco visível e botão Entrar acessível. O endpoint de bootstrap não mostrou o link de primeiro acesso porque a base de dados já contém pelo menos um utilizador, o que corresponde à regra de bloqueio após a primeira conta.
+
+A captura mostrou uma faixa de Preview mode no rodapé da pré-visualização; esta é chrome da ferramenta e não parte da aplicação. A página não revelou erros de renderização no conteúdo extraído.
+
+## Capturas responsivas — ciclo de segurança — 13/08/2026
+
+A captura desktop (1280×720) confirmou um cartão de login centrado, campos vazios, contrastes legíveis e botão Entrar com largura adequada. A captura mobile (375×812) confirmou que o cartão se adapta à largura disponível, os campos permanecem utilizáveis, o texto não é cortado e não existe overflow horizontal. O estado normal do sistema não apresenta a faixa de manutenção porque a manutenção está desactivada na base de dados.

@@ -6406,3 +6406,20 @@
 - [x] Mitigar Upload de Ficheiros Maliciosos bloqueando multipart não suportado, restringindo o proxy de armazenamento e aceitando restauros apenas através de payloads cifrados autenticados
 - [x] Mitigar Escalação de Privilégios verificando papéis administrativos estritos no servidor (`adminProcedure`) para todas as mutações sensíveis
 - [x] Mitigar IDOR validando autenticação, perfis autorizados, IDs positivos e limites dos recursos; o sistema é actualmente de organização única, sem fronteira multi-tenant
+
+## Fase 17: Módulo de Resposta a Incidentes, Diagnóstico e Manutenção de Emergência
+- [ ] Criar tabela e helpers para registo de incidentes de segurança e estado de manutenção global
+- [ ] Implementar o Modo de Manutenção no servidor para bloquear/cortar todas as mutações e requisições de escrita em andamento
+- [ ] Criar a ferramenta de detecção de problemas e diagnóstico baseada em logs de auditoria e falhas
+- [ ] Implementar a identificação forense do incidente (origem, utilizador envolvido, registos afectados)
+- [ ] Implementar a revogação global de sessões para garantir que o invasor perde o acesso imediatamente
+- [ ] Criar procedimentos de restauro rápido e recuperação de dados a partir de backups cifrados
+- [ ] Criar testes unitários para o modo de manutenção, revogação de emergência e diagnóstico de incidentes
+
+## Continuação de segurança — ciclo herdado
+- [x] Corrigir o teste de geração de PDF de transferências para autenticação administrativa e stream PassThrough
+- [x] Implementar 2FA opcional para contas administrativas com códigos de recuperação seguros
+- [x] Adicionar alertas para falhas de login e exportações sensíveis sem expor dados confidenciais
+- [x] Fortalecer o bootstrap do primeiro administrador sem credenciais hardcoded em produção
+- [x] Rever a experiência responsiva do modo de manutenção em desktop, tablet e telemóvel
+- [x] Executar a validação final de TypeScript, testes, build e revisão visual antes do checkpoint

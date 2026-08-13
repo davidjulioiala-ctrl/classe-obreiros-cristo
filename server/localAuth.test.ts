@@ -1,20 +1,61 @@
-import { describe, expect, it } from "vitest";
-import { authenticateUser } from "./auth";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { authenticateUser, hashPassword, verifyPassword } from "./auth";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { createLocalSessionToken, verifyLocalSessionToken } from "./_core/localSession";
 import { COOKIE_NAME } from "../shared/const";
 
+const { getUserByIdMock, getGlobalSessionRevokedAtMock, authenticateUserMock } = vi.hoisted(() => ({
+  getUserByIdMock: vi.fn(),
+  getGlobalSessionRevokedAtMock: vi.fn(),
+  authenticateUserMock: vi.fn(),
+}));
+
+vi.mock("./auth", async () => {
+  const actual = await vi.importActual<typeof import("./auth")>("./auth");
+  return {
+    ...actual,
+    authenticateUser: authenticateUserMock,
+    getUserById: getUserByIdMock,
+  };
+});
+
+vi.mock("./db", () => ({
+  getGlobalSessionRevokedAt: getGlobalSessionRevokedAtMock,
+}));
+
+const adminFixture = {
+  id: 1,
+  username: "admin",
+  name: "Administrador de teste",
+  email: "admin@example.test",
+  password: "scrypt:v1:test",
+  role: "admin",
+  churchRole: "lider",
+  isActive: true,
+  sessionVersion: 1,
+};
+
 describe("autenticação local", () => {
-  it("aceita as credenciais administrativas existentes", async () => {
-    const user = await authenticateUser("admin", "admin123");
-    expect(user).not.toBeNull();
-    expect(user?.username).toBe("admin");
-    expect(user?.password).not.toBe("admin123");
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getGlobalSessionRevokedAtMock.mockResolvedValue(null);
+    getUserByIdMock.mockResolvedValue(adminFixture);
   });
 
-  it("rejeita uma palavra-passe inválida", async () => {
-    const user = await authenticateUser("admin", "senha-incorreta");
-    expect(user).toBeNull();
+  it("usa hash scrypt não reversível para credenciais válidas", async () => {
+    const passwordHash = await hashPassword("admin123");
+    expect(passwordHash).not.toBe("admin123");
+    expect(passwordHash).toMatch(/^scrypt:v1:/);
+    await expect(verifyPassword("admin123", passwordHash)).resolves.toBe(true);
+    await expect(verifyPassword("senha-incorreta", passwordHash)).resolves.toBe(false);
+  });
+
+  it("mantém a autenticação baseada na base de dados sem aceitar utilizador inactivo", async () => {
+    authenticateUserMock.mockResolvedValue(adminFixture);
+    await expect(authenticateUser("admin", "admin123")).resolves.toMatchObject({ username: "admin" });
+
+    authenticateUserMock.mockResolvedValue(null);
+    await expect(authenticateUser("admin", "senha-incorreta")).resolves.toBeNull();
   });
 
   it("valida um token assinado e expira tokens fora do prazo", () => {

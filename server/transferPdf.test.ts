@@ -10,7 +10,7 @@ vi.mock("./db", () => ({ getAllMembers }));
 
 describe("rota de PDF das transferências de adultos", () => {
   it("gera PDF horizontal para membros que já foram marcados como inativos", async () => {
-    getLocalUserFromRequest.mockResolvedValue({ id: 1, username: "admin" });
+    getLocalUserFromRequest.mockResolvedValue({ id: 1, username: "admin", role: "admin" });
     getAllMembers.mockResolvedValue([
       {
         id: 7,
@@ -40,7 +40,16 @@ describe("rota de PDF das transferências de adultos", () => {
     const chunks: Buffer[] = [];
     let jsonBody: unknown;
     response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-    const finished = new Promise<void>((resolve) => response.on("finish", () => resolve()));
+    const finished = new Promise<void>((resolve) => {
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      response.once("finish", settle);
+      response.once("end", settle);
+    });
     (response as any).statusCode = 200;
     (response as any).setHeader = (name: string, value: string) => headers.set(name, value);
     (response as any).status = (code: number) => {

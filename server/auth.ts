@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getDb } from "./db";
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { decryptSensitive, encryptSensitive } from "./_core/fieldEncryption";
+import { serializeRecoveryCodes } from "./_core/twoFactor";
 
 function derivePasswordKey(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -86,6 +88,18 @@ export async function authenticateUser(
   } catch (error) {
     console.error("[Auth] Authentication failed:", error);
     return null;
+  }
+}
+
+export async function getUserCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const rows = await db.select({ id: users.id }).from(users).limit(1);
+    return rows.length;
+  } catch (error) {
+    console.error("[Auth] User count failed:", error);
+    return 0;
   }
 }
 
@@ -179,6 +193,97 @@ export async function updateUser(
   } catch (error) {
     console.error("[Auth] User update failed:", error);
     return null;
+  }
+}
+
+export async function getTwoFactorSettings(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const rows = await db.select({
+      id: users.id,
+      role: users.role,
+      username: users.username,
+      twoFactorEnabled: users.twoFactorEnabled,
+      twoFactorSecret: users.twoFactorSecret,
+      twoFactorRecoveryCodes: users.twoFactorRecoveryCodes,
+    }).from(users).where(eq(users.id, userId)).limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      role: row.role,
+      username: row.username,
+      enabled: row.twoFactorEnabled,
+      secret: decryptSensitive(row.twoFactorSecret),
+      recoveryCodes: decryptSensitive(row.twoFactorRecoveryCodes),
+    };
+  } catch (error) {
+    console.error("[Auth] Get 2FA settings failed:", error);
+    return null;
+  }
+}
+
+export async function saveTwoFactorSetup(userId: number, secret: string, recoveryCodes: string[]) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.update(users).set({
+      twoFactorEnabled: false,
+      twoFactorSecret: encryptSensitive(secret),
+      twoFactorRecoveryCodes: encryptSensitive(serializeRecoveryCodes(recoveryCodes)),
+      twoFactorConfiguredAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+    return true;
+  } catch (error) {
+    console.error("[Auth] Save 2FA setup failed:", error);
+    return false;
+  }
+}
+
+export async function enableTwoFactor(userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.update(users).set({ twoFactorEnabled: true, updatedAt: new Date() }).where(eq(users.id, userId));
+    return true;
+  } catch (error) {
+    console.error("[Auth] Enable 2FA failed:", error);
+    return false;
+  }
+}
+
+export async function disableTwoFactor(userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const current = await getUserById(userId);
+    if (!current) return false;
+    await db.update(users).set({
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      twoFactorRecoveryCodes: null,
+      twoFactorConfiguredAt: null,
+      sessionVersion: (current.sessionVersion ?? 1) + 1,
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+    return true;
+  } catch (error) {
+    console.error("[Auth] Disable 2FA failed:", error);
+    return false;
+  }
+}
+
+export async function updateTwoFactorRecoveryCodes(userId: number, serializedCodes: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.update(users).set({ twoFactorRecoveryCodes: encryptSensitive(serializedCodes), updatedAt: new Date() }).where(eq(users.id, userId));
+    return true;
+  } catch (error) {
+    console.error("[Auth] Update 2FA recovery codes failed:", error);
+    return false;
   }
 }
 

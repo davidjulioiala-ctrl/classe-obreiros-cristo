@@ -1,0 +1,21 @@
+CREATE TABLE `securityIncidents` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`incidentCode` varchar(64) NOT NULL,
+	`category` varchar(100) NOT NULL,
+	`severity` enum('low','medium','high','critical') NOT NULL DEFAULT 'medium',
+	`status` enum('open','investigating','contained','resolved') NOT NULL DEFAULT 'open',
+	`title` varchar(255) NOT NULL,
+	`description` text NOT NULL,
+	`source` varchar(255),
+	`affectedRecords` text,
+	`containmentActions` text,
+	`resolution` text,
+	`detectedAt` timestamp NOT NULL DEFAULT (now()),
+	`containedAt` timestamp,
+	`resolvedAt` timestamp,
+	`createdBy` int NOT NULL,
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `securityIncidents_id` PRIMARY KEY(`id`),
+	CONSTRAINT `securityIncidents_incidentCode_unique` UNIQUE(`incidentCode`)
+);
