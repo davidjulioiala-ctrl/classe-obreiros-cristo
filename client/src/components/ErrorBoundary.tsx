@@ -1,61 +1,119 @@
-import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
+import React, { Component, type ErrorInfo, type ReactNode } from "react";
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  errorId: string | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
+const createErrorId = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `ERR-${timestamp}-${random}`;
+};
+
+/**
+ * Captura erros de renderização na árvore React e mantém a aplicação num
+ * estado recuperável, sem apresentar stack traces ou detalhes internos.
+ */
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+    errorId: null,
+  };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return {
+      hasError: true,
+      error,
+      errorId: null,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    const errorId = createErrorId();
+
+    // Registo técnico local, sem enviar dados para serviços externos e sem
+    // mostrar a mensagem/stack ao utilizador final.
+    console.error("[GlobalErrorBoundary] Renderização interrompida", {
+      errorId,
+      name: error.name,
+      componentStack: info.componentStack,
+    });
+
+    this.setState({ errorId });
   }
+
+  private handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorId: null,
+    });
+  };
+
+  private handleReload = () => {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
 
   render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
-
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
-
-            <button
-              onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
-            >
-              <RotateCcw size={16} />
-              Reload Page
-            </button>
-          </div>
-        </div>
-      );
+    if (!this.state.hasError) {
+      return this.props.children;
     }
 
-    return this.props.children;
+    return (
+      <main
+        role="alert"
+        aria-live="assertive"
+        className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100"
+      >
+        <section className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl sm:p-8">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-300">
+            <AlertTriangle aria-hidden="true" size={30} />
+          </div>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            Classe Obreiros de Cristo
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            Ocorreu um erro inesperado
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            Esta operação não pôde ser concluída. Os seus dados guardados não foram apagados. Tente novamente; se o problema continuar, recarregue a aplicação e informe o código de referência ao administrador.
+          </p>
+          {this.state.errorId ? (
+            <p className="mt-4 rounded-lg bg-slate-950/70 px-3 py-2 font-mono text-xs text-slate-400">
+              Referência: {this.state.errorId}
+            </p>
+          ) : null}
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={this.handleRetry}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900 active:scale-[0.98]"
+            >
+              <RotateCcw aria-hidden="true" size={16} />
+              Tentar novamente
+            </button>
+            <button
+              type="button"
+              onClick={this.handleReload}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-900 active:scale-[0.98]"
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              Recarregar aplicação
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 }
 

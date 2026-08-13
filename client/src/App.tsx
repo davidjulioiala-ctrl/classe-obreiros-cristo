@@ -20,7 +20,6 @@ import Materials from "@/pages/Materials";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import MaintenanceGate from "./components/MaintenanceGate";
 import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LocalAuthProvider, useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
@@ -79,16 +78,14 @@ function Router() {
 
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="light" switchable>
-        <LocalAuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </LocalAuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <ThemeProvider defaultTheme="light" switchable>
+      <LocalAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </LocalAuthProvider>
+    </ThemeProvider>
   );
 }
 

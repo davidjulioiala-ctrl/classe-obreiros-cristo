@@ -6462,3 +6462,10 @@
 - [x] Auditar aninhamento de tabelas, listas dinâmicas com chaves instáveis, Framer Motion e portais.
 - [x] Corrigir a reconciliação e adicionar testes de regressão de DOM.
 - [x] Validar navegação SPA e compilação de produção.
+
+
+## Error Boundary global — 2026-08-13
+- [x] Melhorar o Error Boundary global com recuperação local, recarga controlada e mensagem segura sem expor stack traces.
+- [x] Garantir que o Error Boundary envolve toda a árvore React desde o ponto de entrada da aplicação.
+- [x] Adicionar testes de regressão para captura de erros de renderização e acções de recuperação.
+- [x] Executar typecheck, testes, build e verificação visual antes do checkpoint.
