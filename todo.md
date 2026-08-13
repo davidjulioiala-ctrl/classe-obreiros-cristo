@@ -6490,3 +6490,11 @@
 - [x] Validar tipo (PNG/JPEG/WEBP) e tamanho máximo (5MB) no endpoint público.
 - [x] Armazenar o anexo com segurança (S3 / storage helper) e registar a URL no incidente criado.
 - [x] Adicionar testes de unidade para upload de imagem e validação de formato, validando typecheck, build e responsividade.
+
+
+## Falha global de carregamento das páginas — 2026-08-13
+- [x] Recolher logs recentes do servidor, erros de consola do navegador e excepções no bundle de produção.
+- [x] Verificar a montagem do router, providers React, Error Boundary e rotas estáticas ou dinâmicas.
+- [x] Corrigir o problema raiz (seja conflito de routing, erro de import, excepção de runtime ou middleware).
+- [x] Executar typecheck, suite Vitest, build e testar carregamento de login, /status e dashboard.
+- [x] Guardar checkpoint e publicar a correção da indisponibilidade global.
