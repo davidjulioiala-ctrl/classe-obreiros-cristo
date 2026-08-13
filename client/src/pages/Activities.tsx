@@ -490,7 +490,21 @@ export default function Activities() {
                   {activity.isReligious && activity.type !== "social" && activity.biblicalReference && <p className="text-sm text-slate-600 dark:text-slate-300">Referência bíblica: {activity.biblicalReference}</p>}
                   <ActivityDocuments activityId={activity.id} />
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => openEdit(activity)}><Edit2 className="mr-2 h-4 w-4" />Editar</Button>{activity.status !== "realizada" && <Button variant="outline" size="sm" className="text-emerald-700" disabled={completeActivity.isPending} onClick={() => completeActivity.mutate({ id: activity.id })}><Check className="mr-2 h-4 w-4" />Finalizar</Button>}<Button variant="outline" size="sm" className="text-red-600" disabled={deleteActivity.isPending} onClick={() => removeActivity(activity.id)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</Button></div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => window.open(`/api/activities/${activity.id}/export-pdf?type=ata`, "_blank")}>
+                    <FileText className="mr-1.5 h-4 w-4 text-emerald-600" /> Ata PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => window.open(`/api/activities/${activity.id}/export-pdf?type=relatorio`, "_blank")}>
+                    <FileText className="mr-1.5 h-4 w-4 text-blue-600" /> Relatório PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(activity)}><Edit2 className="mr-2 h-4 w-4" />Editar</Button>
+                  {activity.status !== "realizada" && (
+                    <Button variant="outline" size="sm" className="text-emerald-700" disabled={completeActivity.isPending} onClick={() => completeActivity.mutate({ id: activity.id })}>
+                      <Check className="mr-2 h-4 w-4" />Finalizar
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" className="text-red-600" disabled={deleteActivity.isPending} onClick={() => removeActivity(activity.id)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</Button>
+                </div>
               </div>
             </Card>
           ))}

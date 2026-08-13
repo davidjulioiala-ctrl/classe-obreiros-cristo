@@ -6569,3 +6569,10 @@
 - [ ] Atualizar o componente ActivityDocuments em Activities.tsx para incluir um botão de "Imprimir documento" junto ao visualizador integrado.
 - [ ] Implementar trigger de impressão direcionada ao iframe de pré-visualização autenticada do PDF.
 - [ ] Validar typecheck, testes unitários, build de produção e guardar checkpoint publicado.
+
+
+## Exportação Oficial de Atas e Relatórios de Atividades em PDF — 2026-08-13
+- [ ] Criar gerador PDF estruturado para ata e relatório de atividades usando PDFKit.
+- [ ] Adicionar rota protegida `/api/activities/:id/export-pdf` para exportar a ata ou o relatório oficial.
+- [ ] Adicionar botões de "Exportar Ata PDF" e "Exportar Relatório PDF" na página de Atividades.
+- [ ] Validar typecheck, testes unitários, build de produção e guardar checkpoint publicado.
