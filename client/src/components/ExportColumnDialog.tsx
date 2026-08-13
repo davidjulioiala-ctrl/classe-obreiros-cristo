@@ -47,8 +47,8 @@ export function ExportColumnDialog({ open, title, description, columns, selected
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={selectAll}><CheckSquare className="mr-2 h-4 w-4" /> Seleccionar todas</Button>
-          <Button type="button" variant="outline" size="sm" onClick={clearAll}><Square className="mr-2 h-4 w-4" /> Limpar selecção</Button>
+          <Button type="button" variant="outline" size="sm" onClick={selectAll}><CheckSquare className="mr-2 h-4 w-4" /> Selecionar Todas</Button>
+          <Button type="button" variant="outline" size="sm" onClick={clearAll}><Square className="mr-2 h-4 w-4" /> Desmarcar Todas</Button>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {columns.map((column) => (
