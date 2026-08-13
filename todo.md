@@ -6498,3 +6498,16 @@
 - [x] Corrigir o problema raiz (seja conflito de routing, erro de import, excepção de runtime ou middleware).
 - [x] Executar typecheck, suite Vitest, build e testar carregamento de login, /status e dashboard.
 - [x] Guardar checkpoint e publicar a correção da indisponibilidade global.
+
+
+## Correções operacionais nos seis menus — 2026-08-13
+- [ ] Investigar procedimentos tRPC, rotas e formulários dos menus Materiais, Membros, Relatórios, Transferências, Finanças e Presenças.
+- [ ] Corrigir falhas de schema, tipos, mutações ou tratamento de erros em cada um dos 6 módulos.
+- [ ] Validar testes unitários e build de produção sem erros.
+- [ ] Guardar checkpoint e publicar os menus corrigidos.
+
+
+## Revisão administrativa de incidentes — 2026-08-13
+- [ ] Expor no painel administrativo os anexos de capturas de ecrã associados aos reportes públicos, sem quebrar o acesso seguro ao storage.
+- [ ] Adicionar regressão para preservar a referência do anexo no fluxo de revisão de incidentes.
+- [ ] Validar novamente typecheck, testes, build e checkpoint publicado.

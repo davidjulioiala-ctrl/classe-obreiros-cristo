@@ -53,4 +53,21 @@ describe("login transition regression guards", () => {
     expect(contextSource).toContain("getLocalUserFromRequest");
     expect(contextSource).not.toContain('from "./sdk"');
   });
+
+  it("keeps the shared dashboard layout on local authentication", () => {
+    const layoutSource = readProjectFile("client/src/components/DashboardLayoutCustom.tsx");
+
+    expect(layoutSource).toContain('from "@/_core/hooks/useLocalAuth"');
+    expect(layoutSource).toContain("const { user, logout } = useLocalAuth();");
+    expect(layoutSource).not.toContain('from "@/_core/hooks/useAuth"');
+    expect(layoutSource).not.toContain("useAuth()");
+  });
+
+  it("keeps public incident attachments visible to administrators", () => {
+    const auditSource = readProjectFile("client/src/pages/AuditAndBackup.tsx");
+
+    expect(auditSource).toContain("incident.attachmentUrl");
+    expect(auditSource).toContain("Ver captura anexada");
+    expect(auditSource).toContain('rel="noreferrer"');
+  });
 });

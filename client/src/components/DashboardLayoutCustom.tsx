@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -57,7 +57,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout } = useLocalAuth();
   const [location, navigate] = useLocation();
 
   const filteredMenuItems = menuItems.filter((item) => {
