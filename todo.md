@@ -6338,3 +6338,11 @@
 - [x] Adicionar testes Vitest para login válido, login inválido, sessão válida/inválida e logout
 - [x] Validar funcionalmente o CRUD de utilizadores autenticado, incluindo username/código e permissões
 - [x] Guardar novo checkpoint apenas depois das validações de sessão e CRUD
+
+## Novas Correções Pendentes
+- [x] Adicionar campo de idade calculada visível no formulário de cadastro de membros e listagem
+- [x] Criar o menu Histórico no sidebar e na aplicação para registar cargos e estados
+- [x] Implementar o botão "Processar Transferência" no menu Transferências para filtrar maiores de 18 anos, aprovar em lote com motivo comum, gerar PDF A4 horizontal e mudar status para inativo
+- [x] Remover os placeholders com credenciais fixas do formulário de login local e manter os campos vazios
+- [x] Confirmar responsividade mobile após a correção do login
+- [x] Corrigir a rota do PDF de transferência para localizar também membros recém-inativados

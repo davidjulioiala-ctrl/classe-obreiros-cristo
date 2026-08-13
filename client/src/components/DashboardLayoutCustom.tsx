@@ -20,6 +20,7 @@ import {
   ChevronDown,
   UserCircle,
   ShieldCheck,
+  History,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
@@ -41,6 +42,7 @@ const menuItems: MenuItem[] = [
   { icon: BarChart3, label: "Atividades", href: "/activities" },
   { icon: DollarSign, label: "Finanças", href: "/finances" },
   { icon: ArrowRightLeft, label: "Transferências", href: "/transfers" },
+  { icon: History, label: "Histórico", href: "/history" },
   { icon: FileText, label: "Relatórios", href: "/reports" },
   { icon: Music, label: "Louvor", href: "/louvor" },
   { icon: Settings, label: "Configurações", href: "/settings" },

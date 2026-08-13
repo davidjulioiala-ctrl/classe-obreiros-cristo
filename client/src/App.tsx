@@ -15,6 +15,7 @@ import UserManagement from "@/pages/UserManagement";
 import Louvor from "@/pages/Louvor";
 import Profile from "@/pages/Profile";
 import AuditAndBackup from "@/pages/AuditAndBackup";
+import MemberHistoryPage from "@/pages/MemberHistory";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -53,6 +54,7 @@ function Router() {
       <Route path={"/attendance"} component={Attendance} />
       <Route path={"/finances"} component={Finances} />
       <Route path={"/transfers"} component={Transfers} />
+      <Route path={"/history"} component={MemberHistoryPage} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/louvor"} component={Louvor} />
       <Route path={"/settings"} component={Settings} />

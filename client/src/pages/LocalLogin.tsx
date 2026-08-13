@@ -109,7 +109,7 @@ export default function LocalLogin() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
+                  placeholder="Nome de utilizador"
                   disabled={isLoading}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500"
                 />
@@ -125,7 +125,7 @@ export default function LocalLogin() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="admin123"
+                    placeholder="Introduza a sua senha"
                     disabled={isLoading}
                     className="bg-slate-700/50 border-slate-600 text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-emerald-500 pr-10"
                   />

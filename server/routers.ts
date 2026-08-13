@@ -522,6 +522,79 @@ const settingsRouter = router({
 const transfersRouter = router({
   list: protectedProcedure.query(() => db.listTransfers()),
 
+  eligibleForAdultTransfer: liderProcedure.query(async () => {
+    const members = await db.getAllMembers(true);
+    return members.filter((member) => {
+      if (!member.birthDate) return false;
+      const birth = new Date(`${String(member.birthDate).slice(0, 10)}T00:00:00Z`);
+      const today = new Date();
+      let age = today.getUTCFullYear() - birth.getUTCFullYear();
+      const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < birth.getUTCDate())) age -= 1;
+      return age >= 18;
+    });
+  }),
+
+  reviewAdultTransfers: liderProcedure.query(async () => {
+    const members = await db.getAllMembers(true);
+    return members.map((member) => {
+      const birth = member.birthDate ? new Date(`${String(member.birthDate).slice(0, 10)}T00:00:00Z`) : null;
+      const today = new Date();
+      let age: number | null = null;
+      if (birth && !Number.isNaN(birth.getTime())) {
+        age = today.getUTCFullYear() - birth.getUTCFullYear();
+        const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < birth.getUTCDate())) age -= 1;
+      }
+      return { ...member, age, eligible: age !== null && age >= 18 };
+    });
+  }),
+
+  processAdultTransfers: liderProcedure
+    .input(z.object({ memberIds: z.array(z.number()).min(1), reason: z.string().trim().min(1), toGroupId: z.number().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const candidates = await db.getAllMembers(true);
+      const selected = candidates.filter((member) => {
+        if (!input.memberIds.includes(member.id) || !member.birthDate) return false;
+        const birth = new Date(`${String(member.birthDate).slice(0, 10)}T00:00:00Z`);
+        const today = new Date();
+        let age = today.getUTCFullYear() - birth.getUTCFullYear();
+        const monthDiff = today.getUTCMonth() - birth.getUTCMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < birth.getUTCDate())) age -= 1;
+        return age >= 18;
+      });
+      if (selected.length !== input.memberIds.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A lista inclui membros inativos, sem data de nascimento ou com idade inferior a 18 anos." });
+      }
+
+      const now = new Date();
+      for (const member of selected) {
+        await db.createTransfer({
+          memberId: member.id,
+          fromGroupId: member.groupId ?? undefined,
+          toGroupId: input.toGroupId,
+          toChurch: "Jovens",
+          reason: input.reason,
+          status: "concluida",
+          approvedBy: ctx.user.id,
+          approvedAt: now,
+          completedAt: now,
+        });
+        await db.closeMemberHistory(member.id);
+        await db.addMemberHistory({
+          memberId: member.id,
+          position: "Jovem",
+          details: `Transferência validada para Jovens. Motivo: ${input.reason}`,
+          startDate: now,
+          isActive: false,
+          endDate: now,
+        });
+        await db.updateMember(member.id, { isActive: false, isTransferred: true, transferredAt: now });
+      }
+      await writeAudit(ctx, "processar", "adult_transfer", undefined, { memberIds: input.memberIds, reason: input.reason, toGroupId: input.toGroupId });
+      return { success: true, count: selected.length, members: selected };
+    }),
+
   create: liderProcedure
     .input(
       z.object({
