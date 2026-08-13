@@ -6483,3 +6483,10 @@
 - [x] Criar endpoint público protegido para submeter relatos de problemas com validação estrita.
 - [x] Ligar a submissão ao sistema de incidentes ou auditoria sem exigir login prévio.
 - [x] Adicionar testes de unidade para o formulário e endpoint de reporte, validando typecheck, build e responsividade.
+
+
+## Anexação de capturas de ecrã no reporte rápido — 2026-08-13
+- [x] Adicionar campo de ficheiro (imagem opcional) no formulário de reporte na página /status.
+- [x] Validar tipo (PNG/JPEG/WEBP) e tamanho máximo (5MB) no endpoint público.
+- [x] Armazenar o anexo com segurança (S3 / storage helper) e registar a URL no incidente criado.
+- [x] Adicionar testes de unidade para upload de imagem e validação de formato, validando typecheck, build e responsividade.

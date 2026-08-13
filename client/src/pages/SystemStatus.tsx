@@ -6,12 +6,13 @@ import {
   Home,
   LockKeyhole,
   MessageCircleWarning,
+  Paperclip,
   RefreshCw,
   Send,
   ServerCog,
   ShieldCheck,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 export type PublicMaintenanceState = {
@@ -95,6 +96,8 @@ export default function SystemStatus() {
   const [reportDescription, setReportDescription] = useState("");
   const [reporting, setReporting] = useState(false);
   const [reportResult, setReportResult] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [reportScreenshot, setReportScreenshot] = useState<File | null>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   const checkState = useCallback(async (signal?: AbortSignal) => {
     setChecking(true);
@@ -132,6 +135,31 @@ export default function SystemStatus() {
     };
   }, [checkState]);
 
+  const handleScreenshotChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      setReportScreenshot(null);
+      return;
+    }
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      event.target.value = "";
+      setReportScreenshot(null);
+      setReportResult({ kind: "error", message: "Anexe apenas uma imagem PNG, JPEG ou WEBP." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      setReportScreenshot(null);
+      setReportResult({ kind: "error", message: "A captura deve ter no máximo 5 MB." });
+      return;
+    }
+
+    setReportScreenshot(file);
+    setReportResult(null);
+  };
+
   const submitReport = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (reportDescription.trim().length < 10) {
@@ -142,15 +170,21 @@ export default function SystemStatus() {
     setReporting(true);
     setReportResult(null);
     try {
+      const formData = new FormData();
+      formData.append("category", reportCategory);
+      formData.append("description", reportDescription.trim());
+      if (reportScreenshot) formData.append("screenshot", reportScreenshot, reportScreenshot.name);
+
       const response = await fetch("/api/status-report", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: reportCategory, description: reportDescription.trim() }),
+        body: formData,
       });
       const payload = (await response.json().catch(() => ({}))) as { success?: boolean; reference?: string; error?: string };
       if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível enviar o reporte.");
       setReportDescription("");
+      setReportScreenshot(null);
+      if (screenshotInputRef.current) screenshotInputRef.current.value = "";
       setReportResult({ kind: "success", message: `Reporte registado. Referência: ${payload.reference ?? "atribuída pelo sistema"}.` });
     } catch (error) {
       setReportResult({ kind: "error", message: error instanceof Error ? error.message : "Não foi possível enviar o reporte neste momento." });
@@ -261,6 +295,12 @@ export default function SystemStatus() {
                   <option value="security">Segurança</option>
                   <option value="other">Outro problema</option>
                 </select>
+              </div>
+              <div>
+                <label htmlFor="status-report-screenshot" className="text-sm font-medium text-slate-200">Captura de ecrã <span className="font-normal text-slate-500">(opcional)</span></label>
+                <input ref={screenshotInputRef} id="status-report-screenshot" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" onChange={handleScreenshotChange} className="mt-2 block w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-slate-950 hover:file:bg-emerald-400" />
+                <p className="mt-1 text-xs text-slate-500">PNG, JPEG ou WEBP até 5 MB. Evite incluir palavras-passe, dados pessoais ou informação financeira.</p>
+                {reportScreenshot ? <p className="mt-2 flex items-center gap-2 text-xs text-emerald-200"><Paperclip aria-hidden="true" className="h-3.5 w-3.5" />{reportScreenshot.name} ({Math.ceil(reportScreenshot.size / 1024)} KB)</p> : null}
               </div>
               <div>
                 <label htmlFor="status-report-description" className="text-sm font-medium text-slate-200">Descrição</label>
