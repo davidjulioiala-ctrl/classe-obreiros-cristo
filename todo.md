@@ -6563,3 +6563,9 @@
 - [x] Criar endpoint autenticado para pré-visualização de documentos de actividades com cabeçalhos inline.
 - [x] Atualizar o componente de listagem e visualização de actividades para incorporar um visualizador integrado (iframe/embed) para ficheiros PDF.
 - [x] Adicionar testes unitários para a pré-visualização segura e validar typecheck, build e checkpoint publicado.
+
+
+## Botão de Impressão Direta no Visualizador PDF — 2026-08-13
+- [ ] Atualizar o componente ActivityDocuments em Activities.tsx para incluir um botão de "Imprimir documento" junto ao visualizador integrado.
+- [ ] Implementar trigger de impressão direcionada ao iframe de pré-visualização autenticada do PDF.
+- [ ] Validar typecheck, testes unitários, build de produção e guardar checkpoint publicado.

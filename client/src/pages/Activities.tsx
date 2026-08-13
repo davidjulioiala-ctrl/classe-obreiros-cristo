@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Trash2, Users, X } from "lucide-react";
+import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Printer, Trash2, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
+import { printPdfFrame } from "@/lib/pdfPrint";
 import { toast } from "sonner";
 
 type ActivityForm = {
@@ -69,6 +70,8 @@ async function uploadActivityDocument(activityId: number, file: File, documentTy
 
 function ActivityDocuments({ activityId }: { activityId: number }) {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
+  const [previewReady, setPreviewReady] = useState(false);
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
   const documentsQuery = trpc.activities.documentsList.useQuery({ activityId });
   const documents = documentsQuery.data ?? [];
 
@@ -85,6 +88,15 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
       {documents.map((document) => {
         const isPdf = document.mimeType.toLowerCase() === "application/pdf";
         const isPreviewing = previewDocumentId === document.id;
+        const togglePreview = () => {
+          setPreviewDocumentId(isPreviewing ? null : document.id);
+          setPreviewReady(false);
+        };
+        const printPreview = () => {
+          if (!printPdfFrame(previewFrameRef.current)) {
+            toast.error("A pré-visualização ainda não está pronta para impressão.");
+          }
+        };
         return (
           <div key={document.id} className="rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
             <div className="flex flex-col gap-2 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
@@ -99,7 +111,7 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setPreviewDocumentId(isPreviewing ? null : document.id)}
+                    onClick={togglePreview}
                     aria-expanded={isPreviewing}
                     aria-controls={`activity-document-preview-${document.id}`}
                   >
@@ -119,9 +131,18 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
             </div>
             {isPreviewing && (
               <div id={`activity-document-preview-${document.id}`} className="border-t border-slate-200 p-3 dark:border-slate-700">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-slate-500">Pré-visualização PDF autenticada</p>
+                  <Button type="button" variant="outline" size="sm" onClick={printPreview} disabled={!previewReady} title={previewReady ? "Imprimir sem descarregar o PDF" : "A aguardar o carregamento do PDF"}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir documento
+                  </Button>
+                </div>
                 <iframe
+                  ref={previewFrameRef}
                   src={`/api/activity-documents/${document.id}/preview`}
                   title={`Pré-visualização de ${document.originalName}`}
+                  onLoad={() => setPreviewReady(true)}
                   className="h-[min(70vh,720px)] w-full rounded-md border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950"
                 />
               </div>
