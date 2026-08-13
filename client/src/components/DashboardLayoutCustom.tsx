@@ -23,6 +23,7 @@ import {
   History,
   AlertTriangle,
   UserCog,
+  Package,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
@@ -48,6 +49,7 @@ const menuItems: MenuItem[] = [
   { icon: ArrowRightLeft, label: "Transferências", href: "/transfers" },
   { icon: History, label: "Histórico", href: "/history" },
   { icon: FileText, label: "Relatórios", href: "/reports" },
+  { icon: Package, label: "Materiais", href: "/materials" },
   { icon: Music, label: "Louvor", href: "/louvor" },
   { icon: Settings, label: "Configurações", href: "/settings" },
   { icon: UserCog, label: "Utilizadores", href: "/users" },

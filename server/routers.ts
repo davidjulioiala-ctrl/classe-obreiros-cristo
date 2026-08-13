@@ -361,19 +361,19 @@ const quotasRouter = router({
         month: z.number(),
         year: z.number(),
         amount: z.string(),
+        responsibleName: z.string().trim().min(1, "O nome do responsável é obrigatório"),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const quota = await db.getQuotasByMonthYear(input.month, input.year);
       const existing = quota.find((q) => q.memberId === input.memberId);
 
-      const responsibleName = ctx.user.name || ctx.user.username;
       if (existing) {
         return await db.updateQuota(existing.id, {
           isPaid: true,
           paidAt: new Date(),
           paidBy: ctx.user.id,
-          responsibleName,
+          responsibleName: input.responsibleName,
         });
       }
 
@@ -385,7 +385,7 @@ const quotasRouter = router({
         isPaid: true,
         paidAt: new Date(),
         paidBy: ctx.user.id,
-        responsibleName,
+        responsibleName: input.responsibleName,
       });
     }),
 
@@ -420,15 +420,15 @@ const quotasRouter = router({
 const otherIncomeRouter = router({
   list: protectedProcedure.query(() => db.listOtherIncome()),
   create: financialProcedure
-    .input(z.object({ description: z.string().trim().min(1), amount: z.string().min(1), date: z.coerce.date() }))
+    .input(z.object({ description: z.string().trim().min(1), amount: z.string().min(1), date: z.coerce.date(), responsibleName: z.string().trim().min(1, "O responsável é obrigatório") }))
     .mutation(async ({ input, ctx }) => {
-      const responsibleName = ctx.user.name || ctx.user.username;
-      const result = await db.createOtherIncome({ ...input, recordedBy: ctx.user.id, responsibleName });
-      await writeAudit(ctx, "criar", "otherIncome", undefined, { description: input.description, amount: input.amount, date: input.date, responsibleName });
+      const { responsibleName, ...rest } = input;
+      const result = await db.createOtherIncome({ ...rest, recordedBy: ctx.user.id, responsibleName });
+      await writeAudit(ctx, "criar", "otherIncome", undefined, { ...rest, responsibleName });
       return result;
     }),
   update: financialProcedure
-    .input(z.object({ id: z.number(), description: z.string().trim().min(1).optional(), amount: z.string().min(1).optional(), date: z.coerce.date().optional() }))
+    .input(z.object({ id: z.number(), description: z.string().trim().min(1).optional(), amount: z.string().min(1).optional(), date: z.coerce.date().optional(), responsibleName: z.string().trim().min(1).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateOtherIncome(id, data);
@@ -449,13 +449,13 @@ const otherIncomeRouter = router({
 const expensesRouter = router({
   list: protectedProcedure.query(() => db.listExpenses()),
   create: financialProcedure
-    .input(z.object({ designation: z.string().trim().min(1), quantity: z.number().int().positive(), unitPrice: z.string().min(1), date: z.coerce.date() }))
+    .input(z.object({ designation: z.string().trim().min(1), quantity: z.number().int().positive(), unitPrice: z.string().min(1), date: z.coerce.date(), responsibleName: z.string().trim().min(1, "O responsável é obrigatório") }))
     .mutation(async ({ input, ctx }) => {
-      const totalPrice = (input.quantity * Number(input.unitPrice)).toFixed(2);
+      const { responsibleName, ...rest } = input;
+      const totalPrice = (rest.quantity * Number(rest.unitPrice)).toFixed(2);
       const sequence = await db.getNextExpenseSequence();
-      const responsibleName = ctx.user.name || ctx.user.username;
-      const result = await db.createExpense({ ...input, sequence, totalPrice, recordedBy: ctx.user.id, responsibleName });
-      await writeAudit(ctx, "criar", "expense", undefined, { designation: input.designation, quantity: input.quantity, totalPrice, date: input.date, responsibleName });
+      const result = await db.createExpense({ ...rest, sequence, totalPrice, recordedBy: ctx.user.id, responsibleName });
+      await writeAudit(ctx, "criar", "expense", undefined, { ...rest, totalPrice, responsibleName });
       return result;
     }),
   update: financialProcedure
@@ -756,6 +756,64 @@ const historyRouter = router({
 
 
 
+// ============ MATERIALS ROUTER ============
+
+const materialsRouter = router({
+  list: protectedProcedure.query(async () => db.listMaterials()),
+  create: liderProcedure
+    .input(
+      z.object({
+        code: z.string().trim().min(1),
+        name: z.string().trim().min(1),
+        category: z.string().trim().min(1),
+        quantity: z.number().int().min(1).default(1),
+        condition: z.enum(["Bom", "Regular", "Precário", "Manutenção"]).default("Bom"),
+        custodian: z.string().trim().min(1),
+        location: z.string().trim().optional(),
+        purchaseDate: z.coerce.date().optional(),
+        notes: z.string().trim().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const material = await db.createMaterial({
+        ...input,
+        location: input.location ?? null,
+        purchaseDate: input.purchaseDate ?? null,
+        notes: input.notes ?? null,
+      });
+      await writeAudit(ctx, "criar", "material", material.id, { code: input.code, name: input.name, custodian: input.custodian });
+      return material;
+    }),
+  update: liderProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        code: z.string().trim().min(1).optional(),
+        name: z.string().trim().min(1).optional(),
+        category: z.string().trim().min(1).optional(),
+        quantity: z.number().int().min(1).optional(),
+        condition: z.enum(["Bom", "Regular", "Precário", "Manutenção"]).optional(),
+        custodian: z.string().trim().min(1).optional(),
+        location: z.string().trim().optional(),
+        purchaseDate: z.coerce.date().optional(),
+        notes: z.string().trim().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const material = await db.updateMaterial(id, data);
+      await writeAudit(ctx, "editar", "material", id, data);
+      return material;
+    }),
+  delete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await db.deleteMaterial(input.id);
+      await writeAudit(ctx, "apagar", "material", input.id);
+      return { success: true };
+    }),
+});
+
 // ============ BACKUP ROUTER ============
 
 const backupRouter = router({
@@ -827,6 +885,7 @@ export const appRouter = router({
   reports: reportsRouter,
   audit: auditRouter,
   backup: backupRouter,
+  materials: materialsRouter,
   louvor: louvorRouter,
   settings: settingsRouter,
   history: historyRouter,

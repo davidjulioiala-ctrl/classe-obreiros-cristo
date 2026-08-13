@@ -22,6 +22,7 @@ import {
   InsertMemberHistory,
   backupVersions,
   backupSchedules,
+  materials,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { storageGetSignedUrl, storagePut } from "./storage";
@@ -815,6 +816,38 @@ export async function updateBackupSchedule(id: number, data: Partial<typeof back
   if (!db) throw new Error("Database not available");
   await db.update(backupSchedules).set(data).where(eq(backupSchedules.id, id));
   return getBackupSchedule();
+}
+
+// ============ MATERIALS HELPERS ============
+
+export async function listMaterials() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(materials).orderBy(desc(materials.createdAt));
+}
+
+export async function createMaterial(data: typeof materials.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(materials).values(data);
+  const id = Number((result as { insertId?: number }).insertId ?? 0);
+  const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
+  return rows[0] ?? { id, ...data };
+}
+
+export async function updateMaterial(id: number, data: Partial<typeof materials.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(materials).set(data).where(eq(materials.id, id));
+  const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function deleteMaterial(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(materials).where(eq(materials.id, id));
+  return { success: true };
 }
 
 export async function getBackupScheduleByTaskUid(taskUid: string) {

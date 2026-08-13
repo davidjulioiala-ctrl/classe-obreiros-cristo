@@ -50,7 +50,7 @@ export const members = mysqlTable("members", {
   phoneTelecel: varchar("phoneTelecel", { length: 20 }),
   email: varchar("email", { length: 320 }),
   groupId: int("groupId"),
-  position: varchar("position", { length: 255 }),
+  position: varchar("position", { length: 255 }), // Valores permitidos: Líder, Oficial, Membro de Ministério de Louvor, Convidado, Membro, Outros
   leaderRole: varchar("leaderRole", { length: 255 }), // Specific leader role when position is 'Líder'
   louvorRole: varchar("louvorRole", { length: 255 }), // Specific louvor role when position is 'Membro de Ministério de Louvor'
   isGuest: boolean("isGuest").default(false).notNull(),
@@ -296,6 +296,27 @@ export const louvorScales = mysqlTable("louvorScales", {
 
 export type LouvorScale = typeof louvorScales.$inferSelect;
 export type InsertLouvorScale = typeof louvorScales.$inferInsert;
+
+/**
+ * Materials - Organization assets and inventory
+ */
+export const materials = mysqlTable("materials", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  quantity: int("quantity").default(1).notNull(),
+  condition: mysqlEnum("condition", ["Bom", "Regular", "Precário", "Manutenção"]).default("Bom").notNull(),
+  custodian: varchar("custodian", { length: 255 }).notNull(),
+  location: varchar("location", { length: 255 }),
+  purchaseDate: date("purchaseDate"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = typeof materials.$inferInsert;
 
 /**
  * Member History table - tracking history of positions and status changes

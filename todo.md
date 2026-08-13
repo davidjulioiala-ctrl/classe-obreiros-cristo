@@ -6367,3 +6367,12 @@
 - [x] Adicionar campo Responsável automático em Quotas, Outras Receitas e Despesas
 - [x] Garantir que o menu Louvor apresenta apenas membros do Ministério de Louvor sincronizados ao cadastro principal
 - [x] Devolver a opção de criação de utilizadores e adicionar o fluxo de alteração/recuperação de senha
+
+## Fase 13: Solicitações Adicionais de Gestão
+- [ ] Permitir clicar em cima de cada membro em falta em 'Campos em falta' e completar os dados diretamente sem sair da página
+- [ ] Adicionar o cargo 'Membro' na lista de cargos do cadastro de membros
+- [ ] Alterar o campo responsável nas finanças (Quotas, Outras Receitas, Despesas) para preenchimento manual (nome de quem está a realizar o lançamento)
+- [ ] Adicionar data automática de cadastro na criação de utilizadores
+- [ ] Criar o novo menu de Materiais para registar e controlar património/materiais da organização e respetivos responsáveis pela guarda
+- [ ] Corrigir as cores de destaque nas Configurações (Aparência/Tema) para funcionarem de forma dinâmica e persistente
+- [ ] Garantir que todos os cadastros e lançamentos utilizam IDs gerados automaticamente pela base de dados
