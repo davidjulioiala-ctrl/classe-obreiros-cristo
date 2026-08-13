@@ -26,7 +26,6 @@ import {
   Package,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { Toaster } from "@/components/ui/sonner";
 
 interface DashboardLayoutCustomProps {
   children: ReactNode;
@@ -287,7 +286,6 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
         </motion.main>
       </div>
 
-      <Toaster />
     </div>
   );
 }

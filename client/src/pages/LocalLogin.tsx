@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
+import { useLocation } from "wouter";
 
 export default function LocalLogin() {
   const [username, setUsername] = useState("");
@@ -22,6 +23,7 @@ export default function LocalLogin() {
   const [bootstrapUsername, setBootstrapUsername] = useState("");
   const [bootstrapPassword, setBootstrapPassword] = useState("");
   const { login, verifyTwoFactor } = useLocalAuth();
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     let active = true;
@@ -48,8 +50,8 @@ export default function LocalLogin() {
         setRequiresTwoFactor(true);
         return;
       }
-      // Recarrega a aplicação para que o router global valide o cookie local recém-criado.
-      window.location.assign("/dashboard");
+      // A sessão já foi actualizada no hook; navegação SPA evita desmontar portais durante a transição.
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
     } finally {
@@ -96,7 +98,7 @@ export default function LocalLogin() {
     setIsLoading(true);
     try {
       await verifyTwoFactor(twoFactorCode);
-      window.location.assign("/dashboard");
+      navigate("/dashboard");
     } catch {
       // O hook apresenta a mensagem segura ao utilizador.
     } finally {

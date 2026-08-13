@@ -6423,3 +6423,9 @@
 - [x] Fortalecer o bootstrap do primeiro administrador sem credenciais hardcoded em produção
 - [x] Rever a experiência responsiva do modo de manutenção em desktop, tablet e telemóvel
 - [x] Executar a validação final de TypeScript, testes, build e revisão visual antes do checkpoint
+
+## Correcção de regressão no login — 2026-08-13
+- [ ] Reproduzir o erro React `removeChild` na transição do login
+- [ ] Corrigir a desmontagem/navegação do fluxo de autenticação sem remover nós fora do React
+- [ ] Adicionar teste de regressão e validar login desktop/mobile
+- [ ] Executar typecheck, testes, build e guardar checkpoint da correcção

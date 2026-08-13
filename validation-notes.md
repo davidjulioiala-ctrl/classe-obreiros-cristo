@@ -41,3 +41,12 @@ A captura mostrou uma faixa de Preview mode no rodapé da pré-visualização; e
 ## Capturas responsivas — ciclo de segurança — 13/08/2026
 
 A captura desktop (1280×720) confirmou um cartão de login centrado, campos vazios, contrastes legíveis e botão Entrar com largura adequada. A captura mobile (375×812) confirmou que o cartão se adapta à largura disponível, os campos permanecem utilizáveis, o texto não é cortado e não existe overflow horizontal. O estado normal do sistema não apresenta a faixa de manutenção porque a manutenção está desactivada na base de dados.
+
+## Regressão de login — 2026-08-13
+- O caminho de credenciais inválidas no preview mostrou apenas a mensagem segura "Credenciais inválidas" e não gerou erros no console.
+- A transição pós-login não pôde ser reproduzida com sucesso porque as credenciais existentes no ambiente não foram aceites; foi confirmada a existência de contas administrativas na base de dados sem expor hashes ou segredos.
+- A análise independente identificou como causa provável de alta confiança o uso de `useTheme` de `next-themes` no Sonner enquanto o App usa o `ThemeProvider` local.
+- Correcções aplicadas: Sonner agora lê `useTheme` de `@/contexts/ThemeContext`; removido o Toaster duplicado do layout autenticado; substituída a recarga completa por navegação SPA após login/2FA.
+- Typecheck, testes de autenticação/logout e build de produção passaram após as correcções.
+
+- Após o alinhamento do Sonner com o ThemeProvider local, as capturas desktop (1280×720) e mobile (375×812) mostram o login estável, legível, sem overflow e sem credenciais predefinidas visíveis.
