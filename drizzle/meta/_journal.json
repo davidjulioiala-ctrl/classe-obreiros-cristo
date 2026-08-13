@@ -64,6 +64,20 @@
       "when": 1786627368679,
       "tag": "0008_foamy_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1786632254154,
+      "tag": "0009_huge_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1786633203626,
+      "tag": "0010_slow_roxanne_simpson",
+      "breakpoints": true
     }
   ]
 }

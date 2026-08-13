@@ -264,6 +264,7 @@ export type InsertAppSetting = typeof appSettings.$inferInsert;
  */
 export const louvorMembers = mysqlTable("louvorMembers", {
   id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId"),
   name: varchar("name", { length: 255 }).notNull(),
   instrumentOrVoice: varchar("instrumentOrVoice", { length: 255 }).notNull(), // e.g., "Vocal Principal", "Guitarra", "Teclado"
   phone: varchar("phone", { length: 30 }),
@@ -309,3 +310,42 @@ export const memberHistory = mysqlTable("memberHistory", {
 
 export type MemberHistory = typeof memberHistory.$inferSelect;
 export type InsertMemberHistory = typeof memberHistory.$inferInsert;
+
+/**
+ * Backup versions - metadata for downloadable and cloud snapshots.
+ */
+export const backupVersions = mysqlTable("backupVersions", {
+  id: int("id").autoincrement().primaryKey(),
+  versionLabel: varchar("versionLabel", { length: 255 }).notNull(),
+  destination: mysqlEnum("destination", ["local", "drive"]).default("local").notNull(),
+  cloudEmail: varchar("cloudEmail", { length: 320 }),
+  storageKey: varchar("storageKey", { length: 500 }).notNull(),
+  fileUrl: text("fileUrl"),
+  fileSize: int("fileSize").default(0).notNull(),
+  checksum: varchar("checksum", { length: 128 }),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BackupVersion = typeof backupVersions.$inferSelect;
+export type InsertBackupVersion = typeof backupVersions.$inferInsert;
+
+/**
+ * Daily backup schedule - one configurable administrative heartbeat per project.
+ */
+export const backupSchedules = mysqlTable("backupSchedules", {
+  id: int("id").autoincrement().primaryKey(),
+  hour: int("hour").notNull(),
+  minute: int("minute").default(0).notNull(),
+  destination: mysqlEnum("destination", ["local", "drive"]).default("local").notNull(),
+  cloudEmail: varchar("cloudEmail", { length: 320 }),
+  enabled: boolean("enabled").default(false).notNull(),
+  scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
+  lastRunAt: timestamp("lastRunAt"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BackupSchedule = typeof backupSchedules.$inferSelect;
+export type InsertBackupSchedule = typeof backupSchedules.$inferInsert;

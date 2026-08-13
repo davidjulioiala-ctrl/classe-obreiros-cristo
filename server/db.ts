@@ -1,5 +1,6 @@
 import { eq, and, or, desc, asc, like, between, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createHash } from "node:crypto";
 import {
   InsertUser,
   users,
@@ -19,8 +20,11 @@ import {
   appSettings,
   memberHistory,
   InsertMemberHistory,
+  backupVersions,
+  backupSchedules,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { storageGetSignedUrl, storagePut } from "./storage";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -533,6 +537,29 @@ export async function updateExpense(id: number, data: Partial<typeof expenses.$i
   return db.update(expenses).set(data).where(eq(expenses.id, id));
 }
 
+function dateOnly(value: Date | string | null | undefined) {
+  return value ? String(value).slice(0, 10) : "";
+}
+
+export async function getFinancialReportData(startDate: Date, endDate: Date) {
+  const [allQuotas, allIncome, allExpenses] = await Promise.all([listQuotas(), listOtherIncome(), listExpenses()]);
+  const start = dateOnly(startDate);
+  const end = dateOnly(endDate);
+  const inRange = (value: Date | string | null | undefined) => {
+    const date = dateOnly(value);
+    return date >= start && date <= end;
+  };
+  const quotasInRange = allQuotas.filter((quota) => {
+    const monthDate = `${quota.year}-${String(quota.month).padStart(2, "0")}-01`;
+    return monthDate >= start.slice(0, 7) + "-01" && monthDate <= end.slice(0, 7) + "-01";
+  });
+  return {
+    quotas: quotasInRange,
+    otherIncome: allIncome.filter((income) => inRange(income.date)),
+    expenses: allExpenses.filter((expense) => inRange(expense.date)),
+  };
+}
+
 export async function deleteExpense(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -561,12 +588,38 @@ export async function deleteReport(id: number) {
 
 // ============ AUDIT LOG ============
 
+const SENSITIVE_AUDIT_KEY = /password|passwordHash|token|secret|apiKey|accessKey|refreshToken|authorization/i;
+
+function redactAuditValue(value: unknown, depth = 0): unknown {
+  if (depth > 8) return "[REDACTED]";
+  if (Array.isArray(value)) return value.map((entry) => redactAuditValue(entry, depth + 1));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        SENSITIVE_AUDIT_KEY.test(key) ? "[REDACTED]" : redactAuditValue(entry, depth + 1),
+      ]),
+    );
+  }
+  return value;
+}
+
+export function sanitizeAuditDetails(details: unknown): string | null {
+  if (details === null || details === undefined) return null;
+  const raw = String(details);
+  try {
+    return JSON.stringify(redactAuditValue(JSON.parse(raw))).slice(0, 10000);
+  } catch {
+    return raw.replace(/((?:password|passwordHash|token|secret|apiKey|accessKey|refreshToken|authorization)\s*[=:]\s*)[^,;\s]+/gi, '$1[REDACTED]').slice(0, 10000);
+  }
+}
+
 export async function createAuditLog(data: typeof auditLog.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.insert(auditLog).values({
     ...data,
-    details: data.details ? String(data.details).slice(0, 10000) : null,
+    details: sanitizeAuditDetails(data.details),
   });
 }
 
@@ -629,7 +682,7 @@ export async function deleteCommissionMember(id: number) {
 export async function getBackupSnapshot() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [userRows, memberRows, groupRows, activityRows, attendanceRows, quotaRows, incomeRows, expenseRows, transferRows, reportRows, commissionRows, auditRows] = await Promise.all([
+  const [userRows, memberRows, groupRows, activityRows, attendanceRows, quotaRows, incomeRows, expenseRows, transferRows, reportRows, commissionRows, auditRows, louvorMemberRows, louvorScaleRows, historyRows, settingRows] = await Promise.all([
     db.select({ id: users.id, openId: users.openId, name: users.name, email: users.email, loginMethod: users.loginMethod, role: users.role, churchRole: users.churchRole, isActive: users.isActive, createdAt: users.createdAt, updatedAt: users.updatedAt, lastSignedIn: users.lastSignedIn }).from(users),
     db.select().from(members),
     db.select().from(groups),
@@ -642,14 +695,156 @@ export async function getBackupSnapshot() {
     db.select().from(reports),
     db.select().from(commissionMembers),
     db.select().from(auditLog),
+    db.select().from(louvorMembers),
+    db.select().from(louvorScales),
+    db.select().from(memberHistory),
+    db.select().from(appSettings),
   ]);
-  return { exportedAt: new Date(), version: 1, users: userRows, members: memberRows, groups: groupRows, activities: activityRows, attendance: attendanceRows, quotas: quotaRows, otherIncome: incomeRows, expenses: expenseRows, transfers: transferRows, reports: reportRows, commissionMembers: commissionRows, auditLog: auditRows };
+  return { exportedAt: new Date(), version: 2, users: userRows, members: memberRows, groups: groupRows, activities: activityRows, attendance: attendanceRows, quotas: quotaRows, otherIncome: incomeRows, expenses: expenseRows, transfers: transferRows, reports: reportRows, commissionMembers: commissionRows, auditLog: auditRows.map((row) => ({ ...row, details: sanitizeAuditDetails(row.details) })), louvorMembers: louvorMemberRows, louvorScales: louvorScaleRows, memberHistory: historyRows, appSettings: settingRows };
+}
+
+export async function createBackupVersion(input: { createdBy: number; destination: "local" | "drive"; cloudEmail?: string; versionLabel?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const snapshot = await getBackupSnapshot();
+  const payload = JSON.stringify(snapshot);
+  const checksum = createHash("sha256").update(payload).digest("hex");
+  const key = `backups/${input.createdBy}/${Date.now()}.json`;
+  const stored = await storagePut(key, payload, "application/json");
+  const versionLabel = input.versionLabel?.trim() || `Backup ${new Date().toLocaleString("pt-PT")}`;
+  const result = await db.insert(backupVersions).values({ versionLabel, destination: input.destination, cloudEmail: input.cloudEmail?.trim() || null, storageKey: stored.key, fileUrl: null, fileSize: Buffer.byteLength(payload), checksum, createdBy: input.createdBy });
+  const id = Number((result as { insertId?: number }).insertId ?? 0);
+  if (id) await db.update(backupVersions).set({ fileUrl: `/api/backups/${id}/download` }).where(eq(backupVersions.id, id));
+  return { id, versionLabel, destination: input.destination, cloudEmail: input.cloudEmail?.trim() || null, storageKey: stored.key, fileUrl: id ? `/api/backups/${id}/download` : stored.url, fileSize: Buffer.byteLength(payload), checksum, snapshot };
+}
+
+export async function listBackupVersions() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(backupVersions).orderBy(desc(backupVersions.createdAt));
+}
+
+export async function getBackupVersion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(backupVersions).where(eq(backupVersions.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getBackupPayload(id: number) {
+  const version = await getBackupVersion(id);
+  if (!version) return null;
+  const signedUrl = await storageGetSignedUrl(version.storageKey);
+  const response = await fetch(signedUrl);
+  if (!response.ok) throw new Error(`Não foi possível ler o backup (${response.status})`);
+  return { version, payload: await response.json() as Record<string, unknown> };
+}
+
+function restoreDates(rows: unknown, dateFields: string[]) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((value) => {
+    const row = { ...(value as Record<string, unknown>) };
+    for (const field of dateFields) if (row[field]) row[field] = new Date(String(row[field]));
+    return row;
+  });
+}
+
+export async function restoreBackupVersion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const backup = await getBackupPayload(id);
+  if (!backup) throw new Error("Versão de backup não encontrada");
+  const data = backup.payload;
+  await db.transaction(async (tx) => {
+    await tx.delete(attendance);
+    await tx.delete(commissionMembers);
+    await tx.delete(louvorScales);
+    await tx.delete(memberHistory);
+    await tx.delete(transfers);
+    await tx.delete(reports);
+    await tx.delete(quotas);
+    await tx.delete(otherIncome);
+    await tx.delete(expenses);
+    await tx.delete(activities);
+    await tx.delete(louvorMembers);
+    await tx.delete(members);
+    await tx.delete(groups);
+    await tx.delete(appSettings);
+    await tx.delete(auditLog);
+
+    if (Array.isArray(data.groups) && data.groups.length) await tx.insert(groups).values(data.groups as any);
+    if (Array.isArray(data.members) && data.members.length) await tx.insert(members).values(restoreDates(data.members, ["createdAt", "updatedAt", "transferredAt"]) as any);
+    if (Array.isArray(data.activities) && data.activities.length) await tx.insert(activities).values(restoreDates(data.activities, ["date", "createdAt", "updatedAt"]) as any);
+    if (Array.isArray(data.attendance) && data.attendance.length) await tx.insert(attendance).values(restoreDates(data.attendance, ["recordedAt", "createdAt"]) as any);
+    if (Array.isArray(data.quotas) && data.quotas.length) await tx.insert(quotas).values(restoreDates(data.quotas, ["paidAt", "createdAt", "updatedAt"]) as any);
+    if (Array.isArray(data.otherIncome) && data.otherIncome.length) await tx.insert(otherIncome).values(restoreDates(data.otherIncome, ["date", "createdAt"]) as any);
+    if (Array.isArray(data.expenses) && data.expenses.length) await tx.insert(expenses).values(restoreDates(data.expenses, ["date", "createdAt"]) as any);
+    if (Array.isArray(data.transfers) && data.transfers.length) await tx.insert(transfers).values(restoreDates(data.transfers, ["approvedAt", "completedAt", "createdAt", "updatedAt"]) as any);
+    if (Array.isArray(data.reports) && data.reports.length) await tx.insert(reports).values(restoreDates(data.reports, ["createdAt"]) as any);
+    if (Array.isArray(data.commissionMembers) && data.commissionMembers.length) await tx.insert(commissionMembers).values(restoreDates(data.commissionMembers, ["createdAt"]) as any);
+    if (Array.isArray(data.louvorMembers) && data.louvorMembers.length) await tx.insert(louvorMembers).values(restoreDates(data.louvorMembers, ["createdAt", "updatedAt"]) as any);
+    if (Array.isArray(data.louvorScales) && data.louvorScales.length) await tx.insert(louvorScales).values(restoreDates(data.louvorScales, ["createdAt", "updatedAt"]) as any);
+    if (Array.isArray(data.memberHistory) && data.memberHistory.length) await tx.insert(memberHistory).values(restoreDates(data.memberHistory, ["startDate", "endDate", "createdAt"]) as any);
+    if (Array.isArray(data.appSettings) && data.appSettings.length) await tx.insert(appSettings).values(restoreDates(data.appSettings, ["updatedAt"]) as any);
+    if (Array.isArray(data.auditLog) && data.auditLog.length) await tx.insert(auditLog).values(restoreDates(data.auditLog, ["createdAt", "updatedAt"]) as any);
+  });
+  return { restoredVersionId: id, restoredAt: new Date() };
+}
+
+export async function getBackupSchedule() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(backupSchedules).orderBy(desc(backupSchedules.updatedAt)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createBackupSchedule(data: typeof backupSchedules.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getBackupSchedule();
+  if (existing) {
+    await db.update(backupSchedules).set(data).where(eq(backupSchedules.id, existing.id));
+    return { ...existing, ...data };
+  }
+  const result = await db.insert(backupSchedules).values(data);
+  return { ...data, id: Number((result as { insertId?: number }).insertId ?? 0) };
+}
+
+export async function updateBackupSchedule(id: number, data: Partial<typeof backupSchedules.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(backupSchedules).set(data).where(eq(backupSchedules.id, id));
+  return getBackupSchedule();
+}
+
+export async function getBackupScheduleByTaskUid(taskUid: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(backupSchedules).where(eq(backupSchedules.scheduleCronTaskUid, taskUid)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function markBackupScheduleRun(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(backupSchedules).set({ lastRunAt: new Date() }).where(eq(backupSchedules.id, id));
+}
+
+export async function deleteBackupSchedule(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(backupSchedules).where(eq(backupSchedules.id, id));
 }
 
 
 export async function deleteMember(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const louvorProjection = await db.select({ id: louvorMembers.id }).from(louvorMembers).where(eq(louvorMembers.memberId, id)).limit(1);
+  if (louvorProjection[0]) {
+    await db.delete(louvorScales).where(eq(louvorScales.louvorMemberId, louvorProjection[0].id));
+    await db.delete(louvorMembers).where(eq(louvorMembers.id, louvorProjection[0].id));
+  }
   await db.delete(attendance).where(eq(attendance.memberId, id));
   await db.delete(commissionMembers).where(eq(commissionMembers.memberId, id));
   await db.delete(quotas).where(eq(quotas.memberId, id));
@@ -671,10 +866,39 @@ export async function updateAttendance(id: number, data: Partial<typeof attendan
 
 // ============ LOUVOR MODULE ============
 
+const LOUVOR_POSITION = "Membro de Ministério de Louvor";
+
+export async function syncLouvorMemberProjection(member: typeof members.$inferSelect) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existingByMember = await db.select().from(louvorMembers).where(eq(louvorMembers.memberId, member.id)).limit(1);
+  const existingByName = existingByMember[0] ? [] : await db.select().from(louvorMembers).where(eq(louvorMembers.name, member.name)).limit(1);
+  const existing = existingByMember[0] ?? existingByName[0];
+  const isLouvor = member.position === LOUVOR_POSITION;
+  const values = {
+    memberId: member.id,
+    name: member.name,
+    instrumentOrVoice: member.louvorRole?.trim() || existing?.instrumentOrVoice || "Vocal/Instrumento",
+    phone: member.phoneOrange || member.phoneTelecel || existing?.phone || null,
+    email: member.email || existing?.email || null,
+    isActive: Boolean(member.isActive && isLouvor),
+  };
+
+  if (existing) {
+    await db.update(louvorMembers).set(values).where(eq(louvorMembers.id, existing.id));
+    return { ...existing, ...values };
+  }
+  if (!isLouvor) return null;
+  const inserted = await db.insert(louvorMembers).values(values);
+  return { id: Number(inserted[0].insertId), ...values };
+}
+
 export async function listLouvorMembers() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(louvorMembers).orderBy(desc(louvorMembers.createdAt));
+  const mainMembers = await db.select().from(members).where(eq(members.position, LOUVOR_POSITION));
+  for (const member of mainMembers) await syncLouvorMemberProjection(member);
+  return db.select().from(louvorMembers).where(eq(louvorMembers.isActive, true)).orderBy(desc(louvorMembers.createdAt));
 }
 
 export async function createLouvorMember(data: typeof louvorMembers.$inferInsert) {
@@ -746,7 +970,7 @@ export async function setAppSetting(keyName: string, keyValue: string) {
 export async function updateAuditLog(id: number, data: { action?: string; entityType?: string; details?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return await db.update(auditLog).set(data).where(eq(auditLog.id, id));
+  return await db.update(auditLog).set({ ...data, details: data.details === undefined ? undefined : sanitizeAuditDetails(data.details) }).where(eq(auditLog.id, id));
 }
 
 export async function deleteAuditLog(id: number) {

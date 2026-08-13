@@ -21,6 +21,7 @@ import {
   UserCircle,
   ShieldCheck,
   History,
+  AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
@@ -33,11 +34,13 @@ type MenuItem = {
   icon: typeof Home;
   label: string;
   href: string;
+  nested?: boolean;
 };
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Users, label: "Membros", href: "/members" },
+  { icon: AlertTriangle, label: "Campos em falta", href: "/members/incomplete", nested: true },
   { icon: Calendar, label: "Presenças", href: "/attendance" },
   { icon: BarChart3, label: "Atividades", href: "/activities" },
   { icon: DollarSign, label: "Finanças", href: "/finances" },
@@ -79,7 +82,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
     navigate("/");
   };
 
-  const isActive = (href: string) => location === href || (href === "/dashboard" && location === "/");
+  const isActive = (href: string) => location === href || (href === "/dashboard" && location === "/") || (href === "/members" && location.startsWith("/members/"));
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -148,7 +151,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                   aria-current={active ? "page" : undefined}
                   title={sidebarExpanded ? undefined : item.label}
                   onClick={() => goTo(item.href)}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors sm:px-4 ${
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors sm:px-4 ${item.nested ? "pl-8 text-xs" : ""} ${
                     active
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                       : "text-slate-700 hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400"

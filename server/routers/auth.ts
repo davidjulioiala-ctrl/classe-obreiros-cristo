@@ -99,13 +99,14 @@ export const authRouter = router({
       if (input.userId === ctx.user.id && input.isActive === false) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode desativar a própria conta." });
       }
-      const { userId, churchRole, ...rest } = input;
+      const { userId, churchRole, password, ...rest } = input;
       const user = await updateUser(userId, {
         ...rest,
+        ...(password ? { password } : {}),
         churchRole,
       });
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ ...rest, churchRole }) });
+      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ ...rest, churchRole, ...(password ? { passwordAlterada: true } : {}) }) });
       return { success: true, user: safeUser(user) };
     }),
 

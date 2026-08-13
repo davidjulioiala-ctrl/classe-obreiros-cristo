@@ -1,0 +1,1 @@
+ALTER TABLE `louvorMembers` ADD `memberId` int;

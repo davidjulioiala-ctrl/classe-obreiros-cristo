@@ -10,6 +10,8 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerReportPdfRoute } from "../reportPdf";
 import { registerTransferPdfRoute } from "../transferPdf";
+import { registerFinancialReportRoutes } from "../financialReportRoute";
+import { registerBackupRoutes } from "../backupRoutes";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -42,6 +44,8 @@ async function startServer() {
   registerLocalAuthRoutes(app);
   registerReportPdfRoute(app);
   registerTransferPdfRoute(app);
+  registerFinancialReportRoutes(app);
+  registerBackupRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",

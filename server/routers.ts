@@ -1,5 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { parse as parseCookie } from "cookie";
+import { createHeartbeatJob, updateHeartbeatJob, deleteHeartbeatJob } from "./_core/heartbeat";
 import { systemRouter } from "./_core/systemRouter";
 import { authRouter } from "./routers/auth";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -10,14 +12,14 @@ import * as db from "./db";
 // ============ MIDDLEWARE ============
 
 const liderProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.churchRole !== "lider") {
+  if (ctx.user.role !== "admin" && ctx.user.churchRole !== "lider") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Apenas líderes podem aceder a este recurso" });
   }
   return next({ ctx });
 });
 
 const oficialProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.churchRole !== "oficial" && ctx.user.churchRole !== "lider") {
+  if (ctx.user.role !== "admin" && ctx.user.churchRole !== "oficial" && ctx.user.churchRole !== "lider") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
   }
   return next({ ctx });
@@ -109,18 +111,8 @@ const membersRouter = router({
           isActive: true,
         });
         
-        // Se for do Ministério de Louvor, adicionar automaticamente aos membros de louvor se ainda não existir
         if (input.position === "Membro de Ministério de Louvor") {
-          const louvorList = await db.listLouvorMembers();
-          const exists = louvorList.find(l => l.name.toLowerCase() === input.name.toLowerCase());
-          if (!exists) {
-            await db.createLouvorMember({
-              name: input.name,
-              instrumentOrVoice: input.louvorRole || "Vocal/Instrumento",
-              phone: input.phoneOrange || input.phoneTelecel || undefined,
-              email: input.email || undefined,
-            });
-          }
+          await db.syncLouvorMemberProjection(createdMember);
         }
       }
 
@@ -145,6 +137,7 @@ const membersRouter = router({
           phoneTelecel: z.string().optional(),
           email: z.string().email().optional(),
           position: z.string().optional(),
+          louvorRole: z.string().optional(),
           isActive: z.boolean().optional(),
         }),
       })
@@ -155,6 +148,8 @@ const membersRouter = router({
         birthDate: input.data.birthDate ? new Date(input.data.birthDate) : undefined,
       };
       const result = await db.updateMember(input.id, updateData);
+      const updatedMember = await db.getMemberById(input.id);
+      if (updatedMember) await db.syncLouvorMemberProjection(updatedMember);
       await writeAudit(ctx, "editar", "member", input.id, input.data);
       return result;
     }),
@@ -213,6 +208,8 @@ const activitiesRouter = router({
         audience: z.string().optional(),
         hasCommission: z.boolean().default(false),
         theme: z.string().optional(),
+        speakerName: z.string().optional(),
+        biblicalReference: z.string().optional(),
         isReligious: z.boolean().default(true),
       })
     )
@@ -252,13 +249,27 @@ const activitiesRouter = router({
       type: z.string().optional(),
       audience: z.string().optional(),
       hasCommission: z.boolean(),
-      theme: z.string().optional(),
-      isReligious: z.boolean(),
-    }))
+              theme: z.string().optional(),
+        speakerName: z.string().optional(),
+        biblicalReference: z.string().optional(),
+        isReligious: z.boolean(),
+      }))
+
     .mutation(async ({ input, ctx }) => {
       const { id, date, ...data } = input;
       const result = await db.updateActivity(id, { ...data, date: new Date(date) });
       await writeAudit(ctx, "editar", "activity", id, { name: input.name, type: input.type });
+      return result;
+    }),
+
+  complete: liderProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const scales = await db.listLouvorScales(input.id);
+      const pending = scales.filter((scale) => scale.status === "escalado" || scale.status === "confirmado");
+      if (pending.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Valide primeiro quem compareceu e quem faltou na escala do Louvor." });
+      const result = await db.updateActivity(input.id, { status: "realizada" });
+      await writeAudit(ctx, "concluir", "activity", input.id, { louvorScales: scales.length });
       return result;
     }),
 
@@ -702,28 +713,6 @@ async function assignGroupAutomatically(isGuest: boolean): Promise<number | unde
 
 const louvorRouter = router({
   listMembers: protectedProcedure.query(() => db.listLouvorMembers()),
-  createMember: liderProcedure
-    .input(z.object({ name: z.string().trim().min(1), instrumentOrVoice: z.string().trim().min(1), phone: z.string().optional(), email: z.string().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      const result = await db.createLouvorMember(input);
-      await writeAudit(ctx, "criar", "louvorMember", undefined, input);
-      return result;
-    }),
-  updateMember: liderProcedure
-    .input(z.object({ id: z.number(), name: z.string().trim().min(1).optional(), instrumentOrVoice: z.string().trim().min(1).optional(), phone: z.string().optional(), email: z.string().optional(), isActive: z.boolean().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      const { id, ...data } = input;
-      const result = await db.updateLouvorMember(id, data);
-      await writeAudit(ctx, "editar", "louvorMember", id, data);
-      return result;
-    }),
-  deleteMember: liderProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      const result = await db.deleteLouvorMember(input.id);
-      await writeAudit(ctx, "apagar", "louvorMember", input.id);
-      return result;
-    }),
   listScales: protectedProcedure.input(z.object({ activityId: z.number().optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
   createScale: oficialProcedure
     .input(z.object({ activityId: z.number(), louvorMemberId: z.number(), roleInScale: z.string().trim().min(1), songs: z.string().optional(), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
@@ -763,17 +752,57 @@ const historyRouter = router({
 // ============ BACKUP ROUTER ============
 
 const backupRouter = router({
+  listVersions: adminProcedure.query(async () => db.listBackupVersions()),
+
   export: adminProcedure
-    .input(z.object({ destination: z.enum(["local", "drive"]).default("local") }))
+    .input(z.object({ destination: z.enum(["local", "drive"]).default("local"), cloudEmail: z.string().email().optional(), versionLabel: z.string().max(255).optional() }))
     .mutation(async ({ input, ctx }) => {
-      const snapshot = await db.getBackupSnapshot();
-      await writeAudit(ctx, "exportar", `backup_${input.destination}`, undefined, { version: snapshot.version, destination: input.destination });
-      return {
-        ...snapshot,
-        destination: input.destination,
-        message: input.destination === "drive" ? "Backup sincronizado com sucesso com o Google Drive." : "Backup preparado para descarregamento local.",
-      };
+      const version = await db.createBackupVersion({ createdBy: ctx.user.id, destination: input.destination, cloudEmail: input.cloudEmail, versionLabel: input.versionLabel });
+      await writeAudit(ctx, "exportar", `backup_${input.destination}`, version.id, { version: version.versionLabel, destination: input.destination, cloudEmail: input.cloudEmail ?? null });
+      return { id: version.id, versionLabel: version.versionLabel, destination: version.destination, cloudEmail: version.cloudEmail, fileUrl: version.fileUrl, fileSize: version.fileSize, checksum: version.checksum, message: input.destination === "drive" ? "Backup guardado no armazenamento cloud do sistema. O email foi associado à versão para identificação administrativa." : "Backup preparado para descarregamento local." };
     }),
+
+  restore: adminProcedure
+    .input(z.object({ id: z.number().int().positive(), confirmation: z.literal(true) }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await db.restoreBackupVersion(input.id);
+      await writeAudit(ctx, "restaurar", "backup", input.id, result);
+      return result;
+    }),
+
+  schedule: adminProcedure.query(async () => db.getBackupSchedule()),
+
+  saveSchedule: adminProcedure
+    .input(z.object({ hour: z.number().int().min(0).max(23), minute: z.number().int().min(0).max(59).default(0), destination: z.enum(["local", "drive"]).default("local"), cloudEmail: z.string().email().optional(), enabled: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const current = await db.getBackupSchedule();
+      const sessionToken = parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
+      const cron = `0 ${input.minute} ${input.hour} * * *`;
+      let taskUid = current?.scheduleCronTaskUid ?? undefined;
+      if (input.enabled) {
+        if (taskUid) {
+          await updateHeartbeatJob(taskUid, { cron, enable: true, path: "/api/scheduled/daily-backup", description: "Backup diário administrativo da Classe Obreiros de Cristo" }, sessionToken);
+        } else {
+          const job = await createHeartbeatJob({ name: `daily-backup-${ctx.user.id}`, cron, path: "/api/scheduled/daily-backup", description: "Backup diário administrativo da Classe Obreiros de Cristo" }, sessionToken);
+          taskUid = job.taskUid;
+        }
+      } else if (taskUid) {
+        await updateHeartbeatJob(taskUid, { enable: false }, sessionToken);
+      }
+      const schedule = await db.createBackupSchedule({ id: current?.id, hour: input.hour, minute: input.minute, destination: input.destination, cloudEmail: input.cloudEmail ?? null, enabled: input.enabled, scheduleCronTaskUid: taskUid ?? null, createdBy: current?.createdBy ?? ctx.user.id });
+      await writeAudit(ctx, "configurar", "backup_schedule", schedule.id, { hour: input.hour, minute: input.minute, enabled: input.enabled, destination: input.destination });
+      return schedule;
+    }),
+
+  disableSchedule: adminProcedure.mutation(async ({ ctx }) => {
+    const current = await db.getBackupSchedule();
+    if (!current) return null;
+    const sessionToken = parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
+    if (current.scheduleCronTaskUid) await updateHeartbeatJob(current.scheduleCronTaskUid, { enable: false }, sessionToken);
+    const result = await db.updateBackupSchedule(current.id, { enabled: false });
+    await writeAudit(ctx, "desactivar", "backup_schedule", current.id);
+    return result;
+  }),
 });
 
 // ============ MAIN ROUTER ============

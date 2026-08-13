@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Download, FileArchive, Loader2, ShieldCheck, Edit2, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Clock3, Download, FileArchive, Loader2, Mail, RefreshCw, RotateCcw, ShieldCheck, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,20 +7,12 @@ import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 
-function downloadJson(filename: string, value: unknown) {
-  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export default function AuditAndBackup() {
   const [destination, setDestination] = useState<"local" | "drive">("local");
+  const [cloudEmail, setCloudEmail] = useState("");
+  const [backupHour, setBackupHour] = useState("00");
+  const [backupMinute, setBackupMinute] = useState("00");
+  const [backupEnabled, setBackupEnabled] = useState(false);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
   const [editAction, setEditAction] = useState("");
   const [editEntityType, setEditEntityType] = useState("");
@@ -28,24 +20,75 @@ export default function AuditAndBackup() {
 
   const utils = trpc.useUtils();
   const auditQuery = trpc.audit.list.useQuery({ limit: 250 });
+  const versionsQuery = trpc.backup.listVersions.useQuery();
+  const scheduleQuery = trpc.backup.schedule.useQuery();
   const exportBackup = trpc.backup.export.useMutation();
+  const restoreBackup = trpc.backup.restore.useMutation();
+  const saveSchedule = trpc.backup.saveSchedule.useMutation();
   const updateLog = trpc.audit.update.useMutation();
   const deleteLog = trpc.audit.delete.useMutation();
   const logs = useMemo(() => auditQuery.data ?? [], [auditQuery.data]);
 
+  useEffect(() => {
+    const schedule = scheduleQuery.data;
+    if (!schedule) return;
+    setDestination(schedule.destination);
+    setCloudEmail(schedule.cloudEmail ?? "");
+    setBackupHour(String(schedule.hour).padStart(2, "0"));
+    setBackupMinute(String(schedule.minute).padStart(2, "0"));
+    setBackupEnabled(schedule.enabled);
+  }, [scheduleQuery.data]);
+
+  const refreshBackups = async () => {
+    await Promise.all([versionsQuery.refetch(), auditQuery.refetch(), scheduleQuery.refetch()]);
+  };
+
   const handleBackup = async () => {
     try {
-      const result = await exportBackup.mutateAsync({ destination });
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      if (destination === "local") {
-        downloadJson(`classe-obreiros-cristo-backup-${stamp}.json`, result);
-        toast.success("Backup preparado e descarregado localmente.");
-      } else {
-        toast.success(result.message || "Backup sincronizado com o Google Drive com sucesso.");
+      const result = await exportBackup.mutateAsync({ destination, cloudEmail: cloudEmail.trim() || undefined });
+      if (destination === "local" && result.id) {
+        const anchor = document.createElement("a");
+        anchor.href = `/api/backups/${result.id}/download`;
+        anchor.download = `backup-${result.id}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
       }
-      await auditQuery.refetch();
+      toast.success(destination === "drive" ? "Backup guardado no armazenamento cloud do sistema." : "Backup criado e descarregado para o computador.");
+      await refreshBackups();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível realizar o backup.");
+    }
+  };
+
+  const handleSchedule = async () => {
+    const hour = Number(backupHour);
+    const minute = Number(backupMinute);
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59) {
+      toast.error("Indique uma hora válida entre 00:00 e 23:59.");
+      return;
+    }
+    if (backupEnabled && destination === "drive" && !cloudEmail.trim()) {
+      toast.error("Indique o email administrativo para associar aos backups cloud.");
+      return;
+    }
+    try {
+      await saveSchedule.mutateAsync({ hour, minute, destination, cloudEmail: cloudEmail.trim() || undefined, enabled: backupEnabled });
+      toast.success(backupEnabled ? `Backup automático configurado para ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}.` : "Backup automático desativado.");
+      await refreshBackups();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível guardar o agendamento.");
+    }
+  };
+
+  const handleRestore = async (id: number, label: string) => {
+    if (!window.confirm(`Restaurar a versão “${label}”? Esta operação substitui os dados de negócio atuais. Recomenda-se criar um backup antes de continuar.`)) return;
+    try {
+      await restoreBackup.mutateAsync({ id, confirmation: true });
+      toast.success("Backup restaurado. Actualize a página para carregar os dados recuperados.");
+      await refreshBackups();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível restaurar o backup.");
     }
   };
 
@@ -60,10 +103,10 @@ export default function AuditAndBackup() {
     try {
       await updateLog.mutateAsync({ id, action: editAction, entityType: editEntityType, details: editDetails });
       await utils.audit.list.invalidate();
-      toast.success("Registo de auditoria atualizado com sucesso.");
+      toast.success("Registo de auditoria actualizado com sucesso.");
       setEditingLogId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar registo.");
+      toast.error(error instanceof Error ? error.message : "Erro ao actualizar registo.");
     }
   };
 
@@ -84,37 +127,43 @@ export default function AuditAndBackup() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Administração</p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Auditoria e Backup</h1>
-          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">Consulte, edite ou elimine operações registadas e descarregue cópias de segurança localmente ou na nuvem.</p>
+          <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-400">Crie versões completas dos dados, descarregue-as para o computador, associe um email administrativo ao armazenamento cloud e restaure uma versão específica quando necessário.</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+
+        <div className="grid gap-4 lg:grid-cols-2">
           <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <CardHeader><CardTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5 text-emerald-600" /> Destino e Salvaguarda</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5 text-emerald-600" /> Criar backup</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">Escolha onde pretende guardar o pacote de segurança dos dados da igreja (membros, atividades, finanças, transferências e auditoria).</p>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Destino do backup</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant={destination === "local" ? "default" : "outline"} onClick={() => setDestination("local")} className={destination === "local" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>
-                    Computador (Local)
-                  </Button>
-                  <Button type="button" variant={destination === "drive" ? "default" : "outline"} onClick={() => setDestination("drive")} className={destination === "drive" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>
-                    Google Drive
-                  </Button>
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={destination === "local" ? "default" : "outline"} onClick={() => setDestination("local")} className={destination === "local" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>Computador</Button>
+                <Button type="button" variant={destination === "drive" ? "default" : "outline"} onClick={() => setDestination("drive")} className={destination === "drive" ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>Armazenamento cloud</Button>
               </div>
-              <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleBackup} disabled={exportBackup.isPending}>
-                {exportBackup.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                {destination === "local" ? "Descarregar para o computador" : "Enviar para o Google Drive"}
-              </Button>
+              <div><label className="mb-2 block text-sm font-medium">Email administrativo associado</label><div className="relative"><Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" type="email" value={cloudEmail} onChange={(event) => setCloudEmail(event.target.value)} placeholder="admin@exemplo.org" /></div><p className="mt-1 text-xs text-slate-500">O email identifica o destino cloud configurado. A conta Google/Drive pode exigir uma ligação própria nas definições de integrações.</p></div>
+              <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleBackup} disabled={exportBackup.isPending}>{exportBackup.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{destination === "local" ? "Criar e descarregar backup" : "Criar backup cloud"}</Button>
             </CardContent>
           </Card>
+
           <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-600" /> Log de Operações (Totalmente Editável)</CardTitle></CardHeader>
-            <CardContent>
-              {auditQuery.isLoading ? <p className="text-sm text-slate-500">A carregar registos…</p> : logs.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem operações registadas.</p> : <div className="max-h-[30rem] space-y-2 overflow-auto pr-1">{logs.map((log) => <div key={log.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">{editingLogId === log.id ? <div className="space-y-2"><div className="grid grid-cols-2 gap-2"><Input value={editAction} onChange={(e) => setEditAction(e.target.value)} placeholder="Ação" /><Input value={editEntityType} onChange={(e) => setEditEntityType(e.target.value)} placeholder="Entidade" /></div><Input value={editDetails} onChange={(e) => setEditDetails(e.target.value)} placeholder="Detalhes" /><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setEditingLogId(null)}>Cancelar</Button><Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => saveEditedLog(log.id)}>Guardar</Button></div></div> : <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium text-slate-900 dark:text-white">{log.action} · {log.entityType}</p><p className="mt-1 text-xs text-slate-500">Utilizador #{log.userId}{log.entityId ? ` · Registo #${log.entityId}` : ""} {log.details ? `· ${log.details}` : ""}</p><time className="text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleString("pt-PT")}</time></div><div className="flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => startEditLog(log)}><Edit2 className="h-4 w-4 text-blue-600" /></Button><Button size="sm" variant="ghost" onClick={() => removeLog(log.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button></div></div>}</div>)}</div>}
+            <CardHeader><CardTitle className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-emerald-600" /> Backup automático diário</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center gap-3 text-sm font-medium"><input type="checkbox" checked={backupEnabled} onChange={(event) => setBackupEnabled(event.target.checked)} /> Fazer backup todos os dias</label>
+              <div className="grid grid-cols-2 gap-3"><div><label className="mb-1 block text-xs font-medium">Hora</label><Input type="number" min="0" max="23" value={backupHour} onChange={(event) => setBackupHour(event.target.value)} /></div><div><label className="mb-1 block text-xs font-medium">Minuto</label><Input type="number" min="0" max="59" value={backupMinute} onChange={(event) => setBackupMinute(event.target.value)} /></div></div>
+              <p className="text-xs leading-5 text-slate-500">O horário é interpretado em UTC pelo serviço de agendamento. A execução ocorre no servidor, mesmo com o navegador fechado.</p>
+              <Button className="w-full" variant="outline" onClick={handleSchedule} disabled={saveSchedule.isPending}>{saveSchedule.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}{backupEnabled ? "Guardar agendamento" : "Desactivar backup automático"}</Button>
+              {scheduleQuery.data?.lastRunAt && <p className="text-xs text-emerald-700">Última execução: {new Date(scheduleQuery.data.lastRunAt).toLocaleString("pt-PT")}</p>}
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-0 shadow-sm dark:bg-slate-800">
+          <CardHeader><CardTitle className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><RotateCcw className="h-5 w-5 text-emerald-600" /> Versões de backup</span><Button variant="outline" size="sm" onClick={() => void versionsQuery.refetch()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button></CardTitle></CardHeader>
+          <CardContent>{versionsQuery.isLoading ? <p className="text-sm text-slate-500">A carregar versões…</p> : (versionsQuery.data ?? []).length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem versões de backup.</p> : <div className="space-y-2">{(versionsQuery.data ?? []).map((version) => <div key={version.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium text-slate-900 dark:text-white">{version.versionLabel}</p><p className="text-xs text-slate-500">{new Date(version.createdAt).toLocaleString("pt-PT")} · {version.destination === "drive" ? "Cloud" : "Local"} · {Math.max(1, Math.round(version.fileSize / 1024))} KB</p>{version.cloudEmail && <p className="text-xs text-slate-500">Email: {version.cloudEmail}</p>}</div><div className="flex flex-wrap gap-2"><a className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700" href={`/api/backups/${version.id}/download`} download><Download className="mr-2 h-4 w-4" />Descarregar</a><Button variant="outline" size="sm" className="text-amber-700" disabled={restoreBackup.isPending} onClick={() => void handleRestore(version.id, version.versionLabel)}><RotateCcw className="mr-2 h-4 w-4" />Restaurar</Button></div></div>)}</div>}</CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm dark:bg-slate-800">
+          <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-600" /> Log de operações</CardTitle></CardHeader>
+          <CardContent>{auditQuery.isLoading ? <p className="text-sm text-slate-500">A carregar registos…</p> : logs.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem operações registadas.</p> : <div className="max-h-[30rem] space-y-2 overflow-auto pr-1">{logs.map((log) => <div key={log.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">{editingLogId === log.id ? <div className="space-y-2"><div className="grid grid-cols-2 gap-2"><Input value={editAction} onChange={(event) => setEditAction(event.target.value)} placeholder="Acção" /><Input value={editEntityType} onChange={(event) => setEditEntityType(event.target.value)} placeholder="Entidade" /></div><Input value={editDetails} onChange={(event) => setEditDetails(event.target.value)} placeholder="Detalhes" /><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setEditingLogId(null)}>Cancelar</Button><Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void saveEditedLog(log.id)}>Guardar</Button></div></div> : <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium text-slate-900 dark:text-white">{log.action} · {log.entityType}</p><p className="mt-1 text-xs text-slate-500">Utilizador #{log.userId}{log.entityId ? ` · Registo #${log.entityId}` : ""} {log.details ? `· ${log.details}` : ""}</p><time className="text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleString("pt-PT")}</time></div><div className="flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => startEditLog(log)}><Edit2 className="h-4 w-4 text-blue-600" /></Button><Button size="sm" variant="ghost" onClick={() => void removeLog(log.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button></div></div>}</div>)}</div>}</CardContent>
+        </Card>
       </div>
     </DashboardLayoutCustom>
   );

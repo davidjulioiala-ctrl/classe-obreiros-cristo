@@ -6346,3 +6346,15 @@
 - [x] Remover os placeholders com credenciais fixas do formulário de login local e manter os campos vazios
 - [x] Confirmar responsividade mobile após a correção do login
 - [x] Corrigir a rota do PDF de transferência para localizar também membros recém-inativados
+
+## Fase 11: Novas Solicitações e Funcionalidades (Agosto 2026)
+- [x] Corrigir alteração de modo claro e escuro (Aparência) nas configurações
+- [x] Corrigir o botão e fluxo completo de processamento de transferências de adultos (18+)
+- [x] Adicionar submenu em Membros para listar pessoas com campos incompletos e exibir alerta
+- [x] Actualizar Módulo Financeiro: cálculo de saldo (cotas + outras receitas - despesas), agrupamento por ano e botão de gerar relatório financeiro por intervalo com exportação PDF/Excel
+- [x] Actualizar Atividades: campos para Pregador/Preletor, Tema, Tipo (Religioso vs Social) e referência bíblica condicional
+- [x] Integrar Escalas do Ministério de Louvor por atividade: escolha de membros escalados antes, durante ou após, e validação posterior de comparecimento
+- [x] Adicionar gestão administrativa de Backups: email para nuvem, restauro de versões específicas e backup automático diário agendado
+
+- [x] Remover passwords e outros dados sensíveis dos novos registos de auditoria e impedir que futuras edições de utilizadores os gravem
+- [x] Remover o cadastro independente de membros no menu Louvor e apresentar apenas membros do cadastro principal com cargo de Ministério de Louvor

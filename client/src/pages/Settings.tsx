@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Settings() {
+  const { theme, setTheme } = useTheme();
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
@@ -18,7 +20,7 @@ export default function Settings() {
   const [notifAttendance, setNotifAttendance] = useState(true);
   const [notifFinances, setNotifFinances] = useState(true);
   const [notifTransfers, setNotifTransfers] = useState(true);
-  const [themeMode, setThemeMode] = useState("light");
+  const [themeMode, setThemeMode] = useState(theme);
   const [accentColor, setAccentColor] = useState("emerald");
 
   const orgQuery = trpc.settings.get.useQuery({ keyName: "organization" });
@@ -57,7 +59,10 @@ export default function Settings() {
     if (appearanceQuery.data) {
       try {
         const parsed = JSON.parse(appearanceQuery.data);
-        if (parsed.theme) setThemeMode(parsed.theme);
+        if (parsed.theme === "light" || parsed.theme === "dark") {
+          setThemeMode(parsed.theme);
+          setTheme(parsed.theme);
+        }
         if (parsed.accent) setAccentColor(parsed.accent);
       } catch {}
     }
@@ -69,6 +74,11 @@ export default function Settings() {
 
   const handleSaveNotifications = () => {
     setSettingsMutation.mutate({ keyName: "notifications", keyValue: JSON.stringify({ activities: notifActivities, attendance: notifAttendance, finances: notifFinances, transfers: notifTransfers }) });
+  };
+
+  const handleThemeChange = (nextTheme: "light" | "dark") => {
+    setThemeMode(nextTheme);
+    setTheme(nextTheme);
   };
 
   const handleSaveAppearance = () => {
@@ -167,7 +177,7 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-3">
                     {[{ name: "Claro", value: "light" }, { name: "Escuro", value: "dark" }].map((t) => (
                       <label key={t.value} className="flex items-center gap-3 p-3 rounded-lg border-2 border-slate-200 dark:border-slate-600 cursor-pointer">
-                        <input type="radio" name="theme" value={t.value} checked={themeMode === t.value} onChange={() => setThemeMode(t.value)} className="w-4 h-4" />
+                        <input type="radio" name="theme" value={t.value} checked={themeMode === t.value} onChange={() => handleThemeChange(t.value as "light" | "dark")} className="w-4 h-4" />
                         <span className="font-medium text-slate-900 dark:text-white">{t.name}</span>
                       </label>
                     ))}

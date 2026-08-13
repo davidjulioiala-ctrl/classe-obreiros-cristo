@@ -13,43 +13,24 @@ import { toast } from "sonner";
 export default function Louvor() {
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<"membros" | "escalas">("membros");
-  const [showMemberForm, setShowMemberForm] = useState(false);
-  const [memberForm, setMemberForm] = useState({ name: "", instrumentOrVoice: "Vocal Principal", phone: "", email: "" });
-
   const [showScaleForm, setShowScaleForm] = useState(false);
-  const [scaleForm, setScaleForm] = useState({ activityId: 0, louvorMemberId: 0, roleInScale: "Vocal", songs: "", status: "escalado" as const });
+  const [scaleForm, setScaleForm] = useState({ activityId: 0, louvorMemberIds: [] as number[], roleInScale: "Vocal", songs: "", status: "escalado" as const });
 
   const membersQuery = trpc.louvor.listMembers.useQuery();
   const scalesQuery = trpc.louvor.listScales.useQuery();
   const activitiesQuery = trpc.activities.list.useQuery();
 
-  const createMember = trpc.louvor.createMember.useMutation({
-    onSuccess: () => {
-      toast.success("Membro de Louvor registado com sucesso!");
-      setMemberForm({ name: "", instrumentOrVoice: "Vocal Principal", phone: "", email: "" });
-      setShowMemberForm(false);
-      void utils.louvor.listMembers.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const deleteMember = trpc.louvor.deleteMember.useMutation({
-    onSuccess: () => {
-      toast.success("Membro removido do Louvor.");
-      void utils.louvor.listMembers.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const createScale = trpc.louvor.createScale.useMutation({
     onSuccess: () => {
       toast.success("Escala de música guardada com sucesso!");
-      setScaleForm({ activityId: 0, louvorMemberId: 0, roleInScale: "Vocal", songs: "", status: "escalado" });
+      setScaleForm({ activityId: 0, louvorMemberIds: [], roleInScale: "Vocal", songs: "", status: "escalado" });
       setShowScaleForm(false);
       void utils.louvor.listScales.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
+
+  const updateScale = trpc.louvor.updateScale.useMutation({ onSuccess: () => { toast.success("Presença da escala atualizada."); void utils.louvor.listScales.invalidate(); }, onError: (err) => toast.error(err.message) });
 
   const deleteScale = trpc.louvor.deleteScale.useMutation({
     onSuccess: () => {
@@ -84,68 +65,25 @@ export default function Louvor() {
 
         {activeTab === "membros" && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Equipa de Música</h2>
-              <Button onClick={() => setShowMemberForm((v) => !v)} className="bg-emerald-600 text-white hover:bg-emerald-700">
-                <Plus className="mr-2 h-4 w-4" /> Novo membro de louvor
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Equipa de Música</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">A equipa é sincronizada automaticamente a partir dos membros com o cargo de Ministério de Louvor.</p>
+              </div>
+              <Button variant="outline" onClick={() => window.location.assign("/members")}>
+                <Users className="mr-2 h-4 w-4" /> Gerir no cadastro de membros
               </Button>
             </div>
-
-            {showMemberForm && (
-              <Card className="border-0 shadow-sm dark:bg-slate-800">
-                <CardHeader><CardTitle>Adicionar membro ao louvor</CardTitle></CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label>Nome completo</Label>
-                    <Input className="mt-1" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} placeholder="Nome do cantor ou músico" />
-                  </div>
-                  <div>
-                    <Label>Instrumento ou Voz</Label>
-                    <Select value={memberForm.instrumentOrVoice} onValueChange={(val) => setMemberForm({ ...memberForm, instrumentOrVoice: val })}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Vocal Principal">Vocal Principal</SelectItem>
-                        <SelectItem value="Coro / Backing Vocal">Coro / Backing Vocal</SelectItem>
-                        <SelectItem value="Teclado / Piano">Teclado / Piano</SelectItem>
-                        <SelectItem value="Violão / Guitarra">Violão / Guitarra</SelectItem>
-                        <SelectItem value="Baixo">Baixo</SelectItem>
-                        <SelectItem value="Bateria / Percussão">Bateria / Percussão</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Telefone (Opcional)</Label>
-                    <Input className="mt-1" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} placeholder="+244..." />
-                  </div>
-                  <div>
-                    <Label>Email (Opcional)</Label>
-                    <Input className="mt-1" type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} placeholder="email@exemplo.com" />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
-                    <Button variant="outline" onClick={() => setShowMemberForm(false)}>Cancelar</Button>
-                    <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createMember.isPending} onClick={() => {
-                      if (!memberForm.name.trim()) return toast.error("Indique o nome do membro.");
-                      createMember.mutate(memberForm);
-                    }}>
-                      {createMember.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {membersQuery.isLoading ? <p className="text-sm text-slate-500">A carregar...</p> : members.length === 0 ? <p className="col-span-full rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem membros registados no ministério de louvor.</p> : members.map((m) => (
                 <Card key={m.id} className="border-0 shadow-sm dark:bg-slate-800">
-                  <CardContent className="p-4 flex items-start justify-between">
+                  <CardContent className="p-4">
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white">{m.name}</h3>
                       <p className="text-sm text-emerald-600 font-medium">{m.instrumentOrVoice}</p>
                       {m.phone && <p className="text-xs text-slate-500 mt-1">{m.phone}</p>}
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => deleteMember.mutate({ id: m.id })}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -156,7 +94,7 @@ export default function Louvor() {
         {activeTab === "escalas" && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Escalas por Atividade (Pré ou Pós-evento)</h2>
+              <div><h2 className="text-xl font-semibold text-slate-900 dark:text-white">Escalas por Actividade</h2><p className="text-sm text-slate-500">Seleccione vários membros e valide individualmente quem compareceu.</p></div>
               <Button onClick={() => setShowScaleForm((v) => !v)} className="bg-emerald-600 text-white hover:bg-emerald-700">
                 <Plus className="mr-2 h-4 w-4" /> Adicionar à escala
               </Button>
@@ -175,14 +113,15 @@ export default function Louvor() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <Label>Membro do Louvor</Label>
-                    <select className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={scaleForm.louvorMemberId || ""} onChange={(e) => setScaleForm({ ...scaleForm, louvorMemberId: Number(e.target.value) })}>
-                      <option value="">Selecione o membro...</option>
-                      {members.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.instrumentOrVoice})</option>
-                      ))}
-                    </select>
+                  <div className="md:col-span-2">
+                    <Label>Membros do Louvor</Label>
+                    <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {members.filter((member) => member.isActive).map((member) => {
+                        const selected = scaleForm.louvorMemberIds.includes(member.id);
+                        return <button type="button" key={member.id} onClick={() => setScaleForm({ ...scaleForm, louvorMemberIds: selected ? scaleForm.louvorMemberIds.filter((id) => id !== member.id) : [...scaleForm.louvorMemberIds, member.id] })} className={`rounded-lg border p-3 text-left text-sm ${selected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30" : "border-slate-300 dark:border-slate-600"}`}><span className="block font-medium">{member.name}</span><span className="text-xs text-slate-500">{member.instrumentOrVoice}</span></button>;
+                      })}
+                    </div>
+                    {!members.length && <p className="mt-2 text-xs text-amber-600">Adicione membros pelo cadastro principal com o cargo de Ministério de Louvor.</p>}
                   </div>
                   <div>
                     <Label>Função na Escala</Label>
@@ -195,8 +134,8 @@ export default function Louvor() {
                   <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
                     <Button variant="outline" onClick={() => setShowScaleForm(false)}>Cancelar</Button>
                     <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={createScale.isPending} onClick={() => {
-                      if (!scaleForm.activityId || !scaleForm.louvorMemberId) return toast.error("Selecione a atividade e o membro.");
-                      createScale.mutate(scaleForm);
+                      if (!scaleForm.activityId || !scaleForm.louvorMemberIds.length) return toast.error("Selecione a atividade e pelo menos um membro.");
+                      Promise.all(scaleForm.louvorMemberIds.map((louvorMemberId) => createScale.mutateAsync({ activityId: scaleForm.activityId, louvorMemberId, roleInScale: scaleForm.roleInScale, songs: scaleForm.songs || undefined, status: "escalado" }))).then(() => { toast.success("Escala guardada para os membros escolhidos."); setScaleForm({ activityId: 0, louvorMemberIds: [], roleInScale: "Vocal", songs: "", status: "escalado" }); setShowScaleForm(false); void utils.louvor.listScales.invalidate(); }).catch((err: unknown) => toast.error(err instanceof Error ? err.message : "Não foi possível guardar a escala."));
                     }}>
                       {createScale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar Escala
                     </Button>
@@ -221,9 +160,7 @@ export default function Louvor() {
                       </p>
                       {sc.songs && <p className="text-xs text-slate-500 mt-1">Hinos: {sc.songs}</p>}
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => deleteScale.mutate({ id: sc.id })}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-2"><Select value={sc.status} onValueChange={(value) => updateScale.mutate({ id: sc.id, status: value as "escalado" | "confirmado" | "realizado" | "ausente" })}><SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="escalado">Escalado</SelectItem><SelectItem value="confirmado">Confirmado</SelectItem><SelectItem value="realizado">Compareceu</SelectItem><SelectItem value="ausente">Não compareceu</SelectItem></SelectContent></Select><Button size="icon" variant="ghost" onClick={() => deleteScale.mutate({ id: sc.id })}><Trash2 className="h-4 w-4 text-red-500" /></Button></div>
                   </div>
                 );
               })}

@@ -16,6 +16,7 @@ import Louvor from "@/pages/Louvor";
 import Profile from "@/pages/Profile";
 import AuditAndBackup from "@/pages/AuditAndBackup";
 import MemberHistoryPage from "@/pages/MemberHistory";
+import IncompleteMembers from "@/pages/IncompleteMembers";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -49,6 +50,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/members/incomplete"} component={IncompleteMembers} />
       <Route path={"/members"} component={Members} />
       <Route path={"/activities"} component={Activities} />
       <Route path={"/attendance"} component={Attendance} />
@@ -72,7 +74,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="light" switchable>
         <TooltipProvider>
           <Toaster />
           <Router />
