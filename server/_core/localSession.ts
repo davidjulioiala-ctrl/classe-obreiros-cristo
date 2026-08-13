@@ -1,13 +1,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { ENV } from "./env";
 
-const SESSION_VERSION = "v2";
+const SESSION_VERSION = "v3";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_IDLE_TIMEOUT_SECONDS = 60 * 20;
 const SESSION_WARNING_SECONDS = 60 * 18;
 
 export type SessionPayload = {
   userId: number;
+  sessionVersion: number;
   issuedAt: number;
   lastActivityAt: number;
   expiresAt: number;
@@ -24,37 +25,38 @@ function sign(payload: string) {
   return createHmac("sha256", getSigningSecret()).update(payload).digest("base64url");
 }
 
-export function createLocalSessionToken(userId: number, now = Date.now()): string {
-  if (!Number.isInteger(userId) || userId <= 0) {
-    throw new Error("Invalid user id for local session");
+export function createLocalSessionToken(userId: number, sessionVersion = 1, now = Date.now()): string {
+  if (!Number.isInteger(userId) || userId <= 0 || !Number.isInteger(sessionVersion) || sessionVersion <= 0) {
+    throw new Error("Invalid local session parameters");
   }
   const issuedAt = Math.floor(now / 1000);
   const expiresAt = issuedAt + SESSION_TTL_SECONDS;
-  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${issuedAt}.${expiresAt}`;
+  const payload = `${SESSION_VERSION}.${userId}.${sessionVersion}.${issuedAt}.${issuedAt}.${expiresAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
 export function refreshLocalSessionToken(session: SessionPayload, now = Date.now()): string {
   const lastActivityAt = Math.floor(now / 1000);
-  const payload = `${SESSION_VERSION}.${session.userId}.${session.issuedAt}.${lastActivityAt}.${session.expiresAt}`;
+  const payload = `${SESSION_VERSION}.${session.userId}.${session.sessionVersion}.${session.issuedAt}.${lastActivityAt}.${session.expiresAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
 export function verifyLocalSessionToken(token: string | undefined, now = Date.now()): SessionPayload | null {
   if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 6 || parts[0] !== SESSION_VERSION) return null;
+  if (parts.length !== 7 || parts[0] !== SESSION_VERSION) return null;
 
-  const [, userIdValue, issuedAtValue, lastActivityValue, expiresAtValue, signature] = parts;
+  const [, userIdValue, sessionVersionValue, issuedAtValue, lastActivityValue, expiresAtValue, signature] = parts;
   const userId = Number.parseInt(userIdValue, 10);
+  const sessionVersion = Number.parseInt(sessionVersionValue, 10);
   const issuedAt = Number.parseInt(issuedAtValue, 10);
   const lastActivityAt = Number.parseInt(lastActivityValue, 10);
   const expiresAt = Number.parseInt(expiresAtValue, 10);
-  if (![userId, issuedAt, lastActivityAt, expiresAt].every(Number.isInteger) || userId <= 0 || issuedAt <= 0 || lastActivityAt < issuedAt || expiresAt <= issuedAt) {
+  if (![userId, sessionVersion, issuedAt, lastActivityAt, expiresAt].every(Number.isInteger) || userId <= 0 || sessionVersion <= 0 || issuedAt <= 0 || lastActivityAt < issuedAt || expiresAt <= issuedAt) {
     return null;
   }
 
-  const payload = `${SESSION_VERSION}.${userId}.${issuedAt}.${lastActivityAt}.${expiresAt}`;
+  const payload = `${SESSION_VERSION}.${userId}.${sessionVersion}.${issuedAt}.${lastActivityAt}.${expiresAt}`;
   const expectedSignature = sign(payload);
   const actual = Buffer.from(signature);
   const expected = Buffer.from(expectedSignature);
@@ -63,7 +65,7 @@ export function verifyLocalSessionToken(token: string | undefined, now = Date.no
   const nowSeconds = Math.floor(now / 1000);
   if (nowSeconds >= expiresAt || nowSeconds - lastActivityAt >= SESSION_IDLE_TIMEOUT_SECONDS) return null;
 
-  return { userId, issuedAt, lastActivityAt, expiresAt };
+  return { userId, sessionVersion, issuedAt, lastActivityAt, expiresAt };
 }
 
 export function getSessionIdleSeconds(session: SessionPayload, now = Date.now()) {

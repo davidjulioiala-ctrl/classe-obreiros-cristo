@@ -19,7 +19,7 @@ describe("autenticação local", () => {
 
   it("valida um token assinado e expira tokens fora do prazo", () => {
     const now = Date.UTC(2026, 7, 13, 12, 0, 0);
-    const token = createLocalSessionToken(1, now);
+    const token = createLocalSessionToken(1, 1, now);
     const session = verifyLocalSessionToken(token, now + 1_000);
     expect(session?.userId).toBe(1);
     expect(verifyLocalSessionToken(`${token}x`, now + 1_000)).toBeNull();
@@ -27,7 +27,7 @@ describe("autenticação local", () => {
   });
 
   it("resolve o utilizador pela sessão assinada e rejeita cookie adulterado", async () => {
-    const token = createLocalSessionToken(1);
+    const token = createLocalSessionToken(1, 1);
     const request = {
       headers: { cookie: `${COOKIE_NAME}=${token}` },
     } as any;

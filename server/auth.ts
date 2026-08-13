@@ -1,24 +1,47 @@
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getDb } from "./db";
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 
-// Simple hash function (in production, use bcrypt)
+function derivePasswordKey(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scryptCallback(password, salt, keyLength, SCRYPT_OPTIONS, (error, derived) => {
+      if (error) reject(error);
+      else resolve(derived as Buffer);
+    });
+  });
+}
+const PASSWORD_SCHEME = "scrypt:v1";
+const SCRYPT_KEY_LENGTH = 64;
+const SCRYPT_OPTIONS = { N: 16_384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 } as const;
+
 export async function hashPassword(password: string): Promise<string> {
-  // For demo purposes, we'll use a simple approach
-  // In production, use bcrypt: import bcrypt from 'bcrypt'
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const salt = randomBytes(16);
+  const derivedKey = await derivePasswordKey(password, salt, SCRYPT_KEY_LENGTH);
+  return `${PASSWORD_SCHEME}:${salt.toString("base64url")}:${derivedKey.toString("base64url")}`;
 }
 
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (hash.startsWith(`${PASSWORD_SCHEME}:`)) {
+    const [, , saltValue, keyValue] = hash.split(":");
+    if (!saltValue || !keyValue) return false;
+    try {
+      const salt = Buffer.from(saltValue, "base64url");
+      const expected = Buffer.from(keyValue, "base64url");
+      const actual = await derivePasswordKey(password, salt, expected.length);
+      return actual.length === expected.length && timingSafeEqual(actual, expected);
+    } catch {
+      return false;
+    }
+  }
+
+  // One-time compatibility path for legacy SHA-256 records. A successful
+  // login upgrades the record to scrypt in authenticateUser below.
+  if (!/^[a-f0-9]{64}$/i.test(hash)) return false;
+  const legacy = createHash("sha256").update(password, "utf8").digest("hex");
+  const actual = Buffer.from(legacy, "utf8");
+  const expected = Buffer.from(hash.toLowerCase(), "utf8");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 export async function authenticateUser(
@@ -50,6 +73,13 @@ export async function authenticateUser(
     const isValid = await verifyPassword(password, foundUser.password);
     if (!isValid) {
       return null;
+    }
+
+    if (!foundUser.password.startsWith(`${PASSWORD_SCHEME}:`)) {
+      const upgradedPassword = await hashPassword(password);
+      await db.update(users).set({ password: upgradedPassword, sessionVersion: (foundUser.sessionVersion ?? 1) + 1, updatedAt: new Date() }).where(eq(users.id, foundUser.id));
+      foundUser.password = upgradedPassword;
+      foundUser.sessionVersion = (foundUser.sessionVersion ?? 1) + 1;
     }
 
     return foundUser;
@@ -132,6 +162,8 @@ export async function updateUser(
     if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
     if (updates.password) {
       updateData.password = await hashPassword(updates.password);
+      const currentUser = await db.select({ sessionVersion: users.sessionVersion }).from(users).where(eq(users.id, userId)).limit(1);
+      updateData.sessionVersion = (currentUser[0]?.sessionVersion ?? 1) + 1;
     }
 
     await db.update(users).set(updateData).where(eq(users.id, userId));

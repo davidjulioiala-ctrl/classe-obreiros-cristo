@@ -8,6 +8,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
+import { positiveId, safeEmail, safeText } from "./_core/security";
 
 // ============ MIDDLEWARE ============
 
@@ -57,12 +58,12 @@ const membersRouter = router({
     return await db.getAllMembers();
   }),
 
-  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+  getById: protectedProcedure.input(z.object({ id: positiveId })).query(async ({ input }) => {
     return await db.getMemberById(input.id);
   }),
 
   search: protectedProcedure
-    .input(z.object({ query: z.string(), isGuest: z.boolean().optional() }))
+    .input(z.object({ query: safeText(100), isGuest: z.boolean().optional() }))
     .query(async ({ input }) => {
       return await db.searchMembers(input.query, input.isGuest);
     }),
@@ -70,23 +71,23 @@ const membersRouter = router({
   create: liderProcedure
     .input(
       z.object({
-        name: z.string(),
+        name: safeText(255),
         sex: z.enum(["M", "F"]),
-        birthDate: z.string().optional(),
-        father: z.string().optional(),
-        mother: z.string().optional(),
-        nationality: z.string().optional(),
-        region: z.string().optional(),
-        residence: z.string().optional(),
-        phoneOrange: z.string().optional(),
-        phoneTelecel: z.string().optional(),
-        email: z.string().email().optional(),
-        position: z.string().optional(),
-        leaderRole: z.string().optional(),
-        louvorRole: z.string().optional(),
+        birthDate: safeText(10, false),
+        father: safeText(255, false),
+        mother: safeText(255, false),
+        nationality: safeText(100, false),
+        region: safeText(100, false),
+        residence: safeText(500, false),
+        phoneOrange: safeText(40, false),
+        phoneTelecel: safeText(40, false),
+        email: safeEmail().optional(),
+        position: safeText(255, false),
+        leaderRole: safeText(255, false),
+        louvorRole: safeText(255, false),
         isGuest: z.boolean().default(false),
-        guestOf: z.number().optional(),
-        groupId: z.number().optional(),
+        guestOf: positiveId.optional(),
+        groupId: positiveId.optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -123,21 +124,21 @@ const membersRouter = router({
   update: liderProcedure
     .input(
       z.object({
-        id: z.number(),
+        id: positiveId,
         data: z.object({
-          name: z.string().optional(),
+          name: safeText(255).optional(),
           sex: z.enum(["M", "F"]).optional(),
-          birthDate: z.string().optional(),
-          father: z.string().optional(),
-          mother: z.string().optional(),
-          nationality: z.string().optional(),
-          region: z.string().optional(),
-          residence: z.string().optional(),
-          phoneOrange: z.string().optional(),
-          phoneTelecel: z.string().optional(),
-          email: z.string().email().optional(),
-          position: z.string().optional(),
-          louvorRole: z.string().optional(),
+          birthDate: safeText(10, false),
+          father: safeText(255, false),
+          mother: safeText(255, false),
+          nationality: safeText(100, false),
+          region: safeText(100, false),
+          residence: safeText(500, false),
+          phoneOrange: safeText(40, false),
+          phoneTelecel: safeText(40, false),
+          email: safeEmail().optional(),
+          position: safeText(255, false),
+          louvorRole: safeText(255, false),
           isActive: z.boolean().optional(),
         }),
       })
@@ -155,7 +156,7 @@ const membersRouter = router({
     }),
 
   delete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteMember(input.id);
       await writeAudit(ctx, "apagar", "member", input.id);
@@ -163,7 +164,7 @@ const membersRouter = router({
     }),
 
   getByGroup: protectedProcedure
-    .input(z.object({ groupId: z.number() }))
+    .input(z.object({ groupId: positiveId }))
     .query(async ({ input }) => {
       return await db.getMembersByGroup(input.groupId);
     }),
@@ -178,13 +179,13 @@ const groupsRouter = router({
   }),
 
   getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .query(async ({ input }) => {
       return await db.getGroupById(input.id);
     }),
 
   update: liderProcedure
-    .input(z.object({ id: z.number(), name: z.string().trim().min(1), description: z.string().optional() }))
+    .input(z.object({ id: positiveId, name: safeText(255), description: safeText(1000, false) }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateGroup(id, data);
@@ -199,17 +200,17 @@ const activitiesRouter = router({
   create: liderProcedure
     .input(
       z.object({
-        name: z.string(),
-        date: z.string(),
-        startTime: z.string().optional(),
-        endTime: z.string().optional(),
-        location: z.string().optional(),
-        type: z.string().optional(),
-        audience: z.string().optional(),
+        name: safeText(255),
+        date: safeText(10),
+        startTime: safeText(10, false),
+        endTime: safeText(10, false),
+        location: safeText(255, false),
+        type: safeText(100, false),
+        audience: safeText(100, false),
         hasCommission: z.boolean().default(false),
-        theme: z.string().optional(),
-        speakerName: z.string().optional(),
-        biblicalReference: z.string().optional(),
+        theme: safeText(255, false),
+        speakerName: safeText(255, false),
+        biblicalReference: safeText(255, false),
         isReligious: z.boolean().default(true),
       })
     )
@@ -233,25 +234,25 @@ const activitiesRouter = router({
   }),
 
   getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .query(async ({ input }) => {
       return await db.getActivityById(input.id);
     }),
 
   update: liderProcedure
     .input(z.object({
-      id: z.number(),
-      name: z.string().min(1),
-      date: z.string(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      location: z.string().optional(),
-      type: z.string().optional(),
-      audience: z.string().optional(),
+      id: positiveId,
+      name: safeText(255),
+      date: safeText(10),
+      startTime: safeText(10, false),
+      endTime: safeText(10, false),
+      location: safeText(255, false),
+      type: safeText(100, false),
+      audience: safeText(100, false),
       hasCommission: z.boolean(),
-              theme: z.string().optional(),
-        speakerName: z.string().optional(),
-        biblicalReference: z.string().optional(),
+              theme: safeText(255, false),
+        speakerName: safeText(255, false),
+        biblicalReference: safeText(255, false),
         isReligious: z.boolean(),
       }))
 
@@ -263,7 +264,7 @@ const activitiesRouter = router({
     }),
 
   complete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const scales = await db.listLouvorScales(input.id);
       const pending = scales.filter((scale) => scale.status === "escalado" || scale.status === "confirmado");
@@ -274,7 +275,7 @@ const activitiesRouter = router({
     }),
 
   delete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteActivity(input.id);
       await writeAudit(ctx, "apagar", "activity", input.id);
@@ -282,11 +283,11 @@ const activitiesRouter = router({
     }),
 
   commissionList: protectedProcedure
-    .input(z.object({ activityId: z.number() }))
+    .input(z.object({ activityId: positiveId }))
     .query(({ input }) => db.getCommissionMembersByActivity(input.activityId)),
 
   commissionAdd: liderProcedure
-    .input(z.object({ activityId: z.number(), memberId: z.number(), role: z.string().min(1), phone: z.string().optional() }))
+    .input(z.object({ activityId: positiveId, memberId: positiveId, role: safeText(100), phone: safeText(40, false) }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.createCommissionMember(input);
       await writeAudit(ctx, "criar", "commissionMember", undefined, input);
@@ -294,7 +295,7 @@ const activitiesRouter = router({
     }),
 
   commissionDelete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteCommissionMember(input.id);
       await writeAudit(ctx, "apagar", "commissionMember", input.id);
@@ -304,8 +305,8 @@ const activitiesRouter = router({
   recordAttendance: oficialProcedure
     .input(
       z.object({
-        activityId: z.number(),
-        memberId: z.number(),
+        activityId: positiveId,
+        memberId: positiveId,
         isPresent: z.boolean(),
       })
     )
@@ -317,13 +318,13 @@ const activitiesRouter = router({
     }),
 
   getAttendance: protectedProcedure
-    .input(z.object({ activityId: z.number() }))
+    .input(z.object({ activityId: positiveId }))
     .query(async ({ input }) => {
       return await db.getAttendanceByActivity(input.activityId);
     }),
 
   updateAttendance: oficialProcedure
-    .input(z.object({ id: z.number(), isPresent: z.boolean() }))
+    .input(z.object({ id: positiveId, isPresent: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.updateAttendance(input.id, { isPresent: input.isPresent });
       await writeAudit(ctx, "editar", "attendance", input.id, { isPresent: input.isPresent });
@@ -331,7 +332,7 @@ const activitiesRouter = router({
     }),
 
   deleteAttendance: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteAttendance(input.id);
       await writeAudit(ctx, "apagar", "attendance", input.id);
@@ -339,7 +340,7 @@ const activitiesRouter = router({
     }),
 
   getAttendanceStats: protectedProcedure
-    .input(z.object({ activityId: z.number() }))
+    .input(z.object({ activityId: positiveId }))
     .query(async ({ input }) => {
       return await db.getAttendanceStats(input.activityId);
     }),
@@ -349,7 +350,7 @@ const activitiesRouter = router({
 
 const quotasRouter = router({
   getByMember: protectedProcedure
-    .input(z.object({ memberId: z.number() }))
+    .input(z.object({ memberId: positiveId }))
     .query(async ({ input }) => {
       return await db.getQuotasByMember(input.memberId);
     }),
@@ -357,11 +358,11 @@ const quotasRouter = router({
   recordPayment: liderProcedure
     .input(
       z.object({
-        memberId: z.number(),
-        month: z.number(),
-        year: z.number(),
-        amount: z.string(),
-        responsibleName: z.string().trim().min(1, "O nome do responsável é obrigatório"),
+        memberId: positiveId,
+        month: z.number().int().min(1).max(12),
+        year: z.number().int().min(2000).max(2100),
+        amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valor inválido").max(20),
+        responsibleName: safeText(255),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -390,7 +391,7 @@ const quotasRouter = router({
     }),
 
   getByMonthYear: protectedProcedure
-    .input(z.object({ month: z.number(), year: z.number() }))
+    .input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100) }))
     .query(async ({ input }) => {
       return await db.getQuotasByMonthYear(input.month, input.year);
     }),
@@ -398,7 +399,7 @@ const quotasRouter = router({
   list: protectedProcedure.query(() => db.listQuotas()),
 
   update: financialProcedure
-    .input(z.object({ id: z.number(), isPaid: z.boolean().optional(), amount: z.string().optional(), month: z.number().optional(), year: z.number().optional() }))
+    .input(z.object({ id: positiveId, isPaid: z.boolean().optional(), amount: z.string().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(), month: z.number().int().min(1).max(12).optional(), year: z.number().int().min(2000).max(2100).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateQuota(id, data);
@@ -407,7 +408,7 @@ const quotasRouter = router({
     }),
 
   delete: financialProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteQuota(input.id);
       await writeAudit(ctx, "apagar", "quota", input.id);
@@ -420,7 +421,7 @@ const quotasRouter = router({
 const otherIncomeRouter = router({
   list: protectedProcedure.query(() => db.listOtherIncome()),
   create: financialProcedure
-    .input(z.object({ description: z.string().trim().min(1), amount: z.string().min(1), date: z.coerce.date(), responsibleName: z.string().trim().min(1, "O responsável é obrigatório") }))
+    .input(z.object({ description: safeText(500), amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valor inválido").max(20), date: z.coerce.date(), responsibleName: safeText(255) }))
     .mutation(async ({ input, ctx }) => {
       const { responsibleName, ...rest } = input;
       const result = await db.createOtherIncome({ ...rest, recordedBy: ctx.user.id, responsibleName });
@@ -428,7 +429,7 @@ const otherIncomeRouter = router({
       return result;
     }),
   update: financialProcedure
-    .input(z.object({ id: z.number(), description: z.string().trim().min(1).optional(), amount: z.string().min(1).optional(), date: z.coerce.date().optional(), responsibleName: z.string().trim().min(1).optional() }))
+    .input(z.object({ id: positiveId, description: safeText(500).optional(), amount: z.string().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(), date: z.coerce.date().optional(), responsibleName: safeText(255).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateOtherIncome(id, data);
@@ -436,7 +437,7 @@ const otherIncomeRouter = router({
       return result;
     }),
   delete: financialProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteOtherIncome(input.id);
       await writeAudit(ctx, "apagar", "otherIncome", input.id);
@@ -449,7 +450,7 @@ const otherIncomeRouter = router({
 const expensesRouter = router({
   list: protectedProcedure.query(() => db.listExpenses()),
   create: financialProcedure
-    .input(z.object({ designation: z.string().trim().min(1), quantity: z.number().int().positive(), unitPrice: z.string().min(1), date: z.coerce.date(), responsibleName: z.string().trim().min(1, "O responsável é obrigatório") }))
+    .input(z.object({ designation: safeText(1000), quantity: z.number().int().positive().max(1000000), unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, "Preço inválido").max(20), date: z.coerce.date(), responsibleName: safeText(255) }))
     .mutation(async ({ input, ctx }) => {
       const { responsibleName, ...rest } = input;
       const totalPrice = (rest.quantity * Number(rest.unitPrice)).toFixed(2);
@@ -459,7 +460,7 @@ const expensesRouter = router({
       return result;
     }),
   update: financialProcedure
-    .input(z.object({ id: z.number(), designation: z.string().trim().min(1).optional(), quantity: z.number().int().positive().optional(), unitPrice: z.string().min(1).optional(), date: z.coerce.date().optional() }))
+    .input(z.object({ id: positiveId, designation: safeText(1000).optional(), quantity: z.number().int().positive().max(1000000).optional(), unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(), date: z.coerce.date().optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const totalPrice = data.quantity !== undefined && data.unitPrice !== undefined ? (data.quantity * Number(data.unitPrice)).toFixed(2) : undefined;
@@ -468,7 +469,7 @@ const expensesRouter = router({
       return result;
     }),
   delete: financialProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteExpense(input.id);
       await writeAudit(ctx, "apagar", "expense", input.id);
@@ -480,16 +481,16 @@ const expensesRouter = router({
 
 const reportsRouter = router({
   list: protectedProcedure.query(() => db.listReports()),
-  getByActivity: protectedProcedure.input(z.object({ activityId: z.number() })).query(({ input }) => db.getReportByActivity(input.activityId)),
+  getByActivity: protectedProcedure.input(z.object({ activityId: positiveId })).query(({ input }) => db.getReportByActivity(input.activityId)),
   create: oficialProcedure
-    .input(z.object({ activityId: z.number(), type: z.enum(["ata", "relatorio"]), content: z.string().min(1) }))
+    .input(z.object({ activityId: positiveId, type: z.enum(["ata", "relatorio"]), content: safeText(50000) }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.createReport({ ...input, generatedBy: ctx.user.id });
       await writeAudit(ctx, "criar", "report", undefined, { activityId: input.activityId, type: input.type });
       return result;
     }),
   update: oficialProcedure
-    .input(z.object({ id: z.number(), type: z.enum(["ata", "relatorio"]).optional(), content: z.string().min(1).optional() }))
+    .input(z.object({ id: positiveId, type: z.enum(["ata", "relatorio"]).optional(), content: safeText(50000).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateReport(id, data);
@@ -497,7 +498,7 @@ const reportsRouter = router({
       return result;
     }),
   delete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteReport(input.id);
       await writeAudit(ctx, "apagar", "report", input.id);
@@ -508,14 +509,14 @@ const reportsRouter = router({
 // ============ AUDIT ROUTER ============
 
 const auditRouter = router({
-  list: liderProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(({ input }) => db.listAuditLogs(input?.limit)),
-  update: liderProcedure.input(z.object({ id: z.number(), action: z.string().optional(), entityType: z.string().optional(), details: z.string().optional() })).mutation(async ({ input, ctx }) => {
+  list: liderProcedure.input(z.object({ limit: z.number().int().min(1).max(500).optional() }).optional()).query(({ input }) => db.listAuditLogs(input?.limit)),
+  update: liderProcedure.input(z.object({ id: positiveId, action: safeText(100, false), entityType: safeText(100, false), details: safeText(10000, false) })).mutation(async ({ input, ctx }) => {
     const { id, ...data } = input;
     await db.updateAuditLog(id, data);
     await writeAudit(ctx, "atualizar", "audit_log", id, data);
     return { success: true };
   }),
-  delete: liderProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+  delete: liderProcedure.input(z.object({ id: positiveId })).mutation(async ({ input, ctx }) => {
     await db.deleteAuditLog(input.id);
     await writeAudit(ctx, "eliminar", "audit_log", input.id);
     return { success: true };
@@ -523,10 +524,10 @@ const auditRouter = router({
 });
 
 const settingsRouter = router({
-  get: protectedProcedure.input(z.object({ keyName: z.string() })).query(async ({ input }) => {
+  get: protectedProcedure.input(z.object({ keyName: safeText(120) })).query(async ({ input }) => {
     return await db.getAppSetting(input.keyName);
   }),
-  set: liderProcedure.input(z.object({ keyName: z.string(), keyValue: z.string() })).mutation(async ({ input, ctx }) => {
+  set: liderProcedure.input(z.object({ keyName: safeText(120), keyValue: safeText(20000) })).mutation(async ({ input, ctx }) => {
     await db.setAppSetting(input.keyName, input.keyValue);
     await writeAudit(ctx, "atualizar", "settings", undefined, { keyName: input.keyName });
     return { success: true };
@@ -567,7 +568,7 @@ const transfersRouter = router({
   }),
 
   processAdultTransfers: liderProcedure
-    .input(z.object({ memberIds: z.array(z.number()).min(1), reason: z.string().trim().min(1), toGroupId: z.number().optional() }))
+    .input(z.object({ memberIds: z.array(positiveId).min(1).max(200), reason: safeText(300), toGroupId: positiveId.optional() }))
     .mutation(async ({ input, ctx }) => {
       const candidates = await db.getAllMembers(true);
       const selected = candidates.filter((member) => {
@@ -614,11 +615,11 @@ const transfersRouter = router({
   create: liderProcedure
     .input(
       z.object({
-        memberId: z.number(),
-        fromGroupId: z.number().optional(),
-        toGroupId: z.number().optional(),
-        toChurch: z.string().optional(),
-        reason: z.string().optional(),
+        memberId: positiveId,
+        fromGroupId: positiveId.optional(),
+        toGroupId: positiveId.optional(),
+        toChurch: safeText(120).optional(),
+        reason: safeText(300).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -631,13 +632,13 @@ const transfersRouter = router({
     }),
 
   getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .query(async ({ input }) => {
       return await db.getTransferById(input.id);
     }),
 
   approve: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.updateTransfer(input.id, {
         status: "aprovada" as const,
@@ -649,7 +650,7 @@ const transfersRouter = router({
     }),
 
   complete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const transfer = await db.getTransferById(input.id);
       if (!transfer) throw new TRPCError({ code: "NOT_FOUND" });
@@ -670,13 +671,13 @@ const transfersRouter = router({
     }),
 
   getByMember: protectedProcedure
-    .input(z.object({ memberId: z.number() }))
+    .input(z.object({ memberId: positiveId }))
     .query(async ({ input }) => {
       return await db.getTransfersByMember(input.memberId);
     }),
 
   delete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteTransfer(input.id);
       await writeAudit(ctx, "apagar", "transfer", input.id);
@@ -718,16 +719,16 @@ async function assignGroupAutomatically(isGuest: boolean): Promise<number | unde
 
 const louvorRouter = router({
   listMembers: protectedProcedure.query(() => db.listLouvorMembers()),
-  listScales: protectedProcedure.input(z.object({ activityId: z.number().optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
+  listScales: protectedProcedure.input(z.object({ activityId: positiveId.optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
   createScale: oficialProcedure
-    .input(z.object({ activityId: z.number(), louvorMemberId: z.number(), roleInScale: z.string().trim().min(1), songs: z.string().optional(), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
+    .input(z.object({ activityId: positiveId, louvorMemberId: positiveId, roleInScale: safeText(120), songs: safeText(4000, false), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.createLouvorScale(input);
       await writeAudit(ctx, "criar", "louvorScale", undefined, input);
       return result;
     }),
   updateScale: oficialProcedure
-    .input(z.object({ id: z.number(), roleInScale: z.string().trim().min(1).optional(), songs: z.string().optional(), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).optional() }))
+    .input(z.object({ id: positiveId, roleInScale: safeText(120).optional(), songs: safeText(4000, false), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateLouvorScale(id, data);
@@ -735,7 +736,7 @@ const louvorRouter = router({
       return result;
     }),
   deleteScale: oficialProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteLouvorScale(input.id);
       await writeAudit(ctx, "apagar", "louvorScale", input.id);
@@ -749,7 +750,7 @@ const historyRouter = router({
   list: protectedProcedure.query(async () => {
     return await db.getAllMemberHistory();
   }),
-  getByMember: protectedProcedure.input(z.object({ memberId: z.number() })).query(async ({ input }) => {
+  getByMember: protectedProcedure.input(z.object({ memberId: positiveId })).query(async ({ input }) => {
     return await db.getMemberHistory(input.memberId);
   }),
 });
@@ -763,15 +764,15 @@ const materialsRouter = router({
   create: liderProcedure
     .input(
       z.object({
-        code: z.string().trim().min(1),
-        name: z.string().trim().min(1),
-        category: z.string().trim().min(1),
-        quantity: z.number().int().min(1).default(1),
+        code: safeText(100),
+        name: safeText(255),
+        category: safeText(120),
+        quantity: z.number().int().min(1).max(1000000).default(1),
         condition: z.enum(["Bom", "Regular", "Precário", "Manutenção"]).default("Bom"),
-        custodian: z.string().trim().min(1),
-        location: z.string().trim().optional(),
+        custodian: safeText(255),
+        location: safeText(255, false),
         purchaseDate: z.coerce.date().optional(),
-        notes: z.string().trim().optional(),
+        notes: safeText(5000, false),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -787,16 +788,16 @@ const materialsRouter = router({
   update: liderProcedure
     .input(
       z.object({
-        id: z.number(),
-        code: z.string().trim().min(1).optional(),
-        name: z.string().trim().min(1).optional(),
-        category: z.string().trim().min(1).optional(),
-        quantity: z.number().int().min(1).optional(),
+        id: positiveId,
+        code: safeText(100).optional(),
+        name: safeText(255).optional(),
+        category: safeText(120).optional(),
+        quantity: z.number().int().min(1).max(1000000).optional(),
         condition: z.enum(["Bom", "Regular", "Precário", "Manutenção"]).optional(),
-        custodian: z.string().trim().min(1).optional(),
-        location: z.string().trim().optional(),
+        custodian: safeText(255).optional(),
+        location: safeText(255, false),
         purchaseDate: z.coerce.date().optional(),
-        notes: z.string().trim().optional(),
+        notes: safeText(5000, false),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -806,7 +807,7 @@ const materialsRouter = router({
       return material;
     }),
   delete: liderProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       await db.deleteMaterial(input.id);
       await writeAudit(ctx, "apagar", "material", input.id);
@@ -820,7 +821,7 @@ const backupRouter = router({
   listVersions: adminProcedure.query(async () => db.listBackupVersions()),
 
   export: adminProcedure
-    .input(z.object({ destination: z.enum(["local", "drive"]).default("local"), cloudEmail: z.string().email().optional(), versionLabel: z.string().max(255).optional() }))
+    .input(z.object({ destination: z.enum(["local", "drive"]).default("local"), cloudEmail: safeEmail().optional(), versionLabel: safeText(255, false) }))
     .mutation(async ({ input, ctx }) => {
       const version = await db.createBackupVersion({ createdBy: ctx.user.id, destination: input.destination, cloudEmail: input.cloudEmail, versionLabel: input.versionLabel });
       await writeAudit(ctx, "exportar", `backup_${input.destination}`, version.id, { version: version.versionLabel, destination: input.destination, cloudEmail: input.cloudEmail ?? null });
@@ -828,7 +829,7 @@ const backupRouter = router({
     }),
 
   restore: adminProcedure
-    .input(z.object({ id: z.number().int().positive(), confirmation: z.literal(true) }))
+    .input(z.object({ id: positiveId, confirmation: z.literal(true) }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.restoreBackupVersion(input.id);
       await writeAudit(ctx, "restaurar", "backup", input.id, result);
@@ -838,7 +839,7 @@ const backupRouter = router({
   schedule: adminProcedure.query(async () => db.getBackupSchedule()),
 
   saveSchedule: adminProcedure
-    .input(z.object({ hour: z.number().int().min(0).max(23), minute: z.number().int().min(0).max(59).default(0), destination: z.enum(["local", "drive"]).default("local"), cloudEmail: z.string().email().optional(), enabled: z.boolean() }))
+    .input(z.object({ hour: z.number().int().min(0).max(23), minute: z.number().int().min(0).max(59).default(0), destination: z.enum(["local", "drive"]).default("local"), cloudEmail: safeEmail().optional(), enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const current = await db.getBackupSchedule();
       const sessionToken = parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";

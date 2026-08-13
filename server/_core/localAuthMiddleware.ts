@@ -28,7 +28,7 @@ export async function localAuthMiddleware(
     }
 
     const user = await getUserById(session.userId);
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -54,7 +54,7 @@ export async function getLocalUserFromRequest(req: Request, res?: Response) {
   const session = getLocalSession(req);
   if (!session) return null;
   const user = await getUserById(session.userId);
-  if (!user || !user.isActive) return null;
+  if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) return null;
   if (res) refreshSessionCookie(req, res, session);
   return user;
 }

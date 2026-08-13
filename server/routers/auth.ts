@@ -12,9 +12,10 @@ import {
   deleteUser,
 } from "../auth";
 import { createAuditLog } from "../db";
+import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure, positiveId, safeEmail, safeText } from "../_core/security";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin" && ctx.user.churchRole !== "lider") {
+  if (ctx.user.role !== "admin") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Apenas administradores podem gerir utilizadores",
@@ -46,22 +47,28 @@ export const authRouter = router({
   }),
 
   login: publicProcedure
-    .input(z.object({ username: z.string().min(1), password: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      const user = await authenticateUser(input.username.trim(), input.password);
+    .input(z.object({ username: safeText(100), password: z.string().min(1).max(200) }))
+    .mutation(async ({ input, ctx }) => {
+      const rate = checkLoginRateLimit(ctx.req, input.username);
+      if (!rate.allowed) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Demasiadas tentativas. Tente novamente mais tarde." });
+      }
+      const user = await authenticateUser(input.username, input.password);
       if (!user) {
+        recordLoginFailure(ctx.req, input.username);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Credenciais inválidas" });
       }
+      clearLoginFailures(ctx.req, input.username);
       return { success: true, user: safeUser(user) };
     }),
 
   createUser: adminProcedure
     .input(
       z.object({
-        username: z.string().trim().min(3),
-        password: z.string().min(6),
-        name: z.string().trim().min(1),
-        email: z.string().email(),
+        username: safeText(100),
+        password: z.string().min(8).max(200),
+        name: safeText(255),
+        email: safeEmail(),
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]),
         role: z.enum(["user", "admin"]),
       }),
@@ -85,19 +92,28 @@ export const authRouter = router({
   updateUser: adminProcedure
     .input(
       z.object({
-        userId: z.number().int().positive(),
-        username: z.string().trim().min(3).optional(),
-        name: z.string().trim().min(1).optional(),
-        email: z.string().email().optional(),
+        userId: positiveId,
+        username: safeText(100).optional(),
+        name: safeText(255).optional(),
+        email: safeEmail().optional(),
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).optional(),
         role: z.enum(["user", "admin"]).optional(),
         isActive: z.boolean().optional(),
-        password: z.string().min(6).optional(),
+        password: z.string().min(8).max(200).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       if (input.userId === ctx.user.id && input.isActive === false) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode desativar a própria conta." });
+      }
+      if (input.userId === ctx.user.id && input.role === "user") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode remover a própria função de administrador." });
+      }
+      const target = await getUserById(input.userId);
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      if (target.role === "admin" && input.role === "user") {
+        const admins = (await getAllUsers()).filter((candidate) => candidate.role === "admin" && candidate.isActive);
+        if (admins.length <= 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode remover o último administrador activo." });
       }
       const { userId, churchRole, password, ...rest } = input;
       const user = await updateUser(userId, {
@@ -111,7 +127,7 @@ export const authRouter = router({
     }),
 
   getUserById: adminProcedure
-    .input(z.object({ userId: z.number().int().positive() }))
+    .input(z.object({ userId: positiveId }))
     .query(async ({ input }) => {
       const user = await getUserById(input.userId);
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
@@ -124,10 +140,16 @@ export const authRouter = router({
   }),
 
   deleteUser: adminProcedure
-    .input(z.object({ userId: z.number().int().positive() }))
+    .input(z.object({ userId: positiveId }))
     .mutation(async ({ input, ctx }) => {
       if (input.userId === ctx.user.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode eliminar a própria conta." });
+      }
+      const target = await getUserById(input.userId);
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      if (target.role === "admin") {
+        const admins = (await getAllUsers()).filter((candidate) => candidate.role === "admin" && candidate.isActive);
+        if (admins.length <= 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode eliminar o último administrador activo." });
       }
       const success = await deleteUser(input.userId);
       if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });

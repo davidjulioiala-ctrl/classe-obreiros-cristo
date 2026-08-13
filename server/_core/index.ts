@@ -13,6 +13,7 @@ import { registerTransferPdfRoute } from "../transferPdf";
 import { registerFinancialReportRoutes } from "../financialReportRoute";
 import { registerBackupRoutes } from "../backupRoutes";
 import { serveStatic, setupVite } from "./vite";
+import { requireSameOrigin, SECURITY_LIMITS, securityHeaders } from "./security";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,9 +37,20 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.disable("x-powered-by");
+  app.set("trust proxy", false);
+  app.use(securityHeaders);
+  // The application has no general-purpose upload endpoint. Keep request bodies
+  // small to reduce parser exhaustion and malicious payload risk.
+  app.use((req, res, next) => {
+    const contentType = req.get("content-type")?.toLowerCase() ?? "";
+    if (contentType.startsWith("multipart/form-data")) {
+      return res.status(415).json({ error: "Uploads de ficheiros não estão disponíveis neste endpoint." });
+    }
+    return next();
+  });
+  app.use(express.json({ limit: SECURITY_LIMITS.maxJsonBody }));
+  app.use(express.urlencoded({ limit: SECURITY_LIMITS.maxUrlEncodedBody, extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerLocalAuthRoutes(app);
@@ -49,6 +61,7 @@ async function startServer() {
   // tRPC API
   app.use(
     "/api/trpc",
+    requireSameOrigin,
     createExpressMiddleware({
       router: appRouter,
       createContext,

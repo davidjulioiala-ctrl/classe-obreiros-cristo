@@ -6396,3 +6396,13 @@
 - [x] Aplicar cifragem em campos sensíveis (contactos, emails, moradas, notas, detalhes de despesas/receitas)
 - [x] Cifrar os payloads e arquivos de backup gerados localmente e na nuvem
 - [x] Criar testes unitários para o módulo de cifragem e validar build e testes gerais
+
+## Fase 16: Endurecimento Defensivo contra os 8 Vetores de Ataque
+- [x] Mitigar SQL Injection através do uso restrito do construtor de consultas Drizzle ORM (sem raw SQL vulnerável)
+- [x] Mitigar XSS sanitizando inputs textuais e validando esquemas Zod estritos no tRPC
+- [x] Mitigar CSRF exigindo cookies com `SameSite=lax` e verificando origens em requisições de modificação
+- [x] Mitigar Brute Force adicionando limitação de taxa (rate limiting) e bloqueio temporário por IP/utilizador após falhas
+- [x] Mitigar Session Hijacking aplicando cookies `HttpOnly`, `Secure`, inatividade estrita e rotatividade de sessão
+- [x] Mitigar Upload de Ficheiros Maliciosos bloqueando multipart não suportado, restringindo o proxy de armazenamento e aceitando restauros apenas através de payloads cifrados autenticados
+- [x] Mitigar Escalação de Privilégios verificando papéis administrativos estritos no servidor (`adminProcedure`) para todas as mutações sensíveis
+- [x] Mitigar IDOR validando autenticação, perfis autorizados, IDs positivos e limites dos recursos; o sistema é actualmente de organização única, sem fronteira multi-tenant

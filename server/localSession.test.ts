@@ -12,7 +12,7 @@ describe("sessões locais com limite de inactividade", () => {
   const now = Date.UTC(2026, 7, 13, 12, 0, 0);
 
   it("mantém a sessão válida antes dos 20 minutos", () => {
-    const token = createLocalSessionToken(1, now);
+    const token = createLocalSessionToken(1, 1, now);
     const session = verifyLocalSessionToken(token, now + (LOCAL_SESSION_IDLE_TIMEOUT_SECONDS - 1) * 1000);
 
     expect(session?.userId).toBe(1);
@@ -20,13 +20,13 @@ describe("sessões locais com limite de inactividade", () => {
   });
 
   it("rejeita a sessão ao atingir 20 minutos sem actividade", () => {
-    const token = createLocalSessionToken(1, now);
+    const token = createLocalSessionToken(1, 1, now);
 
     expect(verifyLocalSessionToken(token, now + LOCAL_SESSION_IDLE_TIMEOUT_SECONDS * 1000)).toBeNull();
   });
 
   it("renova a última actividade sem prolongar a validade absoluta", () => {
-    const token = createLocalSessionToken(1, now);
+    const token = createLocalSessionToken(1, 1, now);
     const session = verifyLocalSessionToken(token, now + 10 * 60 * 1000);
     expect(session).not.toBeNull();
 
@@ -39,7 +39,7 @@ describe("sessões locais com limite de inactividade", () => {
   });
 
   it("rejeita tokens adulterados", () => {
-    const token = createLocalSessionToken(1, now);
+    const token = createLocalSessionToken(1, 1, now);
     expect(verifyLocalSessionToken(`${token}x`, now + 1_000)).toBeNull();
   });
 });

@@ -8,6 +8,9 @@ export function registerReportPdfRoute(app: Express) {
     try {
       const user = await getLocalUserFromRequest(req);
       if (!user) return res.status(401).json({ error: "Não autenticado" });
+      if (user.role !== "admin" && user.churchRole !== "lider" && user.churchRole !== "oficial") {
+        return res.status(403).json({ error: "Sem permissão para descarregar relatórios." });
+      }
 
       const id = Number(req.params.id);
       if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Relatório inválido" });

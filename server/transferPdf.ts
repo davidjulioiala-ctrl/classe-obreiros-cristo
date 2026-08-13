@@ -19,9 +19,12 @@ export function registerTransferPdfRoute(app: Express) {
     try {
       const user = await getLocalUserFromRequest(req);
       if (!user) return res.status(401).json({ error: "Não autenticado" });
-      const ids = String(req.query.ids ?? "").split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0);
+      if (user.role !== "admin" && user.churchRole !== "lider" && user.churchRole !== "oficial") {
+        return res.status(403).json({ error: "Sem permissão para gerar transferências." });
+      }
+      const ids = String(req.query.ids ?? "").split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0).slice(0, 200);
       if (!ids.length) return res.status(400).json({ error: "Nenhum membro selecionado" });
-      const reason = String(req.query.reason ?? "Transferência validada para a camada de jovens").slice(0, 300);
+      const reason = String(req.query.reason ?? "Transferência validada para a camada de jovens").replace(/[<>]/g, "").slice(0, 300);
       // A operação de transferência marca os membros como inativos antes de abrir o PDF.
       // Por isso, esta rota deve consultar o histórico completo, não apenas membros ativos.
       const allMembers = await getAllMembers(false);

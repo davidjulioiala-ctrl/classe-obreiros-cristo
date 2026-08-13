@@ -4,10 +4,11 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { localAuthMiddleware } from "./localAuthMiddleware";
 import { createLocalSessionToken } from "./localSession";
+import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure, requireSameOrigin } from "./security";
 
 export function registerLocalAuthRoutes(app: Express) {
   // Local login endpoint
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/login", requireSameOrigin, async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
 
@@ -18,18 +19,26 @@ export function registerLocalAuthRoutes(app: Express) {
         });
       }
 
+      const rate = checkLoginRateLimit(req, username);
+      if (!rate.allowed) {
+        res.setHeader("Retry-After", String(rate.retryAfterSeconds));
+        return res.status(429).json({ success: false, error: "Demasiadas tentativas. Tente novamente mais tarde." });
+      }
+
       const user = await authenticateUser(username, password);
 
       if (!user) {
+        recordLoginFailure(req, username);
         return res.status(401).json({
           success: false,
           error: "Invalid credentials",
         });
       }
 
+      clearLoginFailures(req, username);
       // Set a signed, expiring session cookie; never expose an unsigned user id.
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, createLocalSessionToken(user.id), cookieOptions);
+      res.cookie(COOKIE_NAME, createLocalSessionToken(user.id, user.sessionVersion ?? 1), cookieOptions);
 
       return res.json({
         success: true,
@@ -52,7 +61,7 @@ export function registerLocalAuthRoutes(app: Express) {
   });
 
   // Activity endpoint: validates the idle timeout and refreshes the signed session cookie.
-  app.post("/api/auth/activity", localAuthMiddleware, (_req: Request, res: Response) => {
+  app.post("/api/auth/activity", requireSameOrigin, localAuthMiddleware, (_req: Request, res: Response) => {
     return res.json({ success: true });
   });
 
@@ -74,7 +83,7 @@ export function registerLocalAuthRoutes(app: Express) {
   });
 
   // Logout endpoint
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/auth/logout", requireSameOrigin, (req: Request, res: Response) => {
     try {
       const cookieOptions = getSessionCookieOptions(req);
       res.clearCookie(COOKIE_NAME, cookieOptions);
