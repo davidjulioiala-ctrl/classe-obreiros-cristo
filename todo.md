@@ -7022,3 +7022,8 @@
 ## Nova Tarefa — Selecção de colunas na exportação de membros
 - [x] Adicionar botões de "Selecionar Todas" e "Desmarcar Todas" no modal de exportação de membros.
 - [x] Validar a inclusão apenas das colunas escolhidas na exportação em PDF, CSV e Excel, mantendo os filtros activos.
+
+## Nova Tarefa — Modelos de colunas para exportação
+- [x] Implementar a capacidade de guardar a selecção de colunas actual como um modelo personalizado no navegador (localStorage).
+- [x] Adicionar seletor de modelos predefinidos e personalizados (ex: Resumo Geral, Dados de Contacto, Completo) no modal de exportação.
+- [x] Adicionar testes de regressão para os modelos de colunas.
