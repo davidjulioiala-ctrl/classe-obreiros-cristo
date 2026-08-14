@@ -14,7 +14,7 @@ describe("validação do cargo eclesiástico", () => {
   });
 
   it("mantém o hook de estado e as consultas do menu carregáveis", () => {
-    expect(membersSource).toContain('import { useState, type FormEvent } from "react";');
+    expect(membersSource).toContain('import { useEffect, useState, type FormEvent } from "react";');
     expect(membersSource).toContain("trpc.members.list.useQuery");
     expect(membersSource).toContain("trpc.groups.list.useQuery");
     expect(membersSource).toContain("const handleSubmit = (event: FormEvent)");

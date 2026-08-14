@@ -6956,3 +6956,8 @@
 - [x] Auditar o componente de membros e o selector de cargo/função eclesiástica.
 - [x] Corrigir eventuais chamadas undefined, condicionais de estado ou elementos Select inválidos.
 - [x] Validar testes e build de produção.
+
+## Correção de Crash em Dispositivos Móveis ao Abrir Novo Membro (ERR-MST7B2MW-DRG5NA)
+- [x] Auditar o comportamento do modal/formulário de membros em ecrãs estreitos.
+- [x] Corrigir eventuais dependências de resize, focus ou animação Framer Motion que quebram o DOM virtual no telemóvel.
+- [x] Validar testes unitários e build de produção.
