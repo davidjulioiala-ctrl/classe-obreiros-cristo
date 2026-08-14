@@ -6755,3 +6755,17 @@
 - [x] Integrar gráficos visuais (Recharts ResponsiveContainer, BarChart / PieChart) na página Dashboard.tsx com dados reais.
 - [x] Adicionar estados de carregamento, legenda acessível e estado vazio quando não houver presenças lançadas.
 - [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
+
+## Correções Solicitadas — Rótulo ID, Menus, Ata/Relatório e Formatação
+- [ ] Corrigir o rótulo "Eu IA" para "ID" em todas as tabelas e ecrãs do sistema.
+- [ ] Atualizar e estabilizar os menus Membros e Atividades.
+- [ ] Corrigir a quebra ao abrir o visualizador de Ata/Relatório em Atividades.
+- [ ] Reparar o funcionamento de Negrito, Sublinhado e Itálico nas Definições e nos modelos de cabeçalho.
+- [ ] Executar typecheck, testes Vitest, build de produção e guardar checkpoint.
+
+## Correções Recentes — ID, Membros, Atividades e Estilos Office
+- [x] Corrigido o rótulo de identificação para "ID" em todos os componentes.
+- [x] Corrigida a quebra ao abrir o formulário de novo membro em Membros.
+- [x] Corrigido o visualizador e o fluxo de upload de atas e relatórios em Atividades.
+- [x] Validação e funcionamento de negrito, itálico e sublinhado no cabeçalho e nos PDFs.
+- [x] Executado typecheck, 115 testes unitários aprovados e build de produção concluído.
