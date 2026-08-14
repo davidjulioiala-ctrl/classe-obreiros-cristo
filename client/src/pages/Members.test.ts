@@ -19,4 +19,11 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("trpc.groups.list.useQuery");
     expect(membersSource).toContain("const handleSubmit = (event: FormEvent)");
   });
+
+  it("reinicia o formulário e oferece pesquisa acessível por nome ou ID", () => {
+    expect(membersSource).toContain("const createEmptyForm = (): MemberForm");
+    expect(membersSource).toContain('type="search" aria-label="Pesquisar membros por nome ou ID"');
+    expect(membersSource).toContain('setSearchQuery("")');
+    expect(membersSource).toContain("aria-live=\"polite\"");
+  });
 });

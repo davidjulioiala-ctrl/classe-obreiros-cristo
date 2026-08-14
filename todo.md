@@ -6716,14 +6716,25 @@
 - [x] Adicionar regressões e concluir typecheck, testes e build
 
 ## Correcções solicitadas — Membros, Actividades e branding Office
-- [ ] Diagnosticar e corrigir o menu Membros, incluindo carregamento, pesquisa, formulários e operações.
-- [ ] Restaurar o rótulo Data no menu Actividades.
-- [ ] Corrigir selecção, upload, visualização, descarga e impressão de ata/relatório anexado numa actividade.
-- [ ] Adicionar ao branding PDF fontes e cores disponíveis na paleta Office 365, com validação segura.
-- [ ] Criar testes de regressão, executar typecheck, testes, build e verificação responsiva.
+- [x] Diagnosticar e corrigir o menu Membros, incluindo carregamento, pesquisa, formulários e operações.
+- [x] Restaurar o rótulo Data no menu Actividades.
+- [x] Corrigir selecção, upload, visualização, descarga e impressão de ata/relatório anexado numa actividade.
+- [x] Adicionar ao branding PDF fontes e cores disponíveis na paleta Office 365, com validação segura.
+- [x] Criar testes de regressão, executar typecheck, testes, build e verificação responsiva.
 
 ## Conclusão das Correções Solicitadas
 - [x] Atualizar o menu Membros para garantir funcionamento fluido e sem quebras de renderização.
 - [x] Mudar o rótulo do campo 'dados' para 'data' no menu de atividades.
 - [x] Corrigir o fluxo de seleção e upload de ficheiros de ata/relatório nas atividades para evitar erros e quebras.
 - [x] Adicionar todas as tipografias e paletas de cores do Microsoft Office 365 no sistema e nos cabeçalhos PDF.
+
+## Nova Funcionalidade — Seletor Visual de Fontes e Cores Office 365
+- [ ] Adicionar um seletor visual acessível de fontes e cores Office 365 na interface de Definições.
+- [ ] Garantir aplicação imediata na pré-visualização e persistência no cabeçalho ativo e nos modelos.
+- [ ] Executar typecheck, testes unitários, build de produção e guardar checkpoint.
+
+## Actualização — Menus Membros e Actividades
+- [x] Tornar os estados iniciais dos formulários de Membros e Actividades independentes entre aberturas e resets.
+- [x] Melhorar a pesquisa de Membros com busca por nome ou ID, contador de resultados, limpeza rápida e anúncios acessíveis.
+- [x] Adicionar alerta de erro com repetição ao carregamento da listagem de Actividades.
+- [x] Validar typecheck, 111 testes Vitest e build de produção.

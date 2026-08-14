@@ -13,9 +13,28 @@ import { toast } from "sonner";
 import { matchesMemberSearch } from "@shared/memberSearch";
 import { downloadProtectedFile } from "@/lib/fileDownload";
 
-const emptyForm = {
+type MemberForm = {
+  name: string;
+  sex: "M" | "F";
+  birthDate: string;
+  father: string;
+  mother: string;
+  nationality: string;
+  region: string;
+  residence: string;
+  phoneOrange: string;
+  phoneTelecel: string;
+  email: string;
+  position: string;
+  leaderRole: string;
+  louvorRole: string;
+  isGuest: boolean;
+  groupId?: number;
+};
+
+const createEmptyForm = (): MemberForm => ({
   name: "",
-  sex: "M" as "M" | "F",
+  sex: "M",
   birthDate: "",
   father: "",
   mother: "",
@@ -29,10 +48,8 @@ const emptyForm = {
   leaderRole: "",
   louvorRole: "",
   isGuest: false,
-  groupId: undefined as number | undefined,
-};
-
-type MemberForm = typeof emptyForm;
+  groupId: undefined,
+});
 
 const optionalText = (value: string) => value.trim() || undefined;
 
@@ -53,7 +70,7 @@ export default function Members() {
   const [showForm, setShowForm] = useState(false);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<MemberForm>(emptyForm);
+  const [formData, setFormData] = useState<MemberForm>(() => createEmptyForm());
   const [editingGroup, setEditingGroup] = useState<{ id: number; name: string; description?: string } | null>(null);
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "csv" | "xlsx" | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -74,7 +91,7 @@ export default function Members() {
   const createMemberMutation = trpc.members.create.useMutation({
     onSuccess: () => {
       toast.success("Membro criado com sucesso!");
-      setFormData(emptyForm);
+      setFormData(createEmptyForm());
       setShowForm(false);
       setEditingId(null);
       void refetch();
@@ -84,7 +101,7 @@ export default function Members() {
   const updateMemberMutation = trpc.members.update.useMutation({
     onSuccess: () => {
       toast.success("Membro atualizado com sucesso!");
-      setFormData(emptyForm);
+      setFormData(createEmptyForm());
       setShowForm(false);
       setEditingId(null);
       void refetch();
@@ -106,7 +123,7 @@ export default function Members() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData(emptyForm);
+    setFormData(createEmptyForm());
   };
 
   const handleSubmit = (event: FormEvent) => {
@@ -219,7 +236,7 @@ export default function Members() {
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
               {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
             </Button>
-            <Button onClick={() => { if (showForm) closeForm(); else { setFormData(emptyForm); setEditingId(null); setShowForm(true); } }} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-initial">
+            <Button onClick={() => { if (showForm) closeForm(); else { setFormData(createEmptyForm()); setEditingId(null); setShowForm(true); } }} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-initial">
               {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
               {showForm ? "Fechar" : "Novo membro"}
             </Button>
@@ -347,7 +364,14 @@ export default function Members() {
           </motion.div>
         )}
 
-        <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input placeholder="Pesquisar membros…" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10" /></div>
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Input type="search" aria-label="Pesquisar membros por nome ou ID" placeholder="Pesquisar por nome ou ID…" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10 pr-24" />
+            {searchQuery && <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="absolute right-1 top-1/2 h-8 -translate-y-1/2 px-2 text-xs text-slate-500">Limpar</Button>}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{searchQuery.trim() ? `${filteredMembers?.length ?? 0} resultado(s) para “${searchQuery.trim()}”.` : `${members?.length ?? 0} membro(s) registado(s).`}</p>
+        </div>
 
         <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} onConfirm={(columns) => { setSelectedExportColumns(columns); void exportMembers(columns); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />
 

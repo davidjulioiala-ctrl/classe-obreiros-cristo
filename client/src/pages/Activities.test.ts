@@ -26,4 +26,11 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain("event.currentTarget.files?.item(0)");
     expect(activitiesSource).toContain("event.currentTarget.value = \"\"");
   });
+
+  it("reinicia cada formulário com um estado novo e permite repetir o carregamento", () => {
+    expect(activitiesSource).toContain("const createBlankForm = (): ActivityForm");
+    expect(activitiesSource).toContain("activitiesQuery.isError");
+    expect(activitiesSource).toContain("activitiesQuery.refetch()");
+    expect(activitiesSource).toContain("Não foi possível carregar as actividades.");
+  });
 });

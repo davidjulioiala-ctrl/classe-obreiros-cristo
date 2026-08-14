@@ -47,7 +47,7 @@ function selectActivityDocument(file: File | null): { file: File | null; error?:
   return { file };
 }
 
-const blankForm: ActivityForm = {
+const createBlankForm = (): ActivityForm => ({
   name: "",
   date: "",
   startTime: "",
@@ -63,7 +63,7 @@ const blankForm: ActivityForm = {
   meetingReason: "",
   isReligious: true,
   hasCommission: false,
-};
+});
 
 const blankCommission = (): CommissionRow => ({ memberId: "", role: "", phone: "" });
 
@@ -180,7 +180,7 @@ export default function Activities() {
   const utils = trpc.useUtils();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<ActivityForm>(blankForm);
+  const [formData, setFormData] = useState<ActivityForm>(() => createBlankForm());
   const [commissionRows, setCommissionRows] = useState<CommissionRow[]>([blankCommission()]);
   const [commissionMemberSearch, setCommissionMemberSearch] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -218,7 +218,7 @@ export default function Activities() {
   }, [commissionQuery.data, editingId]);
 
   const resetForm = () => {
-    setFormData(blankForm);
+    setFormData(createBlankForm());
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
     setEditingId(null);
@@ -229,7 +229,7 @@ export default function Activities() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData(blankForm);
+    setFormData(createBlankForm());
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
     setDocumentFile(null);
@@ -398,6 +398,16 @@ export default function Activities() {
             <Plus className="mr-2 h-4 w-4" /> Nova atividade
           </Button>
         </div>
+
+        {activitiesQuery.isError && (
+          <div role="alert" className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold">Não foi possível carregar as actividades.</p>
+              <p className="mt-1 text-xs">{activitiesQuery.error?.message ?? "Verifique a ligação e tente novamente."}</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void activitiesQuery.refetch()}>Tentar novamente</Button>
+          </div>
+        )}
 
         {showForm && (
           <Card className="border-0 shadow-sm dark:bg-slate-800">
