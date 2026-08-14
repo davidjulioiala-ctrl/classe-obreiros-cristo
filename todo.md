@@ -6924,3 +6924,8 @@
 - [x] Garantir uma linha vertical por membro, com os IDs ordenados de forma crescente.
 - [x] Aplicar a mesma ordenação aos formatos PDF, CSV e Excel sem alterar as colunas seleccionadas.
 - [x] Acrescentar testes de regressão para a sequência 1, 2, 3, 4 e seguintes.
+
+## Exportações PDF — orientação horizontal
+- [x] Garantir orientação A4 horizontal nas listas PDF de membros e relatórios.
+- [x] Manter uma linha por registo e validar a legibilidade das colunas em paisagem.
+- [x] Acrescentar testes de regressão para a orientação horizontal e a paginação.

@@ -198,7 +198,7 @@ function finishPdf(document: InstanceType<typeof PDFDocument>, chunks: Buffer[],
 }
 
 export async function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
-  const landscape = columns.length > 6;
+  const landscape = true;
   const { document, chunks, branding } = await createPdf("Lista de membros", landscape);
   document.font("Helvetica").fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
   document.moveDown(0.6);
@@ -208,7 +208,7 @@ export async function generateMembersPdf(members: ExportMember[], search = "", c
 }
 
 export async function generateReportsPdf(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
-  const landscape = columns.includes("content");
+  const landscape = true;
   const { document, chunks, branding } = await createPdf("Lista de relatórios e atas", landscape);
   const tableColumns: PdfTableColumn[] = columns.map((column) => ({ title: reportLabels[column], weight: reportPdfWeights[column], align: column === "id" || column === "activityId" ? "center" : "left" }));
   drawPdfTable(document, branding, "Lista de relatórios e atas", tableColumns, sortById(reports).map((report) => columns.map((column) => reportValue(report, column))), { landscape, emptyLabel: "Ainda não existem relatórios." });

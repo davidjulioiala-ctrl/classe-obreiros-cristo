@@ -116,12 +116,18 @@ describe("list exports", () => {
     expect(rows.slice(1)).toEqual([["1", "Ana"], ["2", "Bruno"], ["3", "Carlos"]]);
   });
 
-  it("generates table-based PDF buffers for both lists, including empty-state rows", async () => {
+  it("generates A4 landscape table PDFs for both lists", async () => {
     const membersPdf = await generateMembersPdf([]);
     const reportsPdf = await generateReportsPdf([]);
+    const membersText = membersPdf.toString("latin1");
+    const reportsText = reportsPdf.toString("latin1");
 
     expect(membersPdf.subarray(0, 5).toString()).toBe("%PDF-");
     expect(reportsPdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(membersText).toContain("841.89");
+    expect(membersText).toContain("595.28");
+    expect(reportsText).toContain("841.89");
+    expect(reportsText).toContain("595.28");
     expect(membersPdf.length).toBeGreaterThan(1000);
     expect(reportsPdf.length).toBeGreaterThan(1000);
   });
