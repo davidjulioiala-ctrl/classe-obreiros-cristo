@@ -1,5 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
-import { useState, useEffect, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { MEMBER_EXPORT_COLUMN_KEYS, MEMBER_EXPORT_COLUMNS } from "@shared/export
 import { trpc } from "@/lib/trpc";
 import { MemberAttendanceBadge } from "./MemberAttendanceBadge";
 import { toast } from "sonner";
-import { matchesMemberSearch } from "@shared/memberSearch";
+import { filterMembers } from "@shared/memberSearch";
 import { downloadProtectedFile } from "@/lib/fileDownload";
 
 type MemberForm = {
@@ -69,6 +68,11 @@ function calculateAge(birthDate?: string | Date | null) {
 
 export default function Members() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [positionFilter, setPositionFilter] = useState("all");
+  const [sexFilter, setSexFilter] = useState<"all" | "M" | "F">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [guestFilter, setGuestFilter] = useState<"all" | "members" | "guests">("all");
+  const [groupFilter, setGroupFilter] = useState<number | "all">("all");
   const [showForm, setShowForm] = useState(false);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -119,9 +123,30 @@ export default function Members() {
     onError: (error) => toast.error(`Erro ao eliminar membro: ${error.message}`),
   });
 
-  const filteredMembers = searchQuery
-    ? members?.filter((member) => matchesMemberSearch(member, searchQuery))
-    : members;
+  const positionOptions = useMemo(() => {
+    const positions = new Set((members ?? []).map((member) => member.position).filter((position): position is string => Boolean(position?.trim())));
+    return Array.from(positions).sort((a, b) => a.localeCompare(b, "pt-PT"));
+  }, [members]);
+
+  const filteredMembers = useMemo(() => filterMembers(members ?? [], {
+    query: searchQuery,
+    position: positionFilter,
+    sex: sexFilter,
+    status: statusFilter,
+    guest: guestFilter,
+    groupId: groupFilter,
+  }), [members, searchQuery, positionFilter, sexFilter, statusFilter, guestFilter, groupFilter]);
+
+  const hasActiveFilters = Boolean(searchQuery.trim()) || positionFilter !== "all" || sexFilter !== "all" || statusFilter !== "all" || guestFilter !== "all" || groupFilter !== "all";
+
+  const clearMemberFilters = () => {
+    setSearchQuery("");
+    setPositionFilter("all");
+    setSexFilter("all");
+    setStatusFilter("all");
+    setGuestFilter("all");
+    setGroupFilter("all");
+  };
 
   const closeForm = () => {
     setShowForm(false);
@@ -268,13 +293,12 @@ export default function Members() {
               const total = groupMembers.length;
               const males = groupMembers.filter(m => m.sex === "M").length;
               const females = groupMembers.filter(m => m.sex === "F").length;
-              const filterKey = `group:${group.id}`;
-              const isSelected = searchQuery === filterKey;
+              const isSelected = groupFilter === group.id;
 
               return (
                 <Card 
                   key={group.id} 
-                  onClick={() => setSearchQuery(isSelected ? "" : filterKey)}
+                  onClick={() => setGroupFilter(isSelected ? "all" : group.id)}
                   className={`cursor-pointer border p-4 transition-all hover:shadow-md ${isSelected ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/25 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800'}`}
                 >
                   <div className="flex items-center justify-between">
@@ -297,11 +321,11 @@ export default function Members() {
               const total = guestMembers.length;
               const males = guestMembers.filter(m => m.sex === "M").length;
               const females = guestMembers.filter(m => m.sex === "F").length;
-              const isSelected = searchQuery === "guest:true";
+              const isSelected = guestFilter === "guests";
 
               return (
                 <Card 
-                  onClick={() => setSearchQuery(isSelected ? "" : "guest:true")}
+                  onClick={() => setGuestFilter(isSelected ? "all" : "guests")}
                   className={`cursor-pointer border p-4 transition-all hover:shadow-md ${isSelected ? 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/25 ring-2 ring-purple-500/20' : 'border-slate-200 dark:border-slate-800'}`}
                 >
                   <div className="flex items-center justify-between">
@@ -452,13 +476,50 @@ export default function Members() {
           </motion.div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-            <Input type="search" aria-label="Pesquisar membros por nome ou ID" placeholder="Pesquisar por nome ou ID…" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10 pr-24" />
-            {searchQuery && <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="absolute right-1 top-1/2 h-8 -translate-y-1/2 px-2 text-xs text-slate-500">Limpar</Button>}
+            <Input type="search" aria-label="Pesquisar membros por nome ou ID" placeholder="Pesquisar rapidamente por nome ou ID…" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="pl-10 pr-24" />
+            {searchQuery && <Button type="button" variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="absolute right-1 top-1/2 h-8 -translate-y-1/2 px-2 text-xs text-slate-500">Limpar pesquisa</Button>}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{searchQuery.trim() ? `${filteredMembers?.length ?? 0} resultado(s) para “${searchQuery.trim()}”.` : `${members?.length ?? 0} membro(s) registado(s).`}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1">
+              <label htmlFor="member-position-filter" className="text-xs font-medium text-slate-600 dark:text-slate-300">Cargo</label>
+              <select id="member-position-filter" aria-label="Filtrar membros por cargo" value={positionFilter} onChange={(event) => setPositionFilter(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="all">Todos os cargos</option>
+                {positionOptions.map((position) => <option key={position} value={position}>{position}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="member-sex-filter" className="text-xs font-medium text-slate-600 dark:text-slate-300">Sexo</label>
+              <select id="member-sex-filter" aria-label="Filtrar membros por sexo" value={sexFilter} onChange={(event) => setSexFilter(event.target.value as typeof sexFilter)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="all">Todos os sexos</option><option value="M">Masculino</option><option value="F">Feminino</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="member-status-filter" className="text-xs font-medium text-slate-600 dark:text-slate-300">Estado</label>
+              <select id="member-status-filter" aria-label="Filtrar membros por estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="all">Todos os estados</option><option value="active">Ativos</option><option value="inactive">Inativos</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="member-group-filter" className="text-xs font-medium text-slate-600 dark:text-slate-300">Grupo</label>
+              <select id="member-group-filter" aria-label="Filtrar membros por grupo" value={groupFilter} onChange={(event) => setGroupFilter(event.target.value === "all" ? "all" : Number(event.target.value))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="all">Todos os grupos</option>
+                {(groups ?? []).filter((group) => group.criteria !== "special:guest").map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="member-type-filter" className="text-xs font-medium text-slate-600 dark:text-slate-300">Tipo</label>
+              <select id="member-type-filter" aria-label="Filtrar membros por tipo" value={guestFilter} onChange={(event) => setGuestFilter(event.target.value as typeof guestFilter)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="all">Membros e convidados</option><option value="members">Apenas membros</option><option value="guests">Apenas convidados</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{hasActiveFilters ? `${filteredMembers.length} resultado(s) encontrado(s).` : `${members?.length ?? 0} membro(s) registado(s).`}</p>
+            <Button type="button" variant="outline" size="sm" onClick={clearMemberFilters} disabled={!hasActiveFilters}>Limpar filtros</Button>
+          </div>
         </div>
 
         <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} askPersonalData defaultIncludePersonalData={false} onConfirm={(columns, includePersonalData) => { setSelectedExportColumns(columns); void exportMembers(columns, includePersonalData); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />

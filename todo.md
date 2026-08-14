@@ -7008,3 +7008,9 @@
 - [ ] Adicionar campo de nota justificativa de falta no registo de presenças.
 - [ ] Implementar exportação de relatórios de presença por data específica ou por membro.
 - [ ] Validar testes unitários, typecheck e build de produção.
+
+## Alteração solicitada — Pesquisa e filtros de membros
+- [x] Implementar pesquisa por nome ou ID e filtros combináveis na lista de membros, com limpeza rápida e experiência responsiva.
+- [x] Adicionar testes de regressão para a pesquisa, filtros, contagem de resultados e acessibilidade dos controlos.
+- [x] Validar typecheck, testes, build e visualização desktop/mobile antes do checkpoint.
+
