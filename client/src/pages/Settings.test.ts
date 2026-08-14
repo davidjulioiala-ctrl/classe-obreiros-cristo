@@ -13,8 +13,9 @@ describe("personalização de cabeçalhos", () => {
   });
 
   it("permite texto de cabeçalho em várias linhas", () => {
-    expect(settingsSource).toContain("<textarea rows={4} value={headerTitleText}");
+    expect(settingsSource).toContain("activeHeaderTitleRef");
     expect(settingsSource).toContain("Pressione Enter para iniciar uma nova linha.");
-    expect(settingsSource).toContain("whitespace-pre-line");
+    expect(settingsSource).toContain("HeaderFormattingToolbar");
+    expect(settingsSource).toContain("FormattedHeaderPreview");
   });
 });

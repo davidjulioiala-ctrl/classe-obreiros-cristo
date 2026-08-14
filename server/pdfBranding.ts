@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { getAppSetting } from "./db";
 import { storageGetSignedUrl } from "./storage";
+import { parseHeaderText, type HeaderTextSegment } from "@shared/headerFormatting";
 
 export const DEFAULT_CONGREGATION_NAME = "Classe Obreiros de Cristo";
 
@@ -118,6 +119,53 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
   }
 }
 
+function headerFont(segment: HeaderTextSegment) {
+  if (segment.bold && segment.italic) return "Helvetica-BoldOblique";
+  if (segment.bold) return "Helvetica-Bold";
+  if (segment.italic) return "Helvetica-Oblique";
+  return "Helvetica";
+}
+
+function drawFormattedHeaderText(
+  document: InstanceType<typeof PDFDocument>,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  options: { fontSize: number; color: string; align: "left" | "center" | "right" },
+) {
+  const lines = parseHeaderText(value);
+  const lineHeight = options.fontSize * 1.25;
+  const compatibleDocument = document as InstanceType<typeof PDFDocument> & {
+    font?: (name: string) => InstanceType<typeof PDFDocument>;
+    widthOfString?: (text: string) => number;
+  };
+  const setFont = (segment: HeaderTextSegment) => {
+    compatibleDocument.font?.(headerFont(segment));
+    compatibleDocument.fontSize(options.fontSize);
+  };
+
+  lines.forEach((line, lineIndex) => {
+    const widths = line.map((segment) => {
+      setFont(segment);
+      return compatibleDocument.widthOfString?.(segment.text) ?? segment.text.length * options.fontSize * 0.55;
+    });
+    const totalWidth = widths.reduce((sum, segmentWidth) => sum + segmentWidth, 0);
+    const startX = options.align === "center" ? x + Math.max(0, (width - totalWidth) / 2) : options.align === "right" ? x + Math.max(0, width - totalWidth) : x;
+    let currentX = startX;
+
+    line.forEach((segment, segmentIndex) => {
+      setFont(segment);
+      document
+        .fillColor(options.color)
+        .text(segment.text, currentX, y + lineIndex * lineHeight, { underline: segment.underline, lineBreak: false });
+      currentX += widths[segmentIndex] ?? 0;
+    });
+  });
+
+  return Math.max(lineHeight, lines.length * lineHeight);
+}
+
 export function drawPdfHeader(
   document: InstanceType<typeof PDFDocument>,
   branding: PdfBranding,
@@ -134,43 +182,48 @@ export function drawPdfHeader(
     large: 72,
   };
   const logoDim = branding.logoBuffer ? sizeMap[branding.logoSize] : 0;
+  const headerTitleHeight = Math.max(20, parseHeaderText(branding.headerTitleText).length * 20);
 
   if (branding.logoBuffer && branding.logoMimeType) {
     if (branding.logoAlignment === "left") {
       document.image(branding.logoBuffer, 42, headerTop, { fit: [logoDim, logoDim] });
       const textX = 42 + logoDim + 12;
       const textWidth = contentWidth - logoDim - 12;
-      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, textX, headerTop + 2, { width: textWidth, align: "left" });
-      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, headerTop + 22, { width: textWidth, align: "left" });
-      document.fontSize(13).fillColor("#047857").text(title, textX, headerTop + 38, { width: textWidth, align: "left" });
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: 16, color: "#064e3b", align: "left" });
+      const subtitleY = headerTop + 2 + titleHeight + 3;
+      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, subtitleY, { width: textWidth, align: "left" });
+      document.fontSize(13).fillColor("#047857").text(title, textX, subtitleY + 16, { width: textWidth, align: "left" });
     } else if (branding.logoAlignment === "right") {
       const textX = 42;
       const textWidth = contentWidth - logoDim - 12;
-      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, textX, headerTop + 2, { width: textWidth, align: "left" });
-      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, headerTop + 22, { width: textWidth, align: "left" });
-      document.fontSize(13).fillColor("#047857").text(title, textX, headerTop + 38, { width: textWidth, align: "left" });
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: 16, color: "#064e3b", align: "left" });
+      const subtitleY = headerTop + 2 + titleHeight + 3;
+      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, subtitleY, { width: textWidth, align: "left" });
+      document.fontSize(13).fillColor("#047857").text(title, textX, subtitleY + 16, { width: textWidth, align: "left" });
       document.image(branding.logoBuffer, pageWidth - 42 - logoDim, headerTop, { fit: [logoDim, logoDim] });
     } else {
       // center alignment: logo on top, texts centered underneath
       const currentLogoH = Math.max(logoDim, 40);
       document.image(branding.logoBuffer, (pageWidth - logoDim) / 2, headerTop, { fit: [logoDim, logoDim] });
       const textY = headerTop + currentLogoH + 6;
-      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, 42, textY, { width: contentWidth, align: "center" });
-      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, textY + 20, { width: contentWidth, align: "center" });
-      document.fontSize(13).fillColor("#047857").text(title, 42, textY + 36, { width: contentWidth, align: "center" });
-      const dividerY = textY + 58;
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, 42, textY, contentWidth, { fontSize: 16, color: "#064e3b", align: "center" });
+      const subtitleY = textY + titleHeight + 3;
+      document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, subtitleY, { width: contentWidth, align: "center" });
+      document.fontSize(13).fillColor("#047857").text(title, 42, subtitleY + 16, { width: contentWidth, align: "center" });
+      const dividerY = subtitleY + 34;
       document.moveTo(42, dividerY).lineTo(pageWidth - 42, dividerY).lineWidth(0.8).strokeColor("#a7f3d0").stroke();
       document.y = dividerY + 10;
       return;
     }
   } else {
     // no logo
-    document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, 42, headerTop + 2, { width: contentWidth, align: "center" });
-    document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, headerTop + 22, { width: contentWidth, align: "center" });
-    document.fontSize(13).fillColor("#047857").text(title, 42, headerTop + 38, { width: contentWidth, align: "center" });
+    drawFormattedHeaderText(document, branding.headerTitleText, 42, headerTop + 2, contentWidth, { fontSize: 16, color: "#064e3b", align: "center" });
+    const subtitleY = headerTop + 2 + headerTitleHeight + 3;
+    document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, subtitleY, { width: contentWidth, align: "center" });
+    document.fontSize(13).fillColor("#047857").text(title, 42, subtitleY + 16, { width: contentWidth, align: "center" });
   }
 
-  const dividerY = headerTop + Math.max(logoDim, 62) + 6;
+  const dividerY = headerTop + Math.max(logoDim, headerTitleHeight + 42, 62) + 6;
   document.moveTo(42, dividerY).lineTo(pageWidth - 42, dividerY).lineWidth(0.8).strokeColor("#a7f3d0").stroke();
   document.y = dividerY + 10;
 }

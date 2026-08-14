@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent, type RefObject } from "react";
 import { motion } from "framer-motion";
 import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,68 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
+import { parseHeaderText, type HeaderFormatTag } from "@shared/headerFormatting";
+
+type HeaderFormattingToolbarProps = {
+  onFormat: (tag: HeaderFormatTag) => void;
+  onClear: () => void;
+};
+
+function HeaderFormattingToolbar({ onFormat, onClear }: HeaderFormattingToolbarProps) {
+  const buttons: Array<{ tag: HeaderFormatTag; label: string; title: string }> = [
+    { tag: "b", label: "B", title: "Negrito" },
+    { tag: "i", label: "I", title: "Itálico" },
+    { tag: "u", label: "U", title: "Sublinhado" },
+  ];
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1" aria-label="Formatação básica do texto">
+      <span className="mr-1 text-[11px] text-slate-500 dark:text-slate-400">Formatar:</span>
+      {buttons.map((button) => (
+        <Button key={button.tag} type="button" variant="outline" size="sm" title={button.title} aria-label={button.title} onMouseDown={(event) => event.preventDefault()} onClick={() => onFormat(button.tag)} className={`h-7 min-w-7 px-2 text-xs ${button.tag === "b" ? "font-bold" : button.tag === "i" ? "italic" : "underline"}`}>
+          {button.label}
+        </Button>
+      ))}
+      <Button type="button" variant="ghost" size="sm" onMouseDown={(event) => event.preventDefault()} onClick={onClear} className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300">Limpar</Button>
+      <span className="ml-1 text-[11px] text-slate-500 dark:text-slate-400">Selecione o texto e escolha uma opção.</span>
+    </div>
+  );
+}
+
+function FormattedHeaderPreview({ value }: { value: string }) {
+  return (
+    <span>
+      {parseHeaderText(value).map((line, lineIndex) => (
+        <span key={`line-${lineIndex}`} className="block min-h-[1.25em]">
+          {line.map((segment, segmentIndex) => (
+            <span key={`segment-${lineIndex}-${segmentIndex}`} className={segment.underline ? "underline" : undefined} style={{ fontWeight: segment.bold ? 700 : 400, fontStyle: segment.italic ? "italic" : "normal" }}>
+              {segment.text}
+            </span>
+          ))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function applyHeaderFormat(ref: RefObject<HTMLTextAreaElement | null>, value: string, setValue: (value: string) => void, tag: HeaderFormatTag) {
+  const textarea = ref.current;
+  const start = textarea?.selectionStart ?? value.length;
+  const end = textarea?.selectionEnd ?? value.length;
+  const selectedText = value.slice(start, end) || "texto";
+  const prefix = `[${tag}]`;
+  const suffix = `[/${tag}]`;
+  const nextValue = `${value.slice(0, start)}${prefix}${selectedText}${suffix}${value.slice(end)}`;
+  setValue(nextValue);
+  window.requestAnimationFrame(() => {
+    textarea?.focus();
+    const nextStart = start + prefix.length;
+    textarea?.setSelectionRange(nextStart, nextStart + selectedText.length);
+  });
+}
+
+function clearHeaderFormat(value: string, setValue: (value: string) => void) {
+  setValue(value.replace(/\[(b|i|u)\]([\s\S]*?)\[\/\1\]/gi, "$2"));
+}
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -28,6 +90,8 @@ export default function Settings() {
   ]);
   const [activeTemplateId, setActiveTemplateId] = useState("default");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const templateTitleRef = useRef<HTMLTextAreaElement>(null);
+  const activeHeaderTitleRef = useRef<HTMLTextAreaElement>(null);
   const [templateFormName, setTemplateFormName] = useState("");
   const [templateFormTitle, setTemplateFormTitle] = useState("");
   const [templateFormAlignment, setTemplateFormAlignment] = useState<"left" | "center" | "right">("center");
@@ -45,6 +109,8 @@ export default function Settings() {
   const orgQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const notifQuery = trpc.settings.get.useQuery({ keyName: "notifications" });
   const appearanceQuery = trpc.settings.get.useQuery({ keyName: "appearance" });
+  const settingsQueryError = orgQuery.error ?? notifQuery.error ?? appearanceQuery.error;
+  const settingsQueryFailed = Boolean(orgQuery.isError || notifQuery.isError || appearanceQuery.isError);
   const setSettingsMutation = trpc.settings.set.useMutation({
     onSuccess: () => toast.success("Configurações guardadas e aplicadas com sucesso!"),
     onError: (err: any) => toast.error(err.message),
@@ -112,6 +178,11 @@ export default function Settings() {
       } catch {}
     }
   }, [appearanceQuery.data]);
+
+  const updateActiveHeaderText = (value: string) => {
+    setHeaderTitleText(value);
+    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize } : template));
+  };
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
@@ -244,6 +315,15 @@ export default function Settings() {
   return (
     <DashboardLayoutCustom>
       <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        {settingsQueryFailed && (
+          <div role="alert" className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            <div>
+              <p className="font-semibold">Não foi possível carregar todas as configurações.</p>
+              <p className="mt-1 text-xs">{settingsQueryError?.message || "Verifique a ligação e tente novamente."}</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => { void orgQuery.refetch(); void notifQuery.refetch(); void appearanceQuery.refetch(); }}>Tentar novamente</Button>
+          </div>
+        )}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Configurações</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">Gerencie as configurações e preferências do sistema</p>
@@ -350,7 +430,8 @@ export default function Settings() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Texto do cabeçalho</label>
-                        <textarea rows={4} value={templateFormTitle} onChange={(event) => setTemplateFormTitle(event.target.value)} className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Escreva o texto que deve aparecer no cabeçalho" />
+                        <textarea ref={templateTitleRef} rows={4} value={templateFormTitle} onChange={(event) => setTemplateFormTitle(event.target.value)} className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Escreva o texto que deve aparecer no cabeçalho" />
+                        <HeaderFormattingToolbar onFormat={(tag) => applyHeaderFormat(templateTitleRef, templateFormTitle, setTemplateFormTitle, tag)} onClear={() => clearHeaderFormat(templateFormTitle, setTemplateFormTitle)} />
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -362,11 +443,8 @@ export default function Settings() {
 
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Texto do Cabeçalho Ativo no PDF</label>
-                  <textarea rows={4} value={headerTitleText} onChange={(e) => {
-                    const val = e.target.value;
-                    setHeaderTitleText(val);
-                    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: val, logoAlignment, logoSize } : template));
-                  }} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" />
+                  <textarea ref={activeHeaderTitleRef} rows={4} value={headerTitleText} onChange={(e) => updateActiveHeaderText(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" />
+                  <HeaderFormattingToolbar onFormat={(tag) => applyHeaderFormat(activeHeaderTitleRef, headerTitleText, updateActiveHeaderText, tag)} onClear={() => clearHeaderFormat(headerTitleText, updateActiveHeaderText)} />
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pressione Enter para iniciar uma nova linha.</p>
                 </div>
                 <div>
@@ -442,7 +520,7 @@ export default function Settings() {
                                     <ImageIcon className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <p className="mt-3 max-w-full whitespace-pre-line break-words text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                <p className="mt-3 max-w-full break-words text-base text-emerald-900 dark:text-emerald-200"><FormattedHeaderPreview value={previewName} /></p>
                                 <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                               </div>
@@ -456,7 +534,7 @@ export default function Settings() {
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                  <p className="whitespace-pre-line break-words text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                  <p className="break-words text-base text-emerald-900 dark:text-emerald-200"><FormattedHeaderPreview value={previewName} /></p>
                                   <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                   <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                                 </div>

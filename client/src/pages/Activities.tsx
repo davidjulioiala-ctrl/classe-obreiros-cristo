@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Printer, Trash2, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -13,6 +13,7 @@ import { trpc } from "@/lib/trpc";
 import { printPdfFrame } from "@/lib/pdfPrint";
 import { downloadProtectedFile } from "@/lib/fileDownload";
 import { toast } from "sonner";
+import { matchesMemberSearch } from "@shared/memberSearch";
 
 type ActivityForm = {
   name: string;
@@ -170,12 +171,18 @@ export default function Activities() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<ActivityForm>(blankForm);
   const [commissionRows, setCommissionRows] = useState<CommissionRow[]>([blankCommission()]);
+  const [commissionMemberSearch, setCommissionMemberSearch] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<DocumentType>("ata");
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   const activitiesQuery = trpc.activities.list.useQuery();
   const membersQuery = trpc.members.list.useQuery();
+  const filteredCommissionMembers = useMemo(() => {
+    const availableMembers = membersQuery.data ?? [];
+    if (!commissionMemberSearch.trim()) return availableMembers;
+    return availableMembers.filter((member) => matchesMemberSearch(member, commissionMemberSearch));
+  }, [membersQuery.data, commissionMemberSearch]);
   const commissionQuery = trpc.activities.commissionList.useQuery(
     { activityId: editingId ?? 1 },
     { enabled: editingId !== null },
@@ -185,7 +192,7 @@ export default function Activities() {
   const deleteActivity = trpc.activities.delete.useMutation();
   const completeActivity = trpc.activities.complete.useMutation({
     onSuccess: () => {
-      toast.success("Actividade finalizada.");
+      toast.success("Atividade finalizada.");
       void utils.activities.list.invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -202,6 +209,7 @@ export default function Activities() {
   const resetForm = () => {
     setFormData(blankForm);
     setCommissionRows([blankCommission()]);
+    setCommissionMemberSearch("");
     setEditingId(null);
     setDocumentFile(null);
     setDocumentType("ata");
@@ -212,6 +220,7 @@ export default function Activities() {
     setEditingId(null);
     setFormData(blankForm);
     setCommissionRows([blankCommission()]);
+    setCommissionMemberSearch("");
     setDocumentFile(null);
     setDocumentType("ata");
     setShowForm(true);
@@ -239,6 +248,7 @@ export default function Activities() {
       hasCommission: activity.hasCommission,
     });
     setCommissionRows([blankCommission()]);
+    setCommissionMemberSearch("");
     setDocumentFile(null);
     setDocumentType("ata");
     setShowForm(true);
@@ -273,7 +283,7 @@ export default function Activities() {
   const saveActivity = async (event: FormEvent) => {
     event.preventDefault();
     if (!formData.name.trim() || !formData.date) {
-      toast.error("Preencha o nome e a data da actividade.");
+      toast.error("Preencha o nome e a data da atividade.");
       return;
     }
 
@@ -282,7 +292,7 @@ export default function Activities() {
     const isReligious = normalizedType === "social" ? false : formData.isReligious;
 
     if (formData.type === "outros" && !finalType) {
-      toast.error("Descreva o tipo de actividade em Outros.");
+      toast.error("Descreva o tipo de atividade em Outros.");
       return;
     }
     if (normalizedType === "reunião" && (!formData.meetingAgenda.trim() || !formData.meetingReason.trim())) {
@@ -327,22 +337,22 @@ export default function Activities() {
       }
 
       await utils.activities.list.invalidate();
-      toast.success(editingId ? "Actividade actualizada." : "Actividade criada.");
+      toast.success(editingId ? "Atividade actualizada." : "Atividade criada.");
       resetForm();
     } catch (error) {
       setIsUploadingDocument(false);
-      toast.error(error instanceof Error ? error.message : "Não foi possível guardar a actividade.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível guardar a atividade.");
     }
   };
 
   const removeActivity = async (id: number) => {
-    if (!window.confirm("Eliminar esta actividade e os seus registos associados?")) return;
+    if (!window.confirm("Eliminar esta atividade e os seus registos associados?")) return;
     try {
       await deleteActivity.mutateAsync({ id });
       await utils.activities.list.invalidate();
-      toast.success("Actividade eliminada.");
+      toast.success("Atividade eliminada.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível eliminar a actividade.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível eliminar a atividade.");
     }
   };
 
@@ -370,11 +380,11 @@ export default function Activities() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Agenda</p>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Actividades</h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Crie, edite, acompanhe e organize as actividades da congregação.</p>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">Atividades</h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Crie, edite, acompanhe e organize as atividades da congregação.</p>
           </div>
           <Button onClick={openCreate} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Nova actividade
+            <Plus className="mr-2 h-4 w-4" /> Nova atividade
           </Button>
         </div>
 
@@ -382,7 +392,7 @@ export default function Activities() {
           <Card className="border-0 shadow-sm dark:bg-slate-800">
             <form onSubmit={saveActivity} className="space-y-5 p-5 sm:p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">{editingId ? "Editar actividade" : "Nova actividade"}</h2>
+                <h2 className="text-lg font-semibold">{editingId ? "Editar atividade" : "Nova atividade"}</h2>
                 <Button type="button" variant="ghost" size="icon" onClick={resetForm} aria-label="Fechar formulário">
                   <X className="h-4 w-4" />
                 </Button>
@@ -390,7 +400,7 @@ export default function Activities() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Nome da actividade</Label>
+                  <Label>Nome da atividade</Label>
                   <Input className="mt-1" required value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} />
                 </div>
                 <div>
@@ -412,7 +422,7 @@ export default function Activities() {
                 <div>
                   <Label>Tipo</Label>
                   <Select value={formData.type || "sem-tipo"} onValueChange={selectActivityType}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Tipo de actividade" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Tipo de atividade" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sem-tipo">Sem tipo</SelectItem>
                       <SelectItem value="culto">Culto</SelectItem>
@@ -426,8 +436,8 @@ export default function Activities() {
                 </div>
                 {formData.type === "outros" && (
                   <div className="md:col-span-2">
-                    <Label>Descreva o tipo de actividade</Label>
-                    <Input className="mt-1" required value={formData.customType} onChange={(event) => setFormData({ ...formData, customType: event.target.value })} placeholder="Ex.: retiro, visita, acção social" />
+                    <Label>Descreva o tipo de atividade</Label>
+                    <Input className="mt-1" required value={formData.customType} onChange={(event) => setFormData({ ...formData, customType: event.target.value })} placeholder="Ex.: retiro, visita, ação social" />
                   </div>
                 )}
                 {formData.type === "reunião" && (
@@ -464,7 +474,7 @@ export default function Activities() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={formData.isReligious} onChange={(event) => setFormData({ ...formData, isReligious: event.target.checked })} /> Actividade religiosa
+                  <input type="checkbox" checked={formData.isReligious} onChange={(event) => setFormData({ ...formData, isReligious: event.target.checked })} /> Atividade religiosa
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={formData.hasCommission} onChange={(event) => { const has = event.target.checked; setFormData({ ...formData, hasCommission: has }); if (has && !commissionRows.length) setCommissionRows([blankCommission()]); }} /> Tem comissão
@@ -477,9 +487,14 @@ export default function Activities() {
                     <div><h3 className="font-semibold">Membros da comissão</h3><p className="text-xs text-slate-500">Nome e cargo são obrigatórios; o número é opcional.</p></div>
                     <Button type="button" variant="outline" onClick={() => setCommissionRows((rows) => [...rows, blankCommission()])}><Plus className="mr-2 h-4 w-4" />Adicionar pessoa</Button>
                   </div>
+                  <div className="rounded-lg border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-900/50">
+                    <Label htmlFor="commission-member-search" className="text-xs font-medium">Pesquisar membros por nome ou ID</Label>
+                    <Input id="commission-member-search" className="mt-1" value={commissionMemberSearch} onChange={(event) => setCommissionMemberSearch(event.target.value)} placeholder="Escreva o nome ou o ID…" />
+                    <p className="mt-1 text-[11px] text-slate-500">{commissionMemberSearch.trim() ? `${filteredCommissionMembers.length} membro(s) encontrado(s).` : "A lista será filtrada enquanto escreve."}</p>
+                  </div>
                   {commissionRows.map((row, index) => (
                     <div key={`${row.id ?? "novo"}-${index}`} className="grid gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
-                      <div><Label className="text-xs">Nome</Label><Select value={row.memberId || "sem-membro"} onValueChange={(value) => updateCommissionRow(index, { memberId: value === "sem-membro" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar membro" /></SelectTrigger><SelectContent><SelectItem value="sem-membro">Seleccionar membro</SelectItem>{membersQuery.isLoading && <SelectItem value="a-carregar" disabled>A carregar membros…</SelectItem>}{!membersQuery.isLoading && !(membersQuery.data ?? []).length && <SelectItem value="sem-resultados" disabled>Não existem membros disponíveis</SelectItem>}{(membersQuery.data ?? []).map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name}</SelectItem>)}</SelectContent></Select>{membersQuery.isError && <p className="mt-1 text-xs text-red-600">Não foi possível carregar os membros.</p>}</div>
+                      <div><Label className="text-xs">Nome</Label><Select value={row.memberId || "sem-membro"} onValueChange={(value) => updateCommissionRow(index, { memberId: value === "sem-membro" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar membro" /></SelectTrigger><SelectContent><SelectItem value="sem-membro">Seleccionar membro</SelectItem>{membersQuery.isLoading && <SelectItem value="a-carregar" disabled>A carregar membros…</SelectItem>}{!membersQuery.isLoading && !(membersQuery.data ?? []).length && <SelectItem value="sem-resultados" disabled>Não existem membros disponíveis</SelectItem>}{filteredCommissionMembers.map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name} (ID {member.id})</SelectItem>)}</SelectContent></Select>{membersQuery.isError && <p className="mt-1 text-xs text-red-600">Não foi possível carregar os membros.</p>}</div>
                       <div><Label className="text-xs">Cargo na comissão</Label><Input className="mt-1" value={row.role} onChange={(event) => updateCommissionRow(index, { role: event.target.value })} placeholder="Coordenador" /></div>
                       <div><Label className="text-xs">Número (opcional)</Label><Input className="mt-1" value={row.phone} onChange={(event) => updateCommissionRow(index, { phone: event.target.value })} placeholder="Contacto" /></div>
                       <Button type="button" variant="ghost" className="self-end text-red-600" disabled={commissionRows.length === 1} onClick={() => setCommissionRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} aria-label="Remover pessoa"><Trash2 className="h-4 w-4" /></Button>
@@ -489,7 +504,7 @@ export default function Activities() {
               )}
 
               <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à actividade.</p></div>
+                <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à atividade.</p></div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
                   <Input type="file" accept="application/pdf,.pdf,.doc,.docx,.odt,.txt" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} />
                   <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)}>
@@ -505,7 +520,7 @@ export default function Activities() {
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
                 <Button type="submit" disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">
                   {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingId ? "Guardar alterações" : "Criar actividade"}
+                  {editingId ? "Guardar alterações" : "Criar atividade"}
                 </Button>
               </div>
             </form>
@@ -513,7 +528,7 @@ export default function Activities() {
         )}
 
         <div className="space-y-4">
-          {activitiesQuery.isLoading && <p className="py-8 text-center text-slate-500">A carregar actividades…</p>}
+          {activitiesQuery.isLoading && <p className="py-8 text-center text-slate-500">A carregar atividades…</p>}
           {!activitiesQuery.isLoading && (activitiesQuery.data ?? []).map((activity) => (
             <Card key={activity.id} className="border-0 shadow-sm dark:bg-slate-800">
               <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
@@ -545,7 +560,7 @@ export default function Activities() {
               </div>
             </Card>
           ))}
-          {!activitiesQuery.isLoading && !(activitiesQuery.data ?? []).length && <Card className="p-10 text-center text-slate-500 dark:bg-slate-800">Ainda não existem actividades.</Card>}
+          {!activitiesQuery.isLoading && !(activitiesQuery.data ?? []).length && <Card className="p-10 text-center text-slate-500 dark:bg-slate-800">Ainda não existem atividades.</Card>}
         </div>
       </div>
     </DashboardLayoutCustom>

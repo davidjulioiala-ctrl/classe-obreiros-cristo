@@ -59,8 +59,8 @@ export default function Members() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [pendingExportFormat, setPendingExportFormat] = useState<"pdf" | "csv" | "xlsx">("pdf");
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS]);
-  const { data: members, isLoading, refetch } = trpc.members.list.useQuery();
-  const { data: groups, refetch: refetchGroups } = trpc.groups.list.useQuery();
+  const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
+  const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
   const updateGroupMutation = trpc.groups.update.useMutation({
     onSuccess: () => {
@@ -192,6 +192,15 @@ export default function Members() {
   return (
     <DashboardLayoutCustom>
       <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        {(membersError || groupsError) && (
+          <div role="alert" className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            <div>
+              <p className="font-semibold">Não foi possível carregar todos os dados dos membros.</p>
+              <p className="mt-1 text-xs">{membersQueryError?.message || groupsQueryError?.message || "Verifique a ligação e tente novamente."}</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => { void refetch(); void refetchGroups(); }}>Tentar novamente</Button>
+          </div>
+        )}
         <motion.div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Membros</h1>

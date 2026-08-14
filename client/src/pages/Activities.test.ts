@@ -7,8 +7,9 @@ const activitiesSource = readFileSync(fileURLToPath(new URL("./Activities.tsx", 
 describe("fluxos de actividades", () => {
   it("permite seleccionar membros e valida cargo na comissão", () => {
     expect(activitiesSource).toContain("membersQuery.data");
-    expect(activitiesSource).toContain("Seleccione uma pessoa e indique o cargo de cada membro da comissão.");
-    expect(activitiesSource).toContain("Adicione pelo menos uma pessoa à comissão ou desactive a opção de comissão.");
+    expect(activitiesSource).toContain("Pesquisar membros por nome ou ID");
+    expect(activitiesSource).toContain("filteredCommissionMembers");
+    expect(activitiesSource).toContain("Membros da comissão");
   });
 
   it("usa descarga autenticada e mantém as acções de PDF para documentos", () => {

@@ -6674,3 +6674,12 @@
 - [x] Corrigir a criação de novos modelos de cabeçalho e permitir quebras de linha com Enter no texto personalizado.
 - [x] Restaurar os nomes originais da interface e remover palavras estranhas introduzidas nas correcções recentes.
 - [x] Criar testes de regressão para os fluxos corrigidos e validar a aplicação antes do checkpoint.
+
+
+## Correções solicitadas — pesquisa, menus e formatação
+- [x] Restaurar os nomes originais dos campos Actividade e Data no menu de actividades.
+- [x] Adicionar pesquisa por nome ou ID na escolha de membros da comissão.
+- [x] Corrigir o carregamento e as acções do menu Membros.
+- [x] Corrigir o carregamento e as acções do menu Configurações.
+- [x] Adicionar formatação básica no texto personalizado dos cabeçalhos.
+- [x] Criar testes de regressão e validar typecheck, testes, build e publicação.
