@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Printer, Trash2, Users, X } from "lucide-react";
+import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Printer, Search, Trash2, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -186,9 +186,36 @@ export default function Activities() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<DocumentType>("ata");
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "planeada" | "realizada" | "cancelada">("todos");
 
   const activitiesQuery = trpc.activities.list.useQuery();
   const membersQuery = trpc.members.list.useQuery();
+  const activities = activitiesQuery.data ?? [];
+  const hasInvalidDateRange = Boolean(dateFrom && dateTo && dateFrom > dateTo);
+  const filteredActivities = useMemo(() => {
+    const query = activitySearch.trim().toLocaleLowerCase();
+    if (hasInvalidDateRange) return [];
+    return activities.filter((activity) => {
+      const activityDate = format(new Date(activity.date), "yyyy-MM-dd");
+      const matchesQuery = !query || [activity.name, activity.location, activity.theme, activity.type, activity.speakerName]
+        .filter(Boolean)
+        .some((value) => String(value).toLocaleLowerCase().includes(query));
+      const matchesFrom = !dateFrom || activityDate >= dateFrom;
+      const matchesTo = !dateTo || activityDate <= dateTo;
+      const matchesStatus = statusFilter === "todos" || activity.status === statusFilter;
+      return matchesQuery && matchesFrom && matchesTo && matchesStatus;
+    });
+  }, [activities, activitySearch, dateFrom, dateTo, hasInvalidDateRange, statusFilter]);
+  const hasActivityFilters = Boolean(activitySearch.trim() || dateFrom || dateTo || statusFilter !== "todos");
+  const clearActivityFilters = () => {
+    setActivitySearch("");
+    setDateFrom("");
+    setDateTo("");
+    setStatusFilter("todos");
+  };
   const filteredCommissionMembers = useMemo(() => {
     const availableMembers = membersQuery.data ?? [];
     if (!commissionMemberSearch.trim()) return availableMembers;
@@ -409,6 +436,43 @@ export default function Activities() {
           </div>
         )}
 
+        <Card className="border-slate-200 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-semibold"><Search className="h-4 w-4 text-emerald-600" aria-hidden="true" />Filtros de actividades</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Combine pesquisa, intervalo de datas e estado para encontrar rapidamente uma actividade.</p>
+              </div>
+              {hasActivityFilters && <Button type="button" variant="ghost" size="sm" onClick={clearActivityFilters}>Limpar filtros</Button>}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label htmlFor="activity-search">Pesquisar</Label>
+                <Input id="activity-search" type="search" className="mt-1" placeholder="Nome, local, tema…" value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="activity-date-from">Data inicial</Label>
+                <Input id="activity-date-from" type="date" className="mt-1" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="activity-date-to">Data final</Label>
+                <Input id="activity-date-to" type="date" className="mt-1" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="activity-status">Estado</Label>
+                <select id="activity-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                  <option value="todos">Todos os estados</option>
+                  <option value="planeada">Planeada</option>
+                  <option value="realizada">Realizada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+            </div>
+            {hasInvalidDateRange && <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">A data inicial não pode ser posterior à data final.</p>}
+            <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{hasInvalidDateRange ? "Corrija o intervalo para ver resultados." : `${filteredActivities.length} actividade(s) encontrada(s)${hasActivityFilters ? " com os filtros actuais" : ""}.`}</p>
+          </div>
+        </Card>
+
         {showForm && (
           <Card className="border-0 shadow-sm dark:bg-slate-800">
             <form onSubmit={saveActivity} className="space-y-5 p-5 sm:p-6">
@@ -565,7 +629,7 @@ export default function Activities() {
 
         <div className="space-y-4">
           {activitiesQuery.isLoading && <p className="py-8 text-center text-slate-500">A carregar atividades…</p>}
-          {!activitiesQuery.isLoading && (activitiesQuery.data ?? []).map((activity) => (
+          {!activitiesQuery.isLoading && filteredActivities.map((activity) => (
             <Card key={activity.id} className="border-0 shadow-sm dark:bg-slate-800">
               <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -596,7 +660,8 @@ export default function Activities() {
               </div>
             </Card>
           ))}
-          {!activitiesQuery.isLoading && !(activitiesQuery.data ?? []).length && <Card className="p-10 text-center text-slate-500 dark:bg-slate-800">Ainda não existem atividades.</Card>}
+          {!activitiesQuery.isLoading && !activities.length && <Card className="p-10 text-center text-slate-500 dark:bg-slate-800">Ainda não existem atividades.</Card>}
+          {!activitiesQuery.isLoading && activities.length > 0 && !filteredActivities.length && <Card className="p-10 text-center text-slate-500 dark:bg-slate-800"><p className="font-medium text-slate-700 dark:text-slate-200">Nenhuma actividade corresponde aos filtros.</p><p className="mt-1 text-sm">Altere os critérios de pesquisa ou limpe os filtros para ver a lista completa.</p>{hasActivityFilters && <Button type="button" variant="outline" size="sm" className="mt-4" onClick={clearActivityFilters}>Limpar filtros</Button>}</Card>}
         </div>
       </div>
     </DashboardLayoutCustom>

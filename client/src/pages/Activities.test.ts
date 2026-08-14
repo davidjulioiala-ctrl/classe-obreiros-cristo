@@ -33,4 +33,14 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain("activitiesQuery.refetch()");
     expect(activitiesSource).toContain("Não foi possível carregar as actividades.");
   });
+
+  it("oferece filtros avançados por texto, intervalo de datas e estado", () => {
+    expect(activitiesSource).toContain('id="activity-search"');
+    expect(activitiesSource).toContain('id="activity-date-from"');
+    expect(activitiesSource).toContain('id="activity-date-to"');
+    expect(activitiesSource).toContain('id="activity-status"');
+    expect(activitiesSource).toContain("hasInvalidDateRange");
+    expect(activitiesSource).toContain("filteredActivities");
+    expect(activitiesSource).toContain("Limpar filtros");
+  });
 });

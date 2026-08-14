@@ -6738,3 +6738,9 @@
 - [x] Melhorar a pesquisa de Membros com busca por nome ou ID, contador de resultados, limpeza rápida e anúncios acessíveis.
 - [x] Adicionar alerta de erro com repetição ao carregamento da listagem de Actividades.
 - [x] Validar typecheck, 111 testes Vitest e build de produção.
+
+## Nova Funcionalidade — Filtros Avançados no Menu Atividades
+- [x] Adicionar controlos de filtro por intervalo de datas (Início e Fim) e estado (Todas, Planeada, Realizada, Cancelada).
+- [x] Filtrar dinamicamente a listagem de atividades mantendo os critérios de pesquisa por nome, local ou tema.
+- [x] Adicionar botão de limpeza de filtros e contador claro de resultados.
+- [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
