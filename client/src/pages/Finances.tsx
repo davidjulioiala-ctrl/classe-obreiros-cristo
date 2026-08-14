@@ -24,6 +24,33 @@ const yearOf = (value: Date | string | null | undefined) => {
   return Number.isNaN(date.getTime()) ? new Date().getFullYear() : date.getFullYear();
 };
 
+type QuotaStatus = "paid" | "unpaid" | "stopped";
+type QuotaStatusRow = { id: number; name: string; isActive: boolean; status: QuotaStatus; amount: string | number | null; paidAt: Date | string | null; lastPaidAt: Date | string | null };
+type QuotaCompliance = { period: { month?: number; year: number }; totalActiveMembers: number; paid: QuotaStatusRow[]; unpaid: QuotaStatusRow[]; stopped: QuotaStatusRow[] };
+
+const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+
+export function buildQuotaStatusCsv(status: QuotaStatus, rows: QuotaStatusRow[]) {
+  const labels: Record<QuotaStatus, string> = { paid: "Pagaram", unpaid: "Não pagaram", stopped: "Pararam de pagar" };
+  const csvRows = [
+    ["ID", "Nome", "Estado", "Valor pago", "Data de pagamento", "Último pagamento"],
+    ...rows.map((row) => [row.id, row.name, labels[status], row.amount === null ? "" : row.amount, dateOnly(row.paidAt), dateOnly(row.lastPaidAt)]),
+  ];
+  return "\\uFEFF" + csvRows.map((row) => row.map(csvCell).join(";")).join("\\n");
+}
+
+function downloadQuotaStatusCsv(status: QuotaStatus, rows: QuotaStatusRow[]) {
+  const labels: Record<QuotaStatus, string> = { paid: "Pagaram", unpaid: "Não pagaram", stopped: "Pararam de pagar" };
+  const blob = new Blob([buildQuotaStatusCsv(status, rows)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `quotas-${status}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast.success(`Exportados ${rows.length} registos: ${labels[status]}.`);
+}
+
 export default function Finances() {
   const utils = trpc.useUtils();
   const [tab, setTab] = useState<Tab>("quotas");
@@ -39,7 +66,9 @@ export default function Finances() {
   const [quotaMonth, setQuotaMonth] = useState(String(new Date().getMonth() + 1));
   const [quotaYear, setQuotaYear] = useState(String(new Date().getFullYear()));
   const [quotaAmount, setQuotaAmount] = useState("100");
-  const [quotaAmountConfigured, setQuotaAmountConfigured] = useState(false);
+  const [quotaReportMonth, setQuotaReportMonth] = useState("all");
+  const [quotaReportYear, setQuotaReportYear] = useState(String(new Date().getFullYear()));
+  const [quotaStatusSearch, setQuotaStatusSearch] = useState("");
   const [reportStart, setReportStart] = useState(`${new Date().getFullYear()}-01-01`);
   const [reportEnd, setReportEnd] = useState(today());
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -49,19 +78,21 @@ export default function Finances() {
   const membersQuery = trpc.members.list.useQuery();
   const organizationQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const quotasQuery = trpc.quotas.list.useQuery();
+  const quotaComplianceInput = useMemo(() => ({ year: Number(quotaReportYear) || new Date().getFullYear(), ...(quotaReportMonth === "all" ? {} : { month: Number(quotaReportMonth) }) }), [quotaReportMonth, quotaReportYear]);
+  const quotaComplianceQuery = trpc.quotas.compliance.useQuery(quotaComplianceInput);
   const incomeQuery = trpc.otherIncome.list.useQuery();
   const expensesQuery = trpc.expenses.list.useQuery();
 
   useEffect(() => {
-    if (!organizationQuery.data || quotaAmountConfigured) return;
+    if (!organizationQuery.data) return;
     try {
       const parsed = JSON.parse(organizationQuery.data) as { defaultQuotaAmount?: unknown };
       const configured = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
       if (/^\d+(?:\.\d{1,2})?$/.test(configured) && Number(configured) >= 0) setQuotaAmount(configured);
     } catch {
-      // Mantém o valor padrão local quando as definições antigas não contêm quota.
+      // Mantém o valor de compatibilidade quando as definições antigas não contêm quota.
     }
-  }, [organizationQuery.data, quotaAmountConfigured]);
+  }, [organizationQuery.data]);
 
   const refreshFinance = async () => {
     await Promise.all([utils.quotas.list.invalidate(), utils.otherIncome.list.invalidate(), utils.expenses.list.invalidate()]);
@@ -202,7 +233,7 @@ export default function Finances() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{(["quotas", "income", "expenses"] as const).map((value) => <Button key={value} variant={tab === value ? "default" : "outline"} onClick={() => setTab(value)} className={tab === value ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>{value === "quotas" ? "Quotas" : value === "income" ? "Outras receitas" : "Despesas"}</Button>)}</div>
 
-        {tab === "quotas" && <QuotaSection busy={busy} quotaMember={quotaMember} setQuotaMember={setQuotaMember} quotaMonth={quotaMonth} setQuotaMonth={setQuotaMonth} quotaYear={quotaYear} setQuotaYear={setQuotaYear} quotaAmount={quotaAmount} setQuotaAmount={setQuotaAmount} setQuotaAmountConfigured={setQuotaAmountConfigured} quotaResponsible={quotaResponsible} setQuotaResponsible={setQuotaResponsible} members={membersQuery.data ?? []} quotas={filteredQuotas} allQuotasCount={quotasQuery.data?.length ?? 0} loading={quotasQuery.isLoading} search={quotaSearch} setSearch={setQuotaSearch} onRecord={() => recordQuota.mutate({ memberId: Number(quotaMember), month: Number(quotaMonth), year: Number(quotaYear), amount: quotaAmount, responsibleName: quotaResponsible.trim() })} onToggle={(id, isPaid) => updateQuota.mutate({ id, isPaid: !isPaid })} onDelete={(id) => { if (confirm("Eliminar esta quota?")) deleteQuota.mutate({ id }); }} />}
+        {tab === "quotas" && <QuotaSection busy={busy} quotaMember={quotaMember} setQuotaMember={setQuotaMember} quotaMonth={quotaMonth} setQuotaMonth={setQuotaMonth} quotaYear={quotaYear} setQuotaYear={setQuotaYear} quotaAmount={quotaAmount} quotaResponsible={quotaResponsible} setQuotaResponsible={setQuotaResponsible} members={membersQuery.data ?? []} quotas={filteredQuotas} allQuotasCount={quotasQuery.data?.length ?? 0} loading={quotasQuery.isLoading} search={quotaSearch} setSearch={setQuotaSearch} onRecord={() => recordQuota.mutate({ memberId: Number(quotaMember), month: Number(quotaMonth), year: Number(quotaYear), responsibleName: quotaResponsible.trim() })} onToggle={(id, isPaid) => updateQuota.mutate({ id, isPaid: !isPaid })} onDelete={(id) => { if (confirm("Eliminar esta quota?")) deleteQuota.mutate({ id }); }} compliance={quotaComplianceQuery.data} complianceLoading={quotaComplianceQuery.isLoading} statusMonth={quotaReportMonth} setStatusMonth={setQuotaReportMonth} statusYear={quotaReportYear} setStatusYear={setQuotaReportYear} statusSearch={quotaStatusSearch} setStatusSearch={setQuotaStatusSearch} onExportStatus={downloadQuotaStatusCsv} />}
 
         {tab === "income" && <IncomeSection busy={busy} form={incomeForm} setForm={setIncomeForm} items={filteredIncome} allItemsCount={incomeQuery.data?.length ?? 0} loading={incomeQuery.isLoading} search={incomeSearch} setSearch={setIncomeSearch} editingId={editingIncome} onSubmit={submitIncome} onEdit={startIncomeEdit} onCancel={() => { setEditingIncome(null); setIncomeForm({ description: "", amount: "", date: today(), responsibleName: "" }); }} onDelete={(id) => { if (confirm("Eliminar esta receita?")) deleteIncome.mutate({ id }); }} />}
 
@@ -235,18 +266,41 @@ type QuotaSectionProps = {
   quotaMember: string; setQuotaMember: (value: string) => void;
   quotaMonth: string; setQuotaMonth: (value: string) => void;
   quotaYear: string; setQuotaYear: (value: string) => void;
-  quotaAmount: string; setQuotaAmount: (value: string) => void; setQuotaAmountConfigured: (value: boolean) => void;
+  quotaAmount: string;
   quotaResponsible: string; setQuotaResponsible: (value: string) => void;
   members: MemberRecord[];
   quotas: QuotaRecord[];
   allQuotasCount: number; loading: boolean; search: string; setSearch: (value: string) => void;
   onRecord: () => void; onToggle: (id: number, isPaid: boolean) => void; onDelete: (id: number) => void;
+  compliance: QuotaCompliance | undefined; complianceLoading: boolean;
+  statusMonth: string; setStatusMonth: (value: string) => void; statusYear: string; setStatusYear: (value: string) => void;
+  statusSearch: string; setStatusSearch: (value: string) => void; onExportStatus: (status: QuotaStatus, rows: QuotaStatusRow[]) => void;
 };
 
 function QuotaSection(props: QuotaSectionProps) {
-  const { busy, quotaMember, setQuotaMember, quotaMonth, setQuotaMonth, quotaYear, setQuotaYear, quotaAmount, setQuotaAmount, setQuotaAmountConfigured, quotaResponsible, setQuotaResponsible, members, quotas, allQuotasCount, loading, search, setSearch, onRecord, onToggle, onDelete } = props;
+  const { busy, quotaMember, setQuotaMember, quotaMonth, setQuotaMonth, quotaYear, setQuotaYear, quotaAmount, quotaResponsible, setQuotaResponsible, members, quotas, allQuotasCount, loading, search, setSearch, onRecord, onToggle, onDelete, compliance, complianceLoading, statusMonth, setStatusMonth, statusYear, setStatusYear, statusSearch, setStatusSearch, onExportStatus } = props;
+  const visibleStatusRows = (rows: QuotaStatusRow[]) => {
+    const query = text(statusSearch.trim());
+    return rows.filter((row) => !query || [row.id, row.name, row.status, row.amount, dateOnly(row.paidAt), dateOnly(row.lastPaidAt)].some((value) => text(value).includes(query)));
+  };
+  const statusCards: Array<{ status: QuotaStatus; title: string; tone: string; rows: QuotaStatusRow[] }> = [
+    { status: "paid", title: "Pagaram", tone: "text-emerald-600", rows: visibleStatusRows(compliance?.paid ?? []) },
+    { status: "unpaid", title: "Não pagaram", tone: "text-amber-600", rows: visibleStatusRows(compliance?.unpaid ?? []) },
+    { status: "stopped", title: "Pararam de pagar", tone: "text-red-600", rows: visibleStatusRows(compliance?.stopped ?? []) },
+  ];
   return <div className="space-y-4">
-    <Card className="p-4 dark:bg-slate-800"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><FormLabel label="Membro"><Select value={quotaMember} onValueChange={setQuotaMember}><SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name} · ID {member.id}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Mês"><Select value={quotaMonth} onValueChange={setQuotaMonth}><SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger><SelectContent>{monthNames.map((month, index) => <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Ano"><Input type="number" value={quotaYear} onChange={(event) => setQuotaYear(event.target.value)} placeholder="Ano" /></FormLabel><FormLabel label="Valor"><Input type="number" min="0" step="0.01" inputMode="decimal" value={quotaAmount} onChange={(event) => { setQuotaAmountConfigured(true); setQuotaAmount(event.target.value); }} placeholder="Valor" /></FormLabel><FormLabel label="Responsável"><Input value={quotaResponsible} onChange={(event) => setQuotaResponsible(event.target.value)} placeholder="Nome do responsável" /></FormLabel><div className="flex items-end"><Button disabled={busy || !quotaMember || !quotaResponsible.trim()} onClick={onRecord} className="w-full bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" />Registar</Button></div></div></Card>
+    <Card className="p-4 dark:bg-slate-800"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><FormLabel label="Membro"><Select value={quotaMember} onValueChange={setQuotaMember}><SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name} · ID {member.id}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Mês"><Select value={quotaMonth} onValueChange={setQuotaMonth}><SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger><SelectContent>{monthNames.map((month, index) => <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Ano"><Input type="number" value={quotaYear} onChange={(event) => setQuotaYear(event.target.value)} placeholder="Ano" /></FormLabel><FormLabel label="Valor definido em Definições"><Input value={`${quotaAmount} XOF`} readOnly disabled aria-describedby="quota-config-hint" /><span id="quota-config-hint" className="mt-1 block text-[11px] text-slate-500">Altere este valor apenas em Definições.</span></FormLabel><FormLabel label="Responsável"><Input value={quotaResponsible} onChange={(event) => setQuotaResponsible(event.target.value)} placeholder="Nome do responsável" /></FormLabel><div className="flex items-end"><Button disabled={busy || !quotaMember || !quotaResponsible.trim()} onClick={onRecord} className="w-full bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" />Registar</Button></div></div></Card>
+    <Card className="border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div><h3 className="font-semibold text-slate-900 dark:text-white">Consulta de pagamentos de quotas</h3><p className="text-xs text-slate-500">Consulte quem pagou, quem não pagou e quem interrompeu os pagamentos.</p></div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <FormLabel label="Período"><Select value={statusMonth} onValueChange={setStatusMonth}><SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger><SelectContent><SelectItem value="all">Ano inteiro</SelectItem>{monthNames.map((month, index) => <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>)}</SelectContent></Select></FormLabel>
+          <FormLabel label="Ano"><Input type="number" min="2000" max="2100" value={statusYear} onChange={(event) => setStatusYear(event.target.value)} /></FormLabel>
+          <FormLabel label="Pesquisar pessoa"><Input value={statusSearch} onChange={(event) => setStatusSearch(event.target.value)} placeholder="Nome ou ID" /></FormLabel>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">{statusCards.map(({ status, title, tone, rows }) => <Card key={status} className="border-slate-200 p-3 dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center justify-between gap-2"><div><h4 className={`font-semibold ${tone}`}>{title}</h4><p className="text-xs text-slate-500">{rows.length} pessoa(s)</p></div><Button size="sm" variant="outline" disabled={complianceLoading || !rows.length} onClick={() => onExportStatus(status, rows)}><FileDown className="mr-1 h-4 w-4" />Extrair</Button></div>{complianceLoading ? <div className="py-5"><Loading /></div> : !rows.length ? <p className="py-5 text-center text-xs text-slate-500">Nenhum registo neste período.</p> : <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{rows.map((row) => <div key={`${status}-${row.id}`} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-2 text-sm dark:bg-slate-800"><span className="min-w-0 truncate"><strong>{row.name}</strong><small className="ml-1 text-xs text-slate-500">ID {row.id}</small></span><span className="shrink-0 text-xs text-slate-500">{status === "paid" ? dateOnly(row.paidAt) : dateOnly(row.lastPaidAt)}</span></div>)}</div>}</Card>)}</div>
+    </Card>
     <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><SearchBox value={search} onChange={setSearch} placeholder="Pesquisar por ID, membro, mês, ano, valor, responsável ou estado..." resultCount={quotas.length} totalCount={allQuotasCount} />{loading ? <Loading /> : !quotas.length ? <EmptyState filtered={Boolean(search.trim())} /> : <>
       <div className="hidden overflow-x-auto sm:block"><div className="min-w-[1180px]"><div className="grid grid-cols-[70px_220px_150px_100px_130px_190px_120px_140px_150px] gap-2 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900"><span>ID</span><span>Membro</span><span>Período</span><span>Valor</span><span>Responsável</span><span>Data de pagamento</span><span>Registado por</span><span>Estado</span><span>Ações</span></div>{quotas.map((quota) => { const member = members.find((item) => item.id === quota.memberId); return <div key={quota.id} className="grid grid-cols-[70px_220px_150px_100px_130px_190px_120px_140px_150px] items-center gap-2 border-t border-slate-200 px-4 py-4 text-sm dark:border-slate-700"><RecordIdBadge id={quota.id} /><span><strong>{member?.name ?? `Membro #${quota.memberId}`}</strong><small className="block text-xs text-slate-500">ID membro: {quota.memberId}</small></span><span>{monthNames[quota.month - 1]} {quota.year}</span><span>{money(quota.amount)}</span><span className="text-slate-600 dark:text-slate-300">{quota.responsibleName ?? "—"}</span><span>{dateOnly(quota.paidAt)}</span><span>{quota.paidBy ? `Utilizador #${quota.paidBy}` : "—"}</span><span className={quota.isPaid ? "font-medium text-emerald-600" : "font-medium text-amber-600"}>{quota.isPaid ? "Pago" : "Pendente"}</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => onToggle(quota.id, quota.isPaid)}>{quota.isPaid ? "Pendente" : "Pago"}</Button><Button size="sm" variant="outline" className="text-red-600" onClick={() => onDelete(quota.id)}><Trash2 className="h-4 w-4" /></Button></div></div>; })}</div></div>
       <div className="space-y-3 p-3 sm:hidden">{quotas.map((quota) => { const member = members.find((item) => item.id === quota.memberId); return <div key={quota.id} className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><MobileField label="ID" value={<RecordIdBadge id={quota.id} />} strong /><MobileField label="Membro" value={`${member?.name ?? `Membro #${quota.memberId}`} (ID ${quota.memberId})`} strong /><MobileField label="Período" value={`${monthNames[quota.month - 1]} ${quota.year}`} /><MobileField label="Valor" value={money(quota.amount)} /><MobileField label="Responsável" value={quota.responsibleName ?? "—"} /><MobileField label="Data de pagamento" value={dateOnly(quota.paidAt)} /><MobileField label="Registado por" value={quota.paidBy ? `Utilizador #${quota.paidBy}` : "—"} /><MobileField label="Estado" value={quota.isPaid ? "Pago" : "Pendente"} className={quota.isPaid ? "text-emerald-600" : "text-amber-600"} /><div className="flex gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => onToggle(quota.id, quota.isPaid)}>{quota.isPaid ? "Marcar pendente" : "Marcar pago"}</Button><Button size="sm" variant="outline" className="text-red-600" onClick={() => onDelete(quota.id)}><Trash2 className="h-4 w-4" /></Button></div></div>; })}</div>

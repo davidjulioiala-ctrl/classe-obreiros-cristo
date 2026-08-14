@@ -535,6 +535,47 @@ export async function getQuotasByMonthYear(month: number, year: number) {
   return rows.map((row) => reveal(row, QUOTA_PRIVATE_FIELDS));
 }
 
+export type QuotaCompliancePeriod = { month?: number; year: number };
+
+export async function getQuotaCompliance(period: QuotaCompliancePeriod) {
+  const [memberRows, quotaRows] = await Promise.all([getAllMembers(false), listQuotas()]);
+  const targetQuotas = quotaRows.filter((quota) => quota.year === period.year && (period.month === undefined || quota.month === period.month));
+  const paidInTarget = new Map<number, (typeof quotaRows)[number]>();
+  for (const quota of targetQuotas) if (quota.isPaid && !paidInTarget.has(quota.memberId)) paidInTarget.set(quota.memberId, quota);
+
+  const hasPaidBeforeTarget = (memberId: number) => quotaRows.some((quota) => {
+    if (quota.memberId !== memberId || !quota.isPaid) return false;
+    if (period.month === undefined) return quota.year < period.year;
+    return quota.year < period.year || (quota.year === period.year && quota.month < period.month);
+  });
+
+  const activeMembers = memberRows.filter((member) => member.isActive);
+  const toStatusRow = (member: (typeof memberRows)[number], status: "paid" | "unpaid" | "stopped") => {
+    const paid = paidInTarget.get(member.id);
+    return {
+      id: member.id,
+      name: member.name,
+      isActive: member.isActive,
+      status,
+      amount: paid?.amount ?? null,
+      paidAt: paid?.paidAt ?? null,
+      lastPaidAt: quotaRows.filter((quota) => quota.memberId === member.id && quota.isPaid).sort((a, b) => Number(new Date(b.paidAt ?? 0)) - Number(new Date(a.paidAt ?? 0)))[0]?.paidAt ?? null,
+    };
+  };
+
+  const paid = activeMembers.filter((member) => paidInTarget.has(member.id)).map((member) => toStatusRow(member, "paid"));
+  const unpaid = activeMembers.filter((member) => !paidInTarget.has(member.id)).map((member) => toStatusRow(member, "unpaid"));
+  const stopped = activeMembers.filter((member) => !paidInTarget.has(member.id) && hasPaidBeforeTarget(member.id)).map((member) => toStatusRow(member, "stopped"));
+
+  return {
+    period,
+    totalActiveMembers: activeMembers.length,
+    paid,
+    unpaid,
+    stopped,
+  };
+}
+
 // ============ OTHER INCOME ============
 
 export async function createOtherIncome(data: typeof otherIncome.$inferInsert) {

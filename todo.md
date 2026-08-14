@@ -6889,3 +6889,11 @@
 - [x] Aplicar o remapeamento sequencial iniciado em 1 por tabela via script SQL transacional.
 - [x] Ajustar os contadores AUTO_INCREMENT de todas as tabelas para o próximo ID livre.
 - [x] Validar a integridade relacional, typecheck e build de produção com sucesso.
+
+## Quotas — configuração, pesquisa e faltas
+- [x] Permitir editar o valor da quota exclusivamente em Definições e aplicar o valor guardado em novos lançamentos.
+- [x] Bloquear no formulário e no backend a alteração manual do valor da quota em Finanças.
+- [x] Adicionar pesquisa de pagamentos de quota por nome e ID da pessoa.
+- [x] Adicionar filtros por mês específico e ano inteiro.
+- [x] Extrair nomes de pessoas que pararam de pagar e de pessoas com quota em falta.
+- [x] Validar permissões, dados históricos, exportação e testes sem alterar lançamentos existentes.

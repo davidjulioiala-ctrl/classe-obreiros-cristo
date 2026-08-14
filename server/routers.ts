@@ -407,13 +407,21 @@ const quotasRouter = router({
         memberId: positiveId,
         month: z.number().int().min(1).max(12),
         year: z.number().int().min(2000).max(2100),
-        amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valor inválido").max(20),
         responsibleName: safeText(255),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const quota = await db.getQuotasByMonthYear(input.month, input.year);
       const existing = quota.find((q) => q.memberId === input.memberId);
+      const organizationSetting = await db.getAppSetting("organization");
+      let configuredAmount = "100";
+      try {
+        const parsed = JSON.parse(organizationSetting ?? "{}") as { defaultQuotaAmount?: unknown };
+        const candidate = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
+        if (/^\d+(?:\.\d{1,2})?$/.test(candidate)) configuredAmount = candidate;
+      } catch {
+        // Mantém o valor de compatibilidade se as definições antigas não tiverem quota.
+      }
 
       if (existing) {
         return await db.updateQuota(existing.id, {
@@ -428,7 +436,7 @@ const quotasRouter = router({
         memberId: input.memberId,
         month: input.month,
         year: input.year,
-        amount: input.amount,
+        amount: configuredAmount,
         isPaid: true,
         paidAt: new Date(),
         paidBy: ctx.user.id,
@@ -442,10 +450,14 @@ const quotasRouter = router({
       return await db.getQuotasByMonthYear(input.month, input.year);
     }),
 
+  compliance: protectedProcedure
+    .input(z.object({ month: z.number().int().min(1).max(12).optional(), year: z.number().int().min(2000).max(2100) }))
+    .query(async ({ input }) => db.getQuotaCompliance(input)),
+
   list: protectedProcedure.query(() => db.listQuotas()),
 
   update: financialProcedure
-    .input(z.object({ id: positiveId, isPaid: z.boolean().optional(), amount: z.string().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(), month: z.number().int().min(1).max(12).optional(), year: z.number().int().min(2000).max(2100).optional() }))
+    .input(z.object({ id: positiveId, isPaid: z.boolean().optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const result = await db.updateQuota(id, data);
