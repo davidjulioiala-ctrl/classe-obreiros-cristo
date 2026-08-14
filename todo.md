@@ -6991,3 +6991,13 @@
 - [x] Adicionar filtro por data específica no menu de presenças.
 - [x] Adicionar campo de verificação de pessoa específica por ID ou nome.
 - [x] Validar testes unitários e build de produção.
+
+## Indicador de Percentagem de Presenças no Perfil
+- [ ] Adicionar cálculo de presenças mensais por membro nas rotas ou procedimentos tRPC.
+- [ ] Criar indicador visual (barra de progresso e estatísticas) no perfil detalhado do membro.
+- [ ] Validar testes unitários, typecheck e build de produção.
+
+## Indicador de Percentagem de Presenças no Perfil
+- [x] Adicionar estatística mensal de presenças por membro no servidor e base de dados.
+- [x] Incluir o distintivo visual com a percentagem no cartão do perfil de cada membro.
+- [x] Validar testes unitários e build de produção.

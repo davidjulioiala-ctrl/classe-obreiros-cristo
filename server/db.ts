@@ -1486,3 +1486,52 @@ export async function getAllMemberHistory() {
     member: memberMap.get(h.memberId) || null,
   }));
 }
+
+export async function getMemberMonthlyAttendanceStats(memberId: number, month?: number, year?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const now = new Date();
+  const targetMonth = month ?? (now.getMonth() + 1);
+  const targetYear = year ?? now.getFullYear();
+
+  const startDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+
+  // Buscar todas as atividades do mês
+  const monthActivities = await db
+    .select()
+    .from(activities)
+    .where(between(activities.date, startDate, endDate));
+
+  const activityIds = monthActivities.map((a) => a.id);
+  if (activityIds.length === 0) {
+    return {
+      month: targetMonth,
+      year: targetYear,
+      totalActivities: 0,
+      presentCount: 0,
+      absentCount: 0,
+      percentage: 0,
+    };
+  }
+
+  // Buscar os registos de presença do membro para essas atividades
+  const memberAttendance = await db
+    .select()
+    .from(attendance)
+    .where(and(eq(attendance.memberId, memberId), inArray(attendance.activityId, activityIds)));
+
+  const presentCount = memberAttendance.filter((r) => r.isPresent).length;
+  const totalActivities = monthActivities.length;
+  const percentage = totalActivities > 0 ? Math.round((presentCount / totalActivities) * 100) : 0;
+
+  return {
+    month: targetMonth,
+    year: targetYear,
+    totalActivities,
+    presentCount,
+    absentCount: totalActivities - presentCount,
+    percentage,
+  };
+}

@@ -65,6 +65,12 @@ const membersRouter = router({
     return await db.getMemberById(input.id);
   }),
 
+  getMonthlyAttendance: protectedProcedure
+    .input(z.object({ memberId: positiveId, month: z.number().optional(), year: z.number().optional() }))
+    .query(async ({ input }) => {
+      return await db.getMemberMonthlyAttendanceStats(input.memberId, input.month, input.year);
+    }),
+
   search: protectedProcedure
     .input(z.object({ query: safeText(100), isGuest: z.boolean().optional() }))
     .query(async ({ input }) => {
