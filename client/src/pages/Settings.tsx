@@ -23,6 +23,15 @@ export default function Settings() {
   const [logoName, setLogoName] = useState("");
   const [logoAlignment, setLogoAlignment] = useState<"left" | "center" | "right">("center");
   const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
+  const [headerTemplates, setHeaderTemplates] = useState<Array<{ id: string; name: string; headerTitleText: string; logoAlignment: "left" | "center" | "right"; logoSize: "small" | "medium" | "large"; isDefault?: boolean }>>([
+    { id: "default", name: "Modelo Principal (Padrão)", headerTitleText: "Classe Obreiros de Cristo", logoAlignment: "center", logoSize: "medium", isDefault: true }
+  ]);
+  const [activeTemplateId, setActiveTemplateId] = useState("default");
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [templateFormName, setTemplateFormName] = useState("");
+  const [templateFormTitle, setTemplateFormTitle] = useState("");
+  const [templateFormAlignment, setTemplateFormAlignment] = useState<"left" | "center" | "right">("center");
+  const [templateFormSize, setTemplateFormSize] = useState<"small" | "medium" | "large">("medium");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloadingPreview, setIsDownloadingPreview] = useState(false);
   const [showOrganizationSaved, setShowOrganizationSaved] = useState(false);
@@ -69,6 +78,12 @@ export default function Settings() {
         if (parsed.logoName) setLogoName(parsed.logoName);
         if (parsed.logoAlignment === "left" || parsed.logoAlignment === "center" || parsed.logoAlignment === "right") setLogoAlignment(parsed.logoAlignment);
         if (parsed.logoSize === "small" || parsed.logoSize === "medium" || parsed.logoSize === "large") setLogoSize(parsed.logoSize);
+        if (Array.isArray(parsed.headerTemplates) && parsed.headerTemplates.length > 0) {
+          setHeaderTemplates(parsed.headerTemplates);
+        }
+        if (typeof parsed.activeTemplateId === "string") {
+          setActiveTemplateId(parsed.activeTemplateId);
+        }
       } catch {}
     }
   }, [orgQuery.data]);
@@ -100,7 +115,7 @@ export default function Settings() {
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTemplates, activeTemplateId }) });
   };
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -197,13 +212,73 @@ export default function Settings() {
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Informações da Organização</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome da Organização</label>
-                  <Input value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Nome" />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nome institucional geral da organização no sistema.</p>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome Oficial da Organização</label>
+                  <Input value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo" />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nome institucional que aparece nos registos gerais e rodapés.</p>
                 </div>
+
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Modelos de Cabeçalho Guardados</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Alterne rapidamente entre diferentes cabeçalhos institucionais ou crie novos modelos.</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const newId = `tpl_${Date.now()}`;
+                      const newTemplate = { id: newId, name: `Modelo ${headerTemplates.length + 1}`, headerTitleText: headerTitleText || "Nova Congregação", logoAlignment, logoSize };
+                      setHeaderTemplates([...headerTemplates, newTemplate]);
+                      setActiveTemplateId(newId);
+                      toast.success("Novo modelo criado. Pode editá-lo abaixo.");
+                    }} className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">
+                      + Novo Modelo
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {headerTemplates.map((tpl) => (
+                      <div key={tpl.id} className={`flex items-center justify-between rounded-md border p-2.5 text-left transition-all ${activeTemplateId === tpl.id ? "border-emerald-500 bg-emerald-50/70 dark:border-emerald-600 dark:bg-emerald-950/50" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"}`}>
+                        <button type="button" onClick={() => {
+                          setActiveTemplateId(tpl.id);
+                          setHeaderTitleText(tpl.headerTitleText);
+                          if (tpl.logoAlignment) setLogoAlignment(tpl.logoAlignment);
+                          if (tpl.logoSize) setLogoSize(tpl.logoSize);
+                          toast.success(`Modelo "${tpl.name}" selecionado.`);
+                        }} className="min-w-0 flex-1 text-left">
+                          <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{tpl.name} {activeTemplateId === tpl.id ? "(Ativo)" : ""}</p>
+                          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{tpl.headerTitleText}</p>
+                        </button>
+                        <div className="flex items-center gap-1 pl-2">
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300" onClick={() => {
+                            const nextName = window.prompt("Nome do modelo:", tpl.name);
+                            if (!nextName) return;
+                            setHeaderTemplates(headerTemplates.map(item => item.id === tpl.id ? { ...item, name: nextName.trim() } : item));
+                            toast.success("Nome atualizado.");
+                          }}>Editar</Button>
+                          {headerTemplates.length > 1 && !tpl.isDefault ? (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-rose-600 hover:text-rose-700" onClick={() => {
+                              const remaining = headerTemplates.filter(item => item.id !== tpl.id);
+                              setHeaderTemplates(remaining);
+                              if (activeTemplateId === tpl.id) {
+                                setActiveTemplateId(remaining[0].id);
+                                setHeaderTitleText(remaining[0].headerTitleText);
+                                setLogoAlignment(remaining[0].logoAlignment);
+                                setLogoSize(remaining[0].logoSize);
+                              }
+                              toast.success("Modelo removido.");
+                            }}>Apagar</Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Texto do Cabeçalho nos PDFs</label>
-                  <Input value={headerTitleText} onChange={(e) => setHeaderTitleText(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo - Sede / Subdepartamento" />
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Texto do Cabeçalho Ativo no PDF</label>
+                  <Input value={headerTitleText} onChange={(e) => {
+                    const val = e.target.value;
+                    setHeaderTitleText(val);
+                    setHeaderTemplates(headerTemplates.map(t => t.id === activeTemplateId ? { ...t, headerTitleText: val, logoAlignment, logoSize } : t));
+                  }} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1" />
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pode personalizar por atividade ou documento conforme necessário.</p>
                 </div>
                 <div>

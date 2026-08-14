@@ -19,9 +19,12 @@ export type PdfBranding = {
 type OrganizationSettings = {
   organizationName?: unknown;
   congregationName?: unknown;
+  headerTitleText?: unknown;
   logoKey?: unknown;
   logoAlignment?: unknown;
   logoSize?: unknown;
+  headerTemplates?: unknown;
+  activeTemplateId?: unknown;
 };
 
 function normalizeName(value: unknown) {
@@ -46,11 +49,21 @@ function detectLogoType(buffer: Buffer): PdfBranding["logoMimeType"] {
   return null;
 }
 
+export type PdfHeaderTemplate = {
+  id: string;
+  name: string;
+  headerTitleText: string;
+  logoAlignment: LogoAlignment;
+  logoSize: LogoSizePreset;
+  isDefault?: boolean;
+};
+
 export type PdfBrandingOverrides = {
   congregationName?: unknown;
   headerTitleText?: unknown;
   logoAlignment?: unknown;
   logoSize?: unknown;
+  templateId?: unknown;
 };
 
 export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Promise<PdfBranding> {
@@ -61,12 +74,29 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
     console.warn("[PdfBranding] Não foi possível ler as definições da organização:", error);
   }
   const congregationName = normalizeName(overrides.congregationName ?? settings.congregationName ?? settings.organizationName);
-  const headerTitleText = typeof overrides.headerTitleText === "string" && overrides.headerTitleText.trim()
-    ? overrides.headerTitleText.trim().slice(0, 250)
-    : congregationName;
+  
+  let selectedHeaderTitle = typeof overrides.headerTitleText === "string" && overrides.headerTitleText.trim() ? overrides.headerTitleText.trim() : null;
+  let selectedAlignment = overrides.logoAlignment;
+  let selectedSize = overrides.logoSize;
+
+  const templates = Array.isArray(settings.headerTemplates) ? (settings.headerTemplates as PdfHeaderTemplate[]) : [];
+  const targetTemplateId = overrides.templateId ?? settings.activeTemplateId;
+  const matchedTemplate = templates.find((t) => t && t.id === targetTemplateId) || templates.find((t) => t && t.isDefault) || templates[0];
+
+  if (!selectedHeaderTitle && matchedTemplate && typeof matchedTemplate.headerTitleText === "string") {
+    selectedHeaderTitle = matchedTemplate.headerTitleText;
+  }
+  if (!selectedAlignment && matchedTemplate && (matchedTemplate.logoAlignment === "left" || matchedTemplate.logoAlignment === "center" || matchedTemplate.logoAlignment === "right")) {
+    selectedAlignment = matchedTemplate.logoAlignment;
+  }
+  if (!selectedSize && matchedTemplate && (matchedTemplate.logoSize === "small" || matchedTemplate.logoSize === "medium" || matchedTemplate.logoSize === "large")) {
+    selectedSize = matchedTemplate.logoSize;
+  }
+
+  const headerTitleText = selectedHeaderTitle ? selectedHeaderTitle.slice(0, 250) : congregationName;
   const logoKey = typeof settings.logoKey === "string" ? settings.logoKey.trim().slice(0, 512) : "";
-  const requestedAlignment = overrides.logoAlignment ?? settings.logoAlignment;
-  const requestedSize = overrides.logoSize ?? settings.logoSize;
+  const requestedAlignment = selectedAlignment ?? settings.logoAlignment;
+  const requestedSize = selectedSize ?? settings.logoSize;
   const logoAlignment: LogoAlignment = requestedAlignment === "left" || requestedAlignment === "right" ? requestedAlignment : "center";
   const logoSize: LogoSizePreset = requestedSize === "small" || requestedSize === "large" ? requestedSize : "medium";
 

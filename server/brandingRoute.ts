@@ -39,6 +39,7 @@ export function readPreviewBody(body: unknown) {
     headerTitleText: typeof source.headerTitleText === "string" ? source.headerTitleText.slice(0, 250) : undefined,
     logoAlignment: source.logoAlignment === "left" || source.logoAlignment === "center" || source.logoAlignment === "right" ? source.logoAlignment : undefined,
     logoSize: source.logoSize === "small" || source.logoSize === "medium" || source.logoSize === "large" ? source.logoSize : undefined,
+    templateId: typeof source.templateId === "string" ? source.templateId.slice(0, 64) : undefined,
   };
 }
 

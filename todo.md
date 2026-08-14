@@ -6642,3 +6642,14 @@
 - [x] Corrigir o carregamento do logótipo e a validação do formulário de membros.
 - [x] Separar a identidade da organização do conteúdo do cabeçalho PDF através do campo dedicado de texto flexível.
 - [x] Validar a geração de pré-visualizações, testes unitários, build de produção e publicação.
+
+## Fase 16: Biblioteca de Múltiplos Modelos de Cabeçalho
+- [ ] Criar estrutura de dados e persistência em appSettings para múltiplos modelos de cabeçalho PDF.
+- [ ] Desenvolver a interface de gestão de modelos nas Definições (criar, editar, duplicar, eliminar e definir predefinido).
+- [ ] Permitir selecionar o modelo de cabeçalho ao criar ou editar atividades e nas exportações gerais.
+- [ ] Atualizar os geradores PDF para aceitar o modelo selecionado e efetuar testes, build e publicação.
+
+## Fase 16: Biblioteca de Múltiplos Modelos de Cabeçalho
+- [x] Criar tipos e suporte a múltiplos modelos de cabeçalho no servidor (`pdfBranding.ts`).
+- [x] Adicionar gestão completa de modelos na página de Definições (criar, editar, apagar, selecionar ativo).
+- [x] Validar compilação TypeScript, testes unitários, build de produção e publicação.
