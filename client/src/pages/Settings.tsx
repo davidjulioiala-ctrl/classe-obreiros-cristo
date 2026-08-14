@@ -247,6 +247,16 @@ export default function Settings() {
                           <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{tpl.headerTitleText}</p>
                         </button>
                         <div className="flex items-center gap-1 pl-2">
+                          {!tpl.isDefault ? (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-emerald-700 hover:text-emerald-900 dark:text-emerald-300" onClick={() => {
+                              setHeaderTemplates(headerTemplates.map(item => ({ ...item, isDefault: item.id === tpl.id })));
+                              setActiveTemplateId(tpl.id);
+                              setHeaderTitleText(tpl.headerTitleText);
+                              setLogoAlignment(tpl.logoAlignment);
+                              setLogoSize(tpl.logoSize);
+                              toast.success(`Modelo "${tpl.name}" definido como padrão.`);
+                            }}>Definir como Padrão</Button>
+                          ) : <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Padrão</span>}
                           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300" onClick={() => {
                             const nextName = window.prompt("Nome do modelo:", tpl.name);
                             if (!nextName) return;

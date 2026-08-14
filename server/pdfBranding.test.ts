@@ -50,6 +50,39 @@ describe("branding dos PDFs", () => {
     expect(branding.logoSize).toBe("large");
   });
 
+  it("usa o modelo marcado como padrão quando não existe uma seleção explícita", async () => {
+    getAppSetting.mockResolvedValue(JSON.stringify({
+      congregationName: "Igreja Local",
+      activeTemplateId: "modelo-antigo",
+      headerTemplates: [
+        { id: "modelo-antigo", name: "Modelo antigo", headerTitleText: "Título antigo", logoAlignment: "left", logoSize: "small" },
+        { id: "modelo-padrao", name: "Modelo padrão", headerTitleText: "Cabeçalho padrão", logoAlignment: "right", logoSize: "large", isDefault: true },
+      ],
+    }));
+
+    const branding = await loadPdfBranding();
+
+    expect(branding.headerTitleText).toBe("Cabeçalho padrão");
+    expect(branding.logoAlignment).toBe("right");
+    expect(branding.logoSize).toBe("large");
+  });
+
+  it("permite substituir o modelo padrão com uma seleção explícita", async () => {
+    getAppSetting.mockResolvedValue(JSON.stringify({
+      congregationName: "Igreja Local",
+      headerTemplates: [
+        { id: "modelo-padrao", name: "Modelo padrão", headerTitleText: "Cabeçalho padrão", logoAlignment: "right", logoSize: "large", isDefault: true },
+        { id: "modelo-atividade", name: "Modelo atividade", headerTitleText: "Atividade especial", logoAlignment: "left", logoSize: "small" },
+      ],
+    }));
+
+    const branding = await loadPdfBranding({ templateId: "modelo-atividade" });
+
+    expect(branding.headerTitleText).toBe("Atividade especial");
+    expect(branding.logoAlignment).toBe("left");
+    expect(branding.logoSize).toBe("small");
+  });
+
   it("volta ao nome predefinido quando a configuração é inválida", async () => {
     getAppSetting.mockResolvedValue("não é JSON");
 

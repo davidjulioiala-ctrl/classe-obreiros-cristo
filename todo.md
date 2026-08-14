@@ -6632,10 +6632,10 @@
 
 
 ## Fase 15: Cabeçalhos Flexíveis e Correções de Erros — 2026-08-13
-- [ ] Investigar e corrigir a falha de upload do logótipo e o erro no cadastro de membros.
-- [ ] Separar o nome da organização do conteúdo do cabeçalho PDF, permitindo texto livre e personalizado por tipo de atividade ou documento.
-- [ ] Adicionar modal/opção de seleção e personalização do cabeçalho antes de exportar cada documento ou relatório.
-- [ ] Validar com testes unitários, typecheck, build de produção e publicação.
+- [x] Investigar e corrigir a falha de upload do logótipo e o erro no cadastro de membros.
+- [x] Separar o nome da organização do conteúdo do cabeçalho PDF, permitindo texto livre e personalizado por tipo de atividade ou documento.
+- [x] Adicionar modal/opção de seleção e personalização do cabeçalho antes de exportar cada documento ou relatório.
+- [x] Validar com testes unitários, typecheck, build de produção e publicação.
 
 
 ## Fase 15: Cabeçalhos Flexíveis e Correções Finais
@@ -6644,12 +6644,18 @@
 - [x] Validar a geração de pré-visualizações, testes unitários, build de produção e publicação.
 
 ## Fase 16: Biblioteca de Múltiplos Modelos de Cabeçalho
-- [ ] Criar estrutura de dados e persistência em appSettings para múltiplos modelos de cabeçalho PDF.
-- [ ] Desenvolver a interface de gestão de modelos nas Definições (criar, editar, duplicar, eliminar e definir predefinido).
-- [ ] Permitir selecionar o modelo de cabeçalho ao criar ou editar atividades e nas exportações gerais.
-- [ ] Atualizar os geradores PDF para aceitar o modelo selecionado e efetuar testes, build e publicação.
+- [x] Criar estrutura de dados e persistência em appSettings para múltiplos modelos de cabeçalho PDF.
+- [x] Desenvolver a interface de gestão de modelos nas Definições (criar, editar, duplicar, eliminar e definir predefinido).
+- [x] Permitir selecionar o modelo de cabeçalho ao criar ou editar atividades e nas exportações gerais.
+- [x] Atualizar os geradores PDF para aceitar o modelo selecionado e efetuar testes, build e publicação.
 
 ## Fase 16: Biblioteca de Múltiplos Modelos de Cabeçalho
 - [x] Criar tipos e suporte a múltiplos modelos de cabeçalho no servidor (`pdfBranding.ts`).
 - [x] Adicionar gestão completa de modelos na página de Definições (criar, editar, apagar, selecionar ativo).
 - [x] Validar compilação TypeScript, testes unitários, build de produção e publicação.
+
+## Fase 17: Modelo de Cabeçalho Padrão
+- [x] Atualizar o esquema de modelos para suportar a propriedade `isDefault`.
+- [x] Garantir que o carregador de branding usa automaticamente o modelo marcado como padrão quando nenhum override for especificado.
+- [x] Adicionar o botão "Definir como Padrão" na biblioteca de modelos em `Settings.tsx`.
+- [x] Validar a compilação TypeScript, testes unitários, build de produção e publicação.

@@ -80,8 +80,10 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
   let selectedSize = overrides.logoSize;
 
   const templates = Array.isArray(settings.headerTemplates) ? (settings.headerTemplates as PdfHeaderTemplate[]) : [];
-  const targetTemplateId = overrides.templateId ?? settings.activeTemplateId;
-  const matchedTemplate = templates.find((t) => t && t.id === targetTemplateId) || templates.find((t) => t && t.isDefault) || templates[0];
+  const explicitTemplateId = typeof overrides.templateId === "string" && overrides.templateId.trim() ? overrides.templateId.trim() : null;
+  const matchedTemplate = explicitTemplateId
+    ? templates.find((t) => t && t.id === explicitTemplateId) || templates.find((t) => t && t.isDefault) || templates[0]
+    : templates.find((t) => t && t.isDefault) || templates.find((t) => t && t.id === settings.activeTemplateId) || templates[0];
 
   if (!selectedHeaderTitle && matchedTemplate && typeof matchedTemplate.headerTitleText === "string") {
     selectedHeaderTitle = matchedTemplate.headerTitleText;
