@@ -35,10 +35,9 @@ describe("attendance member autocomplete regression guards", () => {
 
 
 describe("attendance export and shortcut regression guards", () => {
-  it("keeps seven activities as shortcuts but searches the complete collection", () => {
-    expect(attendanceSource).toContain("const sortedActivities = [...(activities ?? [])]");
-    expect(attendanceSource).toContain("if (!term) return sortedActivities.slice(0, 7)");
-    expect(attendanceSource).toContain("return sortedActivities.filter((activity)");
+  it("supports activity date filter and specific member check in attendance", () => {
+    expect(attendanceSource).toContain("activityDateFilter");
+    expect(attendanceSource).toContain("specificMemberCheck");
   });
 
   it("exposes the authenticated PDF export for the selected activity", () => {

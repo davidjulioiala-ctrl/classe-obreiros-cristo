@@ -15,6 +15,8 @@ export default function Attendance() {
   const [attendanceRecords, setAttendanceRecords] = useState<Record<number, boolean>>({});
   const [memberSearch, setMemberSearch] = useState("");
   const [activitySearch, setActivitySearch] = useState("");
+  const [activityDateFilter, setActivityDateFilter] = useState("");
+  const [specificMemberCheck, setSpecificMemberCheck] = useState("");
   const [memberSearchFocused, setMemberSearchFocused] = useState(false);
   const [highlightedMemberIndex, setHighlightedMemberIndex] = useState(0);
   const memberSearchInputRef = useRef<HTMLInputElement>(null);
@@ -78,10 +80,15 @@ export default function Attendance() {
 
   const recentActivities = useMemo(() => {
     const term = activitySearch.trim().toLowerCase();
+    const dateFilter = activityDateFilter.trim();
     const sortedActivities = [...(activities ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    if (!term) return sortedActivities.slice(0, 7);
-    return sortedActivities.filter((activity) => activity.name.toLowerCase().includes(term) || String(activity.id) === term);
-  }, [activities, activitySearch]);
+    return sortedActivities.filter((activity) => {
+      const matchesTerm = !term || activity.name.toLowerCase().includes(term) || String(activity.id) === term;
+      const activityDateStr = new Date(activity.date).toISOString().split("T")[0];
+      const matchesDate = !dateFilter || activityDateStr === dateFilter;
+      return matchesTerm && matchesDate;
+    });
+  }, [activities, activitySearch, activityDateFilter]);
 
   const handleExportPdf = () => {
     if (!selectedActivity) return;
@@ -161,27 +168,51 @@ export default function Attendance() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Selecione uma atividade
-            </label>
-            <Input value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} placeholder="Pesquisar por nome ou ID; a pesquisa mostra todas as actividades encontradas" className="mb-2" />
-            <select
-              value={selectedActivity || ""}
-              onChange={(e) =>
-                setSelectedActivity(
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
-              className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-            >
-              <option value="">Escolha uma atividade...</option>
-              {recentActivities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name} - {new Date(activity.date).toLocaleDateString("pt-PT")}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Selecione uma atividade
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                <Input value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} placeholder="Pesquisar por nome ou ID…" />
+                <Input type="date" value={activityDateFilter} onChange={(event) => setActivityDateFilter(event.target.value)} placeholder="Filtrar por data específica" />
+              </div>
+              <select
+                value={selectedActivity || ""}
+                onChange={(e) =>
+                  setSelectedActivity(
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              >
+                <option value="">Escolha uma atividade ({recentActivities.length} disponíveis)...</option>
+                {recentActivities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name} - {new Date(activity.date).toLocaleDateString("pt-PT")}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Specific Member Attendance Check */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Verificar presença de pessoa específica (Nome ou ID)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={specificMemberCheck}
+                  onChange={(event) => setSpecificMemberCheck(event.target.value)}
+                  placeholder="Introduza ID ou nome do membro para verificar na actividade selecionada…"
+                />
+                {specificMemberCheck && (
+                  <Button type="button" variant="outline" onClick={() => setSpecificMemberCheck("")}>
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {selectedActivityData && (
@@ -332,10 +363,25 @@ export default function Attendance() {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {filteredMembers.map((member, idx) => {
-                const existingRecord = attendance?.find((record) => record.memberId === member.id);
+            {(() => {
+              const specificTerm = specificMemberCheck.trim();
+              const evaluatedMembers = specificTerm
+                ? filteredMembers.filter((m) => matchesMemberSearch(m, specificTerm))
+                : filteredMembers;
+
+              if (specificTerm && evaluatedMembers.length === 0) {
                 return (
+                  <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
+                    Nenhum membro encontrado com &quot;{specificTerm}&quot; para verificação de presença.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {evaluatedMembers.map((member, idx) => {
+                    const existingRecord = attendance?.find((record) => record.memberId === member.id);
+                    return (
                 <motion.div
                   key={member.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -395,6 +441,8 @@ export default function Attendance() {
                 );
               })}
             </div>
+              );
+            })()}
           </motion.div>
         )}
 

@@ -6981,3 +6981,13 @@
 - [x] Apresentar os 4 grupos principais mais o grupo de convidados com contagem total, homens e mulheres.
 - [x] Permitir filtrar e consultar os membros de cada grupo diretamente no painel.
 - [x] Validar testes e build de produção.
+
+## Pesquisa de Presenças por Data e Membro
+- [ ] Adicionar filtro por data específica no menu de Presenças.
+- [ ] Adicionar campo de pesquisa por membro (nome ou ID) para consultar o histórico de presenças.
+- [ ] Validar testes unitários e build de produção.
+
+## Pesquisa de Presenças por Data e Membro Específico
+- [x] Adicionar filtro por data específica no menu de presenças.
+- [x] Adicionar campo de verificação de pessoa específica por ID ou nome.
+- [x] Validar testes unitários e build de produção.
