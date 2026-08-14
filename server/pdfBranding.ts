@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { getAppSetting } from "./db";
 import { storageGetSignedUrl } from "./storage";
-import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderTextAlignment, type HeaderTextSegment } from "@shared/headerFormatting";
+import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderPdfFontFamily, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderTextAlignment, type HeaderTextSegment } from "@shared/headerFormatting";
 
 export const DEFAULT_CONGREGATION_NAME = "Classe Obreiros de Cristo";
 
@@ -155,13 +155,14 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
 }
 
 function headerFont(segment: HeaderTextSegment, family: HeaderFontFamily) {
-  if (family === "Times-Roman") {
+  const pdfFamily = normalizeHeaderPdfFontFamily(family);
+  if (pdfFamily === "Times-Roman") {
     if (segment.bold && segment.italic) return "Times-BoldItalic";
     if (segment.bold) return "Times-Bold";
     if (segment.italic) return "Times-Italic";
     return "Times-Roman";
   }
-  if (family === "Courier") {
+  if (pdfFamily === "Courier") {
     if (segment.bold && segment.italic) return "Courier-BoldOblique";
     if (segment.bold) return "Courier-Bold";
     if (segment.italic) return "Courier-Oblique";

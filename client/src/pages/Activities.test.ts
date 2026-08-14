@@ -18,4 +18,12 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain("Imprimir documento");
     expect(activitiesSource).toContain("Pré-visualização PDF autenticada");
   });
+
+  it("mantém o campo Data e valida o ficheiro antes de iniciar o upload", () => {
+    expect(activitiesSource).toContain('<Label htmlFor="activity-date">Data</Label>');
+    expect(activitiesSource).toContain("selectActivityDocument");
+    expect(activitiesSource).toContain("MAX_ACTIVITY_DOCUMENT_BYTES");
+    expect(activitiesSource).toContain("event.currentTarget.files?.item(0)");
+    expect(activitiesSource).toContain("event.currentTarget.value = \"\"");
+  });
 });

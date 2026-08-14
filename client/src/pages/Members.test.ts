@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const membersSource = readFileSync(fileURLToPath(new URL("./Members.tsx", import.meta.url)), "utf8");
 
 describe("validação do cargo eclesiástico", () => {
   it("inclui 'Membro' nas opções válidas do formulário", () => {
@@ -7,5 +11,12 @@ describe("validação do cargo eclesiástico", () => {
     
     const isStandard = validPositions.includes("Membro");
     expect(isStandard).toBe(true);
+  });
+
+  it("mantém o hook de estado e as consultas do menu carregáveis", () => {
+    expect(membersSource).toContain('import { useState, type FormEvent } from "react";');
+    expect(membersSource).toContain("trpc.members.list.useQuery");
+    expect(membersSource).toContain("trpc.groups.list.useQuery");
+    expect(membersSource).toContain("const handleSubmit = (event: FormEvent)");
   });
 });

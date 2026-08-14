@@ -14,6 +14,13 @@ describe("payload de pré-visualização do branding", () => {
     });
   });
 
+  it("aceita uma família Office autorizada no preview", () => {
+    expect(readPreviewBody({ headerFontFamily: "Aptos Display", headerTextColor: "#4472C4" })).toMatchObject({
+      headerFontFamily: "Aptos Display",
+      headerTextColor: "#4472c4",
+    });
+  });
+
   it("remove valores inválidos e limita nomes longos", () => {
     const longName = "a".repeat(240);
     const result = readPreviewBody({ congregationName: longName, logoAlignment: "diagonal", logoSize: "huge", headerTextAlignment: "diagonal", headerFontSize: "huge", headerFontFamily: "Comic Sans", headerTextColor: "red" });

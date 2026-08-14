@@ -35,6 +35,17 @@ type ActivityForm = {
 
 type CommissionRow = { id?: number; memberId: string; role: string; phone: string };
 type DocumentType = "ata" | "relatorio";
+const MAX_ACTIVITY_DOCUMENT_BYTES = 15 * 1024 * 1024;
+const ACTIVITY_DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".odt", ".txt"];
+
+function selectActivityDocument(file: File | null): { file: File | null; error?: string } {
+  if (!file) return { file: null };
+  const lowerName = file.name.toLowerCase();
+  const hasAllowedExtension = ACTIVITY_DOCUMENT_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+  if (!hasAllowedExtension) return { file: null, error: "Seleccione um PDF, DOC, DOCX, ODT ou TXT." };
+  if (file.size > MAX_ACTIVITY_DOCUMENT_BYTES) return { file: null, error: "O ficheiro não pode ultrapassar 15 MB." };
+  return { file };
+}
 
 const blankForm: ActivityForm = {
   name: "",
@@ -404,8 +415,8 @@ export default function Activities() {
                   <Input className="mt-1" required value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} />
                 </div>
                 <div>
-                  <Label>Data</Label>
-                  <Input className="mt-1" type="date" required value={formData.date} onChange={(event) => setFormData({ ...formData, date: event.target.value })} />
+                  <Label htmlFor="activity-date">Data</Label>
+                  <Input id="activity-date" className="mt-1" type="date" required value={formData.date} onChange={(event) => setFormData({ ...formData, date: event.target.value })} />
                 </div>
                 <div>
                   <Label>Hora de início</Label>
@@ -506,13 +517,28 @@ export default function Activities() {
               <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à atividade.</p></div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
-                  <Input type="file" accept="application/pdf,.pdf,.doc,.docx,.odt,.txt" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} />
-                  <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)}>
+                  <Input
+                    key={documentFile ? `${documentFile.name}-${documentFile.lastModified}` : "activity-document-empty"}
+                    type="file"
+                    accept="application/pdf,.pdf,.doc,.docx,.odt,.txt"
+                    onChange={(event) => {
+                      const selectedFile = event.currentTarget.files?.item(0) ?? null;
+                      const selection = selectActivityDocument(selectedFile);
+                      if (selection.error) {
+                        setDocumentFile(null);
+                        event.currentTarget.value = "";
+                        toast.error(selection.error);
+                        return;
+                      }
+                      setDocumentFile(selection.file);
+                    }}
+                  />
+                  <Select value={documentType} onValueChange={(value) => setDocumentType(value === "relatorio" ? "relatorio" : "ata")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="ata">Ata</SelectItem><SelectItem value="relatorio">Relatório</SelectItem></SelectContent>
                   </Select>
                 </div>
-                {documentFile && <p className="text-xs text-emerald-700">Documento seleccionado: {documentFile.name}</p>}
+                {documentFile && <p className="break-all text-xs text-emerald-700">Documento seleccionado: {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)</p>}
                 {editingId && <ActivityDocuments activityId={editingId} />}
               </div>
 

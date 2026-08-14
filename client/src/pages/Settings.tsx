@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
-import { DEFAULT_HEADER_TEXT_COLOR, HEADER_FONT_FAMILIES, HEADER_FONT_SIZE_POINTS, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
+import { DEFAULT_HEADER_TEXT_COLOR, HEADER_COLOR_PALETTE, HEADER_FONT_FAMILIES, HEADER_FONT_SIZE_POINTS, getHeaderFontCssFamily, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
 
 type HeaderTemplate = {
   id: string;
@@ -52,9 +52,7 @@ function HeaderFormattingToolbar({ onFormat, onClear }: HeaderFormattingToolbarP
 }
 
 function headerFontCssFamily(fontFamily: HeaderFontFamily) {
-  if (fontFamily === "Times-Roman") return "'Times New Roman', Times, serif";
-  if (fontFamily === "Courier") return "'Courier New', Courier, monospace";
-  return "Arial, Helvetica, sans-serif";
+  return getHeaderFontCssFamily(fontFamily);
 }
 
 function FormattedHeaderPreview({ value }: { value: string }) {
@@ -580,13 +578,21 @@ export default function Settings() {
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>
                         <select value={templateFormFontFamily} onChange={(event) => setTemplateFormFontFamily(normalizeHeaderFontFamily(event.target.value))} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
-                          {HEADER_FONT_FAMILIES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                          <optgroup label="Office / Microsoft">
+                            {HEADER_FONT_FAMILIES.filter((font) => !["Helvetica", "Times-Roman", "Courier"].includes(font.value)).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                          </optgroup>
+                          <optgroup label="Fontes PDF incorporadas">
+                            {HEADER_FONT_FAMILIES.filter((font) => ["Helvetica", "Times-Roman", "Courier"].includes(font.value)).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                          </optgroup>
                         </select>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Cor do texto</label>
                         <div className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
-                          <input type="color" value={templateFormTextColor} onChange={(event) => setTemplateFormTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor do texto do cabeçalho" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+                          <select value={templateFormTextColor} onChange={(event) => setTemplateFormTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Paleta Office do texto do cabeçalho" className="min-w-0 flex-1 rounded-md border-0 bg-transparent px-1 py-1 text-xs text-slate-900 outline-none dark:text-white">
+                            {HEADER_COLOR_PALETTE.map((color) => <option key={color.value} value={color.value}>{color.label} ({color.value})</option>)}
+                          </select>
+                          <input type="color" value={templateFormTextColor} onChange={(event) => setTemplateFormTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor personalizada do texto do cabeçalho" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
                           <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{templateFormTextColor}</span>
                         </div>
                       </div>
@@ -628,13 +634,21 @@ export default function Settings() {
                     <div>
                       <label htmlFor="pdf-header-font-family" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>
                       <select id="pdf-header-font-family" value={headerFontFamily} onChange={(event) => setHeaderFontFamily(normalizeHeaderFontFamily(event.target.value))} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
-                        {HEADER_FONT_FAMILIES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                        <optgroup label="Office / Microsoft">
+                          {HEADER_FONT_FAMILIES.filter((font) => !["Helvetica", "Times-Roman", "Courier"].includes(font.value)).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                        </optgroup>
+                        <optgroup label="Fontes PDF incorporadas">
+                          {HEADER_FONT_FAMILIES.filter((font) => ["Helvetica", "Times-Roman", "Courier"].includes(font.value)).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                        </optgroup>
                       </select>
                     </div>
                     <div>
                       <label htmlFor="pdf-header-text-color" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Cor do texto</label>
                       <div className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
-                        <input id="pdf-header-text-color" type="color" value={headerTextColor} onChange={(event) => setHeaderTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor do texto do cabeçalho PDF" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+                        <select id="pdf-header-text-color-palette" value={headerTextColor} onChange={(event) => setHeaderTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Paleta Office do texto do cabeçalho PDF" className="min-w-0 flex-1 rounded-md border-0 bg-transparent px-1 py-1 text-xs text-slate-900 outline-none dark:text-white">
+                          {HEADER_COLOR_PALETTE.map((color) => <option key={color.value} value={color.value}>{color.label} ({color.value})</option>)}
+                        </select>
+                        <input id="pdf-header-text-color" type="color" value={headerTextColor} onChange={(event) => setHeaderTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor personalizada do texto do cabeçalho PDF" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
                         <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{headerTextColor}</span>
                       </div>
                     </div>

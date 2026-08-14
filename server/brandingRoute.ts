@@ -6,7 +6,7 @@ import { storagePut } from "./storage";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { requireSameOrigin } from "./_core/security";
 import { drawPdfHeader, loadPdfBranding } from "./pdfBranding";
-import { normalizeHeaderFontFamily, normalizeHeaderFontSizePoints, normalizeHeaderTextColor } from "@shared/headerFormatting";
+import { HEADER_FONT_FAMILIES, normalizeHeaderFontFamily, normalizeHeaderFontSizePoints, normalizeHeaderTextColor } from "@shared/headerFormatting";
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg"]);
@@ -49,7 +49,7 @@ export function readPreviewBody(body: unknown) {
     headerTextAlignment: source.headerTextAlignment === "left" || source.headerTextAlignment === "center" || source.headerTextAlignment === "right" ? source.headerTextAlignment : undefined,
     headerFontSize: source.headerFontSize === "small" || source.headerFontSize === "medium" || source.headerFontSize === "large" ? source.headerFontSize : undefined,
     headerFontSizePoints: source.headerFontSizePoints === undefined ? undefined : normalizeHeaderFontSizePoints(source.headerFontSizePoints),
-    headerFontFamily: source.headerFontFamily === "Helvetica" || source.headerFontFamily === "Times-Roman" || source.headerFontFamily === "Courier" ? normalizeHeaderFontFamily(source.headerFontFamily) : undefined,
+    headerFontFamily: typeof source.headerFontFamily === "string" && HEADER_FONT_FAMILIES.some((font) => font.value === source.headerFontFamily) ? normalizeHeaderFontFamily(source.headerFontFamily) : undefined,
     headerTextColor: typeof source.headerTextColor === "string" && /^#[0-9a-f]{6}$/i.test(source.headerTextColor) ? normalizeHeaderTextColor(source.headerTextColor) : undefined,
     templateId: typeof source.templateId === "string" ? source.templateId.slice(0, 64) : undefined,
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeHeaderFontSizePoints, parseHeaderText } from "./headerFormatting";
+import { HEADER_COLOR_PALETTE, HEADER_FONT_FAMILIES, getHeaderFontCssFamily, normalizeHeaderFontFamily, normalizeHeaderPdfFontFamily, normalizeHeaderFontSizePoints, parseHeaderText } from "./headerFormatting";
 
 describe("headerFormatting", () => {
   it("preserva quebras de linha", () => {
@@ -37,5 +37,22 @@ describe("headerFormatting", () => {
     expect(normalizeHeaderFontSizePoints("", 16.5)).toBe(16.5);
     expect(normalizeHeaderFontSizePoints("4.5")).toBe(8);
     expect(normalizeHeaderFontSizePoints("80.5")).toBe(72);
+  });
+
+  it("expõe famílias Office e mapeia-as para fontes PDFKit seguras", () => {
+    expect(HEADER_FONT_FAMILIES.map((font) => font.value)).toContain("Aptos");
+    expect(HEADER_FONT_FAMILIES.map((font) => font.value)).toContain("Calibri");
+    expect(normalizeHeaderFontFamily("Aptos Display")).toBe("Aptos Display");
+    expect(normalizeHeaderPdfFontFamily("Aptos Display")).toBe("Helvetica");
+    expect(normalizeHeaderPdfFontFamily("Aptos Serif")).toBe("Times-Roman");
+    expect(normalizeHeaderPdfFontFamily("Aptos Mono")).toBe("Courier");
+    expect(getHeaderFontCssFamily("Aptos Display")).toContain("Aptos Display");
+    expect(normalizeHeaderFontFamily("fonte-inválida")).toBe("Helvetica");
+  });
+
+  it("disponibiliza a paleta de tema Office e permite cores personalizadas", () => {
+    expect(HEADER_COLOR_PALETTE.find((color) => color.value === "#4472C4")?.label).toContain("Ênfase 1");
+    expect(HEADER_COLOR_PALETTE.find((color) => color.value === "#70AD47")?.group).toBe("Office theme");
+    expect(HEADER_COLOR_PALETTE.length).toBeGreaterThanOrEqual(20);
   });
 });

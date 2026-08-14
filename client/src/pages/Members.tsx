@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -109,7 +109,7 @@ export default function Members() {
     setFormData(emptyForm);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!formData.name.trim()) {
       toast.error("Indique o nome completo do membro.");

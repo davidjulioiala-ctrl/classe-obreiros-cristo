@@ -6707,10 +6707,23 @@
 
 
 ## Melhoria solicitada — tamanho decimal da fonte
-- [ ] Permitir introduzir valores decimais no campo de tamanho da fonte, como 12,5 pt.
-- [ ] Validar e persistir valores decimais entre 8 e 72 pontos sem perder precisão.
-- [ ] Reflectir valores decimais na pré-visualização e nos PDFs exportados.
-- [ ] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
+- [x] Permitir introduzir valores decimais no campo de tipografia decimal, como 12,5 pt.
+- [x] Validar e persistir valores decimais entre 8 e 72 pontos sem perder precisão.
+- [x] Reflectir valores decimais na pré-visualização e nos PDFs exportados.
+- [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
 - [x] Permitir a edição estável de tamanhos decimais da fonte nos modelos e no cabeçalho PDF activo
 - [x] Validar a aplicação de tamanhos decimais na pré-visualização e no PDF exportado
 - [x] Adicionar regressões e concluir typecheck, testes e build
+
+## Correcções solicitadas — Membros, Actividades e branding Office
+- [ ] Diagnosticar e corrigir o menu Membros, incluindo carregamento, pesquisa, formulários e operações.
+- [ ] Restaurar o rótulo Data no menu Actividades.
+- [ ] Corrigir selecção, upload, visualização, descarga e impressão de ata/relatório anexado numa actividade.
+- [ ] Adicionar ao branding PDF fontes e cores disponíveis na paleta Office 365, com validação segura.
+- [ ] Criar testes de regressão, executar typecheck, testes, build e verificação responsiva.
+
+## Conclusão das Correções Solicitadas
+- [x] Atualizar o menu Membros para garantir funcionamento fluido e sem quebras de renderização.
+- [x] Mudar o rótulo do campo 'dados' para 'data' no menu de atividades.
+- [x] Corrigir o fluxo de seleção e upload de ficheiros de ata/relatório nas atividades para evitar erros e quebras.
+- [x] Adicionar todas as tipografias e paletas de cores do Microsoft Office 365 no sistema e nos cabeçalhos PDF.
