@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Calendar, DollarSign, TrendingUp, ArrowUp, Activity, AlertCircle, RefreshCw } from "lucide-react";
+import { Users, Calendar, DollarSign, TrendingUp, ArrowUp, Activity, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart,
   Bar,
@@ -27,6 +28,13 @@ function toDateKey(value: Date | string | number | null | undefined) {
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }
 
+function formatActivityDate(value: Date | string) {
+  const parsed = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T12:00:00`)
+    : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "Data indisponível" : parsed.toLocaleDateString("pt-PT", { dateStyle: "medium" });
+}
+
 function DateRangeEmptyState({ message }: { message: string }) {
   return <div className="flex h-80 items-center justify-center rounded-lg border border-dashed border-slate-300 px-4 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">{message}</div>;
 }
@@ -36,30 +44,62 @@ const StatCard = ({
   label,
   value,
   trendValue,
+  onClick,
+  accent = "emerald",
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   trendValue: string;
-}) => (
-  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-    <Card className="p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{label}</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{value}</p>
-          <div className="flex items-center gap-1">
-            <ArrowUp className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-green-600">{trendValue}</span>
+  onClick?: () => void;
+  accent?: "emerald" | "amber";
+}) => {
+  const interactiveProps = onClick
+    ? {
+        role: "button" as const,
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClick();
+          }
+        },
+        "aria-label": `${label}: ${value}. Abrir detalhes`,
+      }
+    : {};
+  const accentClasses = accent === "amber"
+    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+    : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400";
+
+  return (
+    <motion.div
+      {...interactiveProps}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: onClick ? -4 : 0 }}
+      transition={{ duration: 0.3 }}
+      className={onClick ? "cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" : undefined}
+    >
+      <Card className="p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{label}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">{value}</p>
+            <div className="flex items-center gap-1">
+              <ArrowUp className={`w-4 h-4 ${accent === "amber" ? "text-amber-500" : "text-green-500"}`} />
+              <span className={`text-sm font-medium ${accent === "amber" ? "text-amber-600" : "text-green-600"}`}>{trendValue}</span>
+            </div>
+          </div>
+          <div className={`p-3 rounded-lg ${accentClasses}`}>
+            <div>{Icon}</div>
           </div>
         </div>
-        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-          <div className="text-emerald-600 dark:text-emerald-400">{Icon}</div>
-        </div>
-      </div>
-    </Card>
-  </motion.div>
-);
+        {onClick && <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400"><span>Ver pessoas e actividades</span><ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></div>}
+      </Card>
+    </motion.div>
+  );
+};
 
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -78,13 +118,21 @@ export default function Dashboard() {
   const { data: activities } = trpc.activities.list.useQuery();
   const { data: quotas } = trpc.quotas.list.useQuery?.() || { data: [] };
   const { data: groups } = trpc.groups.list.useQuery();
+  const [participationGroup, setParticipationGroup] = useState<"active" | "inactive" | null>(null);
+  const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 });
   const participationQuery = trpc.dashboard.participationByType.useQuery(
     { startDate: dateFrom || undefined, endDate: dateTo || undefined },
     { enabled: !dateRangeInvalid },
   );
 
   const registeredPeopleCount = members?.length ?? 0;
-  const activePeopleCount = members?.filter((member) => member.isActive).length ?? 0;
+  const activePeopleCount = participationHighlightsQuery.data?.active.length ?? 0;
+  const inactivePeopleCount = participationHighlightsQuery.data?.inactive.length ?? 0;
+  const selectedParticipationMembers = participationGroup === "active"
+    ? participationHighlightsQuery.data?.active ?? []
+    : participationGroup === "inactive"
+      ? participationHighlightsQuery.data?.inactive ?? []
+      : [];
   const regularMemberCount = members?.filter((member) => {
     const position = (member.position ?? "").trim().toLocaleLowerCase("pt-PT");
     return !member.isGuest && position !== "líder";
@@ -155,7 +203,21 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas registadas" value={registeredPeopleCount} trendValue="Total no sistema" />
-          <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas activas" value={activePeopleCount} trendValue="Estado activo" />
+          <StatCard
+            icon={<Users className="w-6 h-6" />}
+            label="Membros activos por participação"
+            value={activePeopleCount}
+            trendValue="60% ou mais de presença"
+            onClick={() => setParticipationGroup("active")}
+          />
+          <StatCard
+            icon={<Users className="w-6 h-6" />}
+            label="Membros inactivos por participação"
+            value={inactivePeopleCount}
+            trendValue="Menos de 60% de presença"
+            accent="amber"
+            onClick={() => setParticipationGroup("inactive")}
+          />
           <StatCard icon={<Users className="w-6 h-6" />} label="Membros regulares" value={regularMemberCount} trendValue="Sem convidados e líderes" />
           <StatCard icon={<Calendar className="w-6 h-6" />} label="Actividades registadas" value={totalActivities} trendValue="Calendário activo" />
           <StatCard icon={<DollarSign className="w-6 h-6" />} label="Cotas registadas" value={quotas?.length ?? 0} trendValue="Módulo financeiro" />
@@ -261,6 +323,53 @@ export default function Dashboard() {
             </div>
           )}
         </ChartCard>
+
+        <Dialog open={participationGroup !== null} onOpenChange={(open) => !open && setParticipationGroup(null)}>
+          <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{participationGroup === "active" ? "Membros activos por participação" : "Membros inactivos por participação"}</DialogTitle>
+              <DialogDescription>
+                Classificação calculada sobre {participationHighlightsQuery.data?.totalActivities ?? 0} actividades registadas. Activo significa presença igual ou superior a 60%; inactivo significa presença inferior a 60%.
+              </DialogDescription>
+            </DialogHeader>
+            {participationHighlightsQuery.isLoading ? (
+              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400" aria-busy="true">A calcular a participação dos membros…</div>
+            ) : participationHighlightsQuery.isError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300" role="alert">Não foi possível carregar os detalhes de participação.</div>
+            ) : selectedParticipationMembers.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">Não existem pessoas nesta classificação.</div>
+            ) : (
+              <div className="grid gap-3">
+                {selectedParticipationMembers.map((member) => (
+                  <article key={member.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-slate-900 dark:text-white">{member.name}</h3>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">ID {member.id}{member.position ? ` · ${member.position}` : ""}{member.isGuest ? " · Convidado" : ""}</p>
+                      </div>
+                      <div className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ${member.attendancePercentage >= 60 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"}`}>
+                        {member.attendancePercentage}% ({member.presentCount}/{member.totalActivities})
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Últimas 7 actividades frequentadas</p>
+                      {member.lastActivities.length > 0 ? (
+                        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                          {member.lastActivities.map((activity) => (
+                            <li key={activity.id} className="rounded-md bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">
+                              <span className="font-medium">{activity.name}</span>
+                              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{formatActivityDate(activity.date)}{activity.type ? ` · ${activity.type}` : ""}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Ainda não existem actividades frequentadas registadas.</p>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </DashboardLayoutCustom>
   );

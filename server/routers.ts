@@ -1063,6 +1063,9 @@ const dashboardRouter = router({
       const endDate = input.endDate ? new Date(`${input.endDate}T23:59:59.999Z`) : undefined;
       return await db.getParticipationByActivityType({ startDate, endDate });
     }),
+  memberParticipationHighlights: protectedProcedure
+    .input(z.object({ threshold: z.number().min(0).max(100).default(60), recentLimit: z.number().int().min(1).max(20).default(7) }))
+    .query(async ({ input }) => db.getMemberParticipationHighlights(input)),
 });
 
 // ============ MAIN ROUTER ============

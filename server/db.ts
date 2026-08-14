@@ -32,6 +32,7 @@ import { decryptFields, decryptJson, encryptFields, encryptJson } from "./_core/
 import { filterRestorableSettings } from "./_core/backupRecovery";
 import { normalizeMemberSearch } from "../shared/memberSearch";
 import { ACTIVITY_TYPE_CATALOG, activityTypeLabel } from "../shared/activityTypes";
+import { summarizeMemberParticipation } from "../shared/memberParticipation";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -498,6 +499,19 @@ export async function getParticipationByActivityType(options?: { startDate?: Dat
     .orderBy(desc(sql`presentCount`), asc(activities.type));
 
   return completeParticipationByActivityType(rows);
+}
+
+export async function getMemberParticipationHighlights(options?: { threshold?: number; recentLimit?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [memberRows, activityRows, attendanceRows] = await Promise.all([
+    db.select().from(members).orderBy(asc(members.id)),
+    db.select({ id: activities.id, name: activities.name, date: activities.date, type: activities.type, status: activities.status }).from(activities).orderBy(desc(activities.date), desc(activities.id)),
+    db.select({ memberId: attendance.memberId, activityId: attendance.activityId, isPresent: attendance.isPresent }).from(attendance),
+  ]);
+
+  return summarizeMemberParticipation(memberRows, activityRows, attendanceRows, options);
 }
 
 // ============ QUOTAS ============

@@ -21,4 +21,13 @@ describe("filtro temporal do Dashboard", () => {
     expect(dashboardSource).toContain("startDate: dateFrom || undefined");
     expect(dashboardSource).toContain("endDate: dateTo || undefined");
   });
+
+  it("apresenta destaques de activos e inactivos com o limiar de 60% e acesso às últimas sete actividades", () => {
+    expect(dashboardSource).toContain("memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 })");
+    expect(dashboardSource).toContain("Membros activos por participação");
+    expect(dashboardSource).toContain("Membros inactivos por participação");
+    expect(dashboardSource).toContain('setParticipationGroup("active")');
+    expect(dashboardSource).toContain('setParticipationGroup("inactive")');
+    expect(dashboardSource).toContain("Últimas 7 actividades frequentadas");
+  });
 });

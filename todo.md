@@ -7033,3 +7033,10 @@
 - [x] Adicionar um novo cartão de destaque na Página Inicial com o total de membros regulares (excluindo convidados e líderes).
 - [x] Implementar a exportação de membros por grupo (PDF, CSV e Excel) com selecção de colunas e dados filtrados.
 - [x] Adicionar testes e validar a compilação.
+
+## Nova Tarefa — Destaques de Membros Ativos e Inativos (>= 60% e < 60%) com Últimas 7 Atividades
+- [ ] Implementar procedimento tRPC ou helper de servidor para calcular a percentagem de presença de cada membro face às atividades globais (ou do mês), classificando como Ativo (>= 60%) e Inativo (< 60%).
+- [ ] Recolher o histórico das últimas 7 atividades em que cada membro participou para exibição no modal/painel de detalhe.
+- [ ] Atualizar o Dashboard/Página Inicial com os cartões de destaque clicáveis para Ativos e Inativos.
+- [ ] Criar modal ou painel interativo ao clicar em cada destaque para listar os membros, a sua percentagem de presença e as últimas 7 atividades frequentadas.
+- [ ] Adicionar testes de regressão e validar a compilação, typecheck e build de produção.
