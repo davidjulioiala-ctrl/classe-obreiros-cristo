@@ -121,7 +121,8 @@ export default function AuditAndBackup() {
 
   const handleBackup = async () => {
     try {
-      const result = await exportBackup.mutateAsync({ destination, cloudEmail: cloudEmail.trim() || undefined });
+      const versionLabel = `Backup manual ${new Date().toLocaleString("pt-PT")}`;
+      const result = await exportBackup.mutateAsync({ destination, cloudEmail: cloudEmail.trim() || undefined, versionLabel });
       if (destination === "local" && result.id) {
         const anchor = document.createElement("a");
         anchor.href = `/api/backups/${result.id}/download`;

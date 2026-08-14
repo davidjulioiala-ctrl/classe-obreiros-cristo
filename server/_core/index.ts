@@ -10,6 +10,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerReportPdfRoute } from "../reportPdf";
 import { registerTransferPdfRoute } from "../transferPdf";
+import { registerAttendancePdfRoute } from "../attendancePdf";
 import { registerFinancialReportRoutes } from "../financialReportRoute";
 import { registerBackupRoutes } from "../backupRoutes";
 import { serveStatic, setupVite } from "./vite";
@@ -80,6 +81,7 @@ async function startServer() {
   app.use(maintenanceGate);
   registerReportPdfRoute(app);
   registerTransferPdfRoute(app);
+  registerAttendancePdfRoute(app);
   registerFinancialReportRoutes(app);
   registerBackupRoutes(app);
   // tRPC API

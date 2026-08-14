@@ -73,8 +73,21 @@ export default function Attendance() {
 
   const recentActivities = useMemo(() => {
     const term = activitySearch.trim().toLowerCase();
-    return [...(activities ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 7).filter((activity) => !term || activity.name.toLowerCase().includes(term) || String(activity.id) === term);
+    const sortedActivities = [...(activities ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (!term) return sortedActivities.slice(0, 7);
+    return sortedActivities.filter((activity) => activity.name.toLowerCase().includes(term) || String(activity.id) === term);
   }, [activities, activitySearch]);
+
+  const handleExportPdf = () => {
+    if (!selectedActivity) return;
+    const anchor = document.createElement("a");
+    anchor.href = `/api/attendance/${selectedActivity}/pdf`;
+    anchor.download = `presencas-${selectedActivity}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    toast.success("Exportação de presenças iniciada.");
+  };
   const selectedActivityData = activities?.find((a) => a.id === selectedActivity);
   const filteredMembers = useMemo(() => (members ?? []).filter((member) => matchesMemberSearch(member, memberSearch)), [members, memberSearch]);
   const memberSuggestions = filteredMembers.slice(0, 8);
@@ -147,7 +160,7 @@ export default function Attendance() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Selecione uma atividade
             </label>
-            <Input value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} placeholder="Pesquisar nas últimas 7 actividades por nome ou ID" className="mb-2" />
+            <Input value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} placeholder="Pesquisar por nome ou ID; a pesquisa mostra todas as actividades encontradas" className="mb-2" />
             <select
               value={selectedActivity || ""}
               onChange={(e) =>
@@ -185,13 +198,23 @@ export default function Attendance() {
                   </div>
                 </div>
               </div>
-              <Button
-                onClick={handleSaveAttendance}
-                disabled={recordAttendanceMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                {recordAttendanceMutation.isPending ? "A guardar..." : "Guardar"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportPdf}
+                  disabled={!selectedActivityData}
+                >
+                  <Download className="mr-2 h-4 w-4" />Exportar PDF
+                </Button>
+                <Button
+                  onClick={handleSaveAttendance}
+                  disabled={recordAttendanceMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {recordAttendanceMutation.isPending ? "A guardar..." : "Guardar"}
+                </Button>
+              </div>
             </div>
           )}
         </motion.div>

@@ -6851,3 +6851,9 @@
 - [x] Funcionalidade de mudança de senha com segurança e validação.
 - [x] Sistema de backup automático e prático.
 - [x] Seleção múltipla para eliminação em lote de logs de operações.
+
+## Correções solicitadas — Backup, Transferências e Presenças
+- [x] Corrigir os erros de abertura, carregamento e operações no menu Backup.
+- [x] Corrigir os erros de carregamento e processamento no menu Transferências.
+- [x] Mostrar apenas sete registos como atalhos iniciais, revelando o restante através de pesquisa.
+- [x] Adicionar exportação das presenças registadas para PDF.

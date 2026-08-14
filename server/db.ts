@@ -822,7 +822,8 @@ export async function getReportById(id: number) {
 export async function listTransfers() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(transfers).orderBy(desc(transfers.createdAt));
+  const rows = await db.select().from(transfers).orderBy(desc(transfers.createdAt));
+  return rows.map((row) => reveal(row, TRANSFER_PRIVATE_FIELDS));
 }
 
 export async function deleteTransfer(id: number) {

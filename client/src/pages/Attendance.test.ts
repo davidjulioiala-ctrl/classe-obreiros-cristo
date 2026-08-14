@@ -32,3 +32,17 @@ describe("attendance member autocomplete regression guards", () => {
     expect(attendanceSource).toContain("memberId: parseInt(memberId)");
   });
 });
+
+
+describe("attendance export and shortcut regression guards", () => {
+  it("keeps seven activities as shortcuts but searches the complete collection", () => {
+    expect(attendanceSource).toContain("const sortedActivities = [...(activities ?? [])]");
+    expect(attendanceSource).toContain("if (!term) return sortedActivities.slice(0, 7)");
+    expect(attendanceSource).toContain("return sortedActivities.filter((activity)");
+  });
+
+  it("exposes the authenticated PDF export for the selected activity", () => {
+    expect(attendanceSource).toContain("/api/attendance/${selectedActivity}/pdf");
+    expect(attendanceSource).toContain("Exportar PDF");
+  });
+});
