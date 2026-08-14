@@ -124,7 +124,7 @@ const membersRouter = router({
       return result;
     }),
 
-  update: liderProcedure
+  update: oficialProcedure
     .input(
       z.object({
         id: positiveId,

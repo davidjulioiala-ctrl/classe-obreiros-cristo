@@ -6971,3 +6971,8 @@
 - [x] Atualizar regras de backend e frontend para permitir que Oficiais criem membros.
 - [x] Ocultar os menus Configurações e Louvor para utilizadores com papel de Oficial.
 - [x] Validar testes e build de produção.
+
+## Ajuste Fino de Permissões para Oficiais (Membros)
+- [x] Permitir que oficiais criem e editem membros (incluindo completar campos em falta).
+- [x] Impedir que oficiais eliminem membros (restringir exclusão a administradores).
+- [x] Validar testes e build de produção.
