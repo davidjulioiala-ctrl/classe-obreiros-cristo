@@ -133,12 +133,16 @@ function OfficeColorPicker({ id, value, onChange, customInputLabel }: OfficeColo
         <div key={group}>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{group}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {HEADER_COLOR_PALETTE.filter((color) => color.group === group).map((color) => (
-              <button key={color.value} type="button" role="radio" aria-checked={value === color.value} onClick={() => onChange(color.value)} title={`Aplicar ${color.label}`} className={`flex min-h-11 items-center gap-2 rounded-md border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${value === color.value ? "border-emerald-500 bg-emerald-50 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/50" : "border-slate-200 bg-white hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900"}`}>
-                <span className="h-6 w-6 shrink-0 rounded-full border border-slate-300 shadow-inner dark:border-slate-600" style={{ backgroundColor: color.value }} aria-hidden="true" />
-                <span className="min-w-0"><span className="block truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{color.label}</span><span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{color.value}</span></span>
-              </button>
-            ))}
+            {HEADER_COLOR_PALETTE.filter((color) => color.group === group).map((color) => {
+              const normalizedColor = normalizeHeaderTextColor(color.value);
+              const selected = normalizeHeaderTextColor(value) === normalizedColor;
+              return (
+                <button key={color.value} type="button" role="radio" aria-checked={selected} onClick={() => onChange(normalizedColor)} title={`Aplicar ${color.label}`} className={`flex min-h-11 items-center gap-2 rounded-md border px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${selected ? "border-emerald-500 bg-emerald-50 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/50" : "border-slate-200 bg-white hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900"}`}>
+                  <span className="h-6 w-6 shrink-0 rounded-full border border-slate-300 shadow-inner dark:border-slate-600" style={{ backgroundColor: normalizedColor }} aria-hidden="true" />
+                  <span className="min-w-0"><span className="block truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{color.label}</span><span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{normalizedColor}</span></span>
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -319,14 +323,32 @@ export default function Settings() {
     setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints, headerFontFamily, headerTextColor } : template));
   };
 
+  const updateActiveHeaderTextColor = (value: string) => {
+    const normalizedColor = normalizeHeaderTextColor(value);
+    setHeaderTextColor(normalizedColor);
+    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTextColor: normalizedColor } : template));
+  };
+
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
     const persistedHeaderFontSizePoints = normalizeHeaderFontSizeDraft(headerFontSizePointsDraft, HEADER_FONT_SIZE_POINTS[headerFontSize]);
     setHeaderFontSizePoints(persistedHeaderFontSizePoints);
     setHeaderFontSizePointsDraft(String(persistedHeaderFontSizePoints));
-    const persistedTemplates = headerTemplates.map((template) => template.id === activeTemplateId ? { ...template, headerFontSizePoints: persistedHeaderFontSizePoints } : template);
+    const persistedHeaderTextColor = normalizeHeaderTextColor(headerTextColor);
+    const persistedTemplates = headerTemplates.map((template) => template.id === activeTemplateId ? {
+      ...template,
+      headerTitleText,
+      logoAlignment,
+      logoSize,
+      headerTextAlignment,
+      headerFontSize,
+      headerFontSizePoints: persistedHeaderFontSizePoints,
+      headerFontFamily,
+      headerTextColor: persistedHeaderTextColor,
+    } : template);
+    setHeaderTextColor(persistedHeaderTextColor);
     setHeaderTemplates(persistedTemplates);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -688,7 +710,7 @@ export default function Settings() {
                     </div>
                     <div className="sm:col-span-2">
                       <p className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Cor do texto</p>
-                      <OfficeColorPicker id="pdf-header-text-color" value={headerTextColor} onChange={(color) => setHeaderTextColor(normalizeHeaderTextColor(color))} customInputLabel="Cor personalizada do texto do cabeçalho PDF" />
+                      <OfficeColorPicker id="pdf-header-text-color" value={headerTextColor} onChange={updateActiveHeaderTextColor} customInputLabel="Cor personalizada do texto do cabeçalho PDF" />
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pressione Enter para iniciar uma nova linha.</p>

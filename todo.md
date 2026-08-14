@@ -6803,17 +6803,23 @@
 - [x] Rever testes Vitest, typecheck, build e validação visual dos fluxos corrigidos.
 
 ## Nova revisão — filtros de gráficos e documentos de actividades
-- [ ] Adicionar um filtro reutilizável de intervalo de datas a todos os gráficos do sistema.
-- [ ] Aplicar o intervalo de datas às consultas/agregações e manter estados vazio, erro e limpeza.
-- [ ] Permitir cancelar um upload de documento em curso, limpando progresso e estado.
-- [ ] Permitir eliminar um ficheiro já carregado com confirmação e autorização no servidor.
-- [ ] Permitir vários ficheiros por actividade, preservando visualização, download e impressão por ficheiro.
-- [ ] Adicionar testes Vitest, typecheck, build e validação visual dos novos fluxos.
+- [x] Adicionar um filtro reutilizável de intervalo de datas a todos os gráficos do sistema.
+- [x] Aplicar o intervalo de datas às consultas/agregações e manter estados vazio, erro e limpeza.
+- [x] Permitir cancelar um upload de documento em curso, limpando progresso e estado.
+- [x] Permitir eliminar um ficheiro já carregado com confirmação e autorização no servidor.
+- [x] Permitir vários ficheiros por actividade, preservando visualização, download e impressão por ficheiro.
+- [x] Adicionar testes Vitest, typecheck, build e validação visual dos novos fluxos.
 
 ## Revisão — paletas de cores e estabilidade dos menus
-- [ ] Diagnosticar por que motivo as paletas de cores e o modo claro/escuro não são aplicados ou persistidos.
-- [ ] Corrigir a aplicação das paletas em CSS, ThemeContext e Definições, preservando contraste e responsividade.
-- [ ] Verificar todas as rotas e itens do menu e corrigir páginas que não carregam, dão 404 ou quebram ao executar acções.
-- [ ] Validar operações de criação, edição, eliminação, pesquisa, filtros, uploads, exportações e notificações nos menus existentes.
-- [ ] Adicionar/actualizar testes de regressão, executar typecheck, testes completos, build e validação visual.
-- [ ] Guardar checkpoint publicado com a revisão concluída.
+- [x] Diagnosticar por que motivo as paletas de cores e o modo claro/escuro não são aplicados ou persistidos.
+- [x] Corrigir a aplicação das paletas em CSS, ThemeContext e Definições, preservando contraste e responsividade.
+- [x] Verificar todas as rotas e itens do menu e corrigir páginas que não carregam, dão 404 ou quebram ao executar acções.
+- [x] Validar operações de criação, edição, eliminação, pesquisa, filtros, uploads, exportações e notificações nos menus existentes.
+- [x] Adicionar/actualizar testes de regressão, executar typecheck, testes completos, build e validação visual.
+- [x] Guardar checkpoint publicado com a revisão concluída.
+
+## Correcção — paleta de cores de texto
+- [ ] Corrigir o selector de cores do texto no editor de cabeçalhos, sem alterar o tema claro/escuro.
+- [ ] Garantir que a cor textual escolhida é aplicada imediatamente à pré-visualização e persistida nos modelos.
+- [ ] Garantir que a mesma cor textual é usada na pré-visualização PDF e no PDF exportado.
+- [ ] Adicionar testes de regressão, executar typecheck e build, e publicar a correcção.
