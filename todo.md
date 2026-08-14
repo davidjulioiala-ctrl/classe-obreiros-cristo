@@ -6877,11 +6877,11 @@
 - [x] Acrescentar testes de integridade para criação, relações e exportações.
 
 ## Migração de IDs existentes — remapeamento relacional
-- [ ] Mapear todos os IDs existentes e as referências entre tabelas antes da migração.
-- [ ] Criar um remapeamento sequencial por tabela, começando em 1, sem perder registos.
-- [ ] Actualizar todas as chaves estrangeiras e referências históricas de acordo com o remapeamento.
-- [ ] Garantir que os IDs permanecem int auto-incrementais após a migração.
-- [ ] Validar contagens, relações, pesquisas, exportações e integridade após a alteração.
+- [x] Mapear todos os IDs existentes e as referências entre tabelas antes da migração.
+- [x] Criar um remapeamento sequencial por tabela, começando em 1, sem perder registos.
+- [x] Actualizar todas as chaves estrangeiras e referências históricas de acordo com o remapeamento.
+- [x] Garantir que os IDs permanecem int auto-incrementais após a migração.
+- [x] Validar contagens, relações, pesquisas, exportações e integridade após a alteração.
 
 ## Migração de IDs físicos existentes — concluída
 - [x] Mapear IDs existentes e dependências relacionais em todas as tabelas.
