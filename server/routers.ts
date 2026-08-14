@@ -1024,6 +1024,14 @@ const backupRouter = router({
   }),
 });
 
+// ============ DASHBOARD ROUTER ============
+
+const dashboardRouter = router({
+  participationByType: protectedProcedure.query(async () => {
+    return await db.getParticipationByActivityType();
+  }),
+});
+
 // ============ MAIN ROUTER ============
 
 export const appRouter = router({
@@ -1044,6 +1052,7 @@ export const appRouter = router({
   settings: settingsRouter,
   history: historyRouter,
   incident: incidentRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

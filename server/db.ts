@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, like, between, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, like, between, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { createHash } from "node:crypto";
 import {
@@ -430,6 +430,41 @@ export async function getAttendanceStats(activityId: number) {
   const absent = total - present;
 
   return { total, present, absent };
+}
+
+export type ParticipationByActivityTypeRow = {
+  type: string | null | undefined;
+  activityCount: unknown;
+  presentCount: unknown;
+  recordedCount: unknown;
+};
+
+export function normalizeParticipationByActivityType(rows: ParticipationByActivityTypeRow[]) {
+  return rows.map((row) => ({
+    type: row.type?.trim() || "Sem tipo",
+    activityCount: Math.max(0, Number(row.activityCount) || 0),
+    presentCount: Math.max(0, Number(row.presentCount) || 0),
+    recordedCount: Math.max(0, Number(row.recordedCount) || 0),
+  }));
+}
+
+export async function getParticipationByActivityType() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      type: activities.type,
+      activityCount: sql<number>`COUNT(DISTINCT ${activities.id})`,
+      presentCount: sql<number>`COALESCE(SUM(CASE WHEN ${attendance.isPresent} = 1 THEN 1 ELSE 0 END), 0)`,
+      recordedCount: sql<number>`COUNT(${attendance.id})`,
+    })
+    .from(activities)
+    .leftJoin(attendance, eq(attendance.activityId, activities.id))
+    .groupBy(activities.type)
+    .orderBy(desc(sql`presentCount`), asc(activities.type));
+
+  return normalizeParticipationByActivityType(rows);
 }
 
 // ============ QUOTAS ============

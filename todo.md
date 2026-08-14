@@ -6749,3 +6749,9 @@
 - [x] Adicionar controlos de ordenação por Data (Mais recente / Mais antiga) e Estado (Ordem alfabética ou prioridade).
 - [x] Integrar a ordenação com o pipeline de filtragem existente (pesquisa, datas e estado).
 - [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
+
+## Nova Funcionalidade — Gráficos de Participação por Tipo de Atividade no Dashboard
+- [x] Criar procedimento tRPC ou extensão no router para agregar a participação e presenças por tipo de atividade (Culto, Reunião, Ensaio, Social, Outros).
+- [x] Integrar gráficos visuais (Recharts ResponsiveContainer, BarChart / PieChart) na página Dashboard.tsx com dados reais.
+- [x] Adicionar estados de carregamento, legenda acessível e estado vazio quando não houver presenças lançadas.
+- [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
