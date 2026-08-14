@@ -7027,3 +7027,9 @@
 - [x] Implementar a capacidade de guardar a selecção de colunas actual como um modelo personalizado no navegador (localStorage).
 - [x] Adicionar seletor de modelos predefinidos e personalizados (ex: Resumo Geral, Dados de Contacto, Completo) no modal de exportação.
 - [x] Adicionar testes de regressão para os modelos de colunas.
+
+## Nova Tarefa — Página Inicial, Destaque de Membros Comuns e Exportação por Grupo
+- [ ] Renomear o menu "Dashboard" para "Página Inicial" na barra de navegação.
+- [ ] Adicionar um novo cartão de destaque na Página Inicial com o total de membros regulares (excluindo convidados e líderes).
+- [ ] Implementar a exportação de membros por grupo (PDF, CSV e Excel) com selecção de colunas e dados filtrados.
+- [ ] Adicionar testes e validar a compilação.

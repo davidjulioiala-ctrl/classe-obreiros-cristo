@@ -22,6 +22,13 @@ function parseIncludePersonalData(value: unknown): boolean {
   return value === "true" || value === true;
 }
 
+function canExportMembers(user: { role: string; churchRole: string } | null) {
+  if (!user) return false;
+  const role = user.role.toLowerCase();
+  const churchRole = user.churchRole.toLowerCase();
+  return role === "admin" || churchRole.includes("líder") || churchRole.includes("lider") || churchRole.includes("financeiro");
+}
+
 function canExportReports(user: { role: string; churchRole: string } | null) {
   if (!user) return false;
   const role = user.role.toLowerCase();
@@ -34,6 +41,7 @@ export function registerListExportRoutes(app: Express) {
     try {
       const user = await getLocalUserFromRequest(req);
       if (!user) return res.status(401).json({ error: "Não autenticado" });
+      if (!canExportMembers(user)) return res.status(403).json({ error: "Sem permissão para exportar listas de membros." });
       const format = req.params.format;
       if (format !== "pdf" && format !== "csv" && format !== "xlsx") return res.status(400).json({ error: "Formato inválido" });
       const searchQuery = safeSearch(req.query.search);

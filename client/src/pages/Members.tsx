@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { ExportColumnDialog } from "@/components/ExportColumnDialog";
 import { MEMBER_EXPORT_COLUMN_KEYS, MEMBER_EXPORT_COLUMNS } from "@shared/exportColumns";
@@ -67,6 +68,8 @@ function calculateAge(birthDate?: string | Date | null) {
 }
 
 export default function Members() {
+  const { user } = useLocalAuth();
+  const canExportMembers = user?.role === "admin" || (user?.churchRole !== undefined && user.churchRole !== "oficial");
   const [searchQuery, setSearchQuery] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [sexFilter, setSexFilter] = useState<"all" | "M" | "F">("all");
@@ -222,6 +225,17 @@ export default function Members() {
     setExportDialogOpen(true);
   };
 
+  const openGroupExportDialog = (groupId: number | "guests", format: "pdf" | "csv" | "xlsx") => {
+    setGroupFilter(groupId === "guests" ? "all" : groupId);
+    setGuestFilter(groupId === "guests" ? "guests" : "all");
+    setPendingExportFormat(format);
+    setExportDialogOpen(true);
+  };
+
+  const exportScopeLabel = groupFilter !== "all"
+    ? (groups ?? []).find((group) => group.id === groupFilter)?.name
+    : guestFilter === "guests" ? "convidados" : undefined;
+
   const exportMembers = async (columns = selectedExportColumns, includePersonalData = false) => {
     if (columns.length === 0) return toast.error("Seleccione pelo menos uma coluna.");
     const format = pendingExportFormat;
@@ -237,7 +251,8 @@ export default function Members() {
       params.set("columns", columns.join(","));
       params.set("includePersonalData", includePersonalData ? "true" : "false");
       const hasActiveFilters = Boolean(searchQuery.trim()) || positionFilter !== "all" || sexFilter !== "all" || statusFilter !== "all" || guestFilter !== "all" || groupFilter !== "all";
-      await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${hasActiveFilters ? "-filtrados" : ""}.${format}`);
+      const scopeSuffix = exportScopeLabel ? `-${exportScopeLabel.toLocaleLowerCase("pt-PT").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}` : "";
+      await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${scopeSuffix}${hasActiveFilters && !scopeSuffix ? "-filtrados" : ""}.${format}`);
       toast.success(`Lista de membros exportada em ${format.toUpperCase()}.`);
       setExportDialogOpen(false);
     } catch (error) {
@@ -267,15 +282,19 @@ export default function Members() {
             <p className="mt-1 text-slate-600 dark:text-slate-400">Acompanhe a distribuição por grupos, géneros e convidados da congregação.</p>
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-            <Button onClick={() => openExportDialog("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
-              <Download className="mr-2 h-4 w-4" /> PDF
-            </Button>
-            <Button onClick={() => openExportDialog("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
-              <FileText className="mr-2 h-4 w-4" /> CSV
-            </Button>
-            <Button onClick={() => openExportDialog("xlsx")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
-            </Button>
+            {canExportMembers && (
+              <>
+                <Button onClick={() => openExportDialog("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+                  <Download className="mr-2 h-4 w-4" /> PDF
+                </Button>
+                <Button onClick={() => openExportDialog("csv")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+                  <FileText className="mr-2 h-4 w-4" /> CSV
+                </Button>
+                <Button onClick={() => openExportDialog("xlsx")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
+                </Button>
+              </>
+            )}
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
               {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
             </Button>
@@ -304,7 +323,7 @@ export default function Members() {
               return (
                 <Card 
                   key={group.id} 
-                  onClick={() => setGroupFilter(isSelected ? "all" : group.id)}
+                  onClick={() => { setGuestFilter("all"); setGroupFilter(isSelected ? "all" : group.id); }}
                   className={`cursor-pointer border p-4 transition-all hover:shadow-md ${isSelected ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/25 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800'}`}
                 >
                   <div className="flex items-center justify-between">
@@ -318,6 +337,15 @@ export default function Members() {
                     <span>Homens: <strong>{males}</strong></span>
                     <span>Mulheres: <strong>{females}</strong></span>
                   </div>
+                  {canExportMembers && (
+                    <div className="mt-3 grid grid-cols-3 gap-1 border-t border-slate-100 pt-2 dark:border-slate-800/80">
+                      {(["pdf", "csv", "xlsx"] as const).map((format) => (
+                        <Button key={format} type="button" variant="ghost" size="sm" className="h-8 px-1 text-[11px]" aria-label={`Exportar grupo ${group.name} em ${format === "xlsx" ? "Excel" : format.toUpperCase()}`} onClick={(event) => { event.stopPropagation(); openGroupExportDialog(group.id, format); }}>
+                          {format === "xlsx" ? "Excel" : format.toUpperCase()}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               );
             };
@@ -345,6 +373,15 @@ export default function Members() {
                     <span>Homens: <strong>{males}</strong></span>
                     <span>Mulheres: <strong>{females}</strong></span>
                   </div>
+                  {canExportMembers && (
+                    <div className="mt-3 grid grid-cols-3 gap-1 border-t border-slate-100 pt-2 dark:border-slate-800/80">
+                      {(["pdf", "csv", "xlsx"] as const).map((format) => (
+                        <Button key={format} type="button" variant="ghost" size="sm" className="h-8 px-1 text-[11px]" aria-label={`Exportar convidados em ${format === "xlsx" ? "Excel" : format.toUpperCase()}`} onClick={(event) => { event.stopPropagation(); openGroupExportDialog("guests", format); }}>
+                          {format === "xlsx" ? "Excel" : format.toUpperCase()}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               );
             };

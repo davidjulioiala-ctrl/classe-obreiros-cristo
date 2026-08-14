@@ -40,7 +40,7 @@ export type MenuItem = {
 export type NavigationUser = { role?: string | null; churchRole?: string | null } | null | undefined;
 
 export const menuItems: MenuItem[] = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: Home, label: "Página Inicial", href: "/dashboard" },
   { icon: Users, label: "Membros", href: "/members" },
   { icon: AlertTriangle, label: "Campos em falta", href: "/members/incomplete", nested: true },
   { icon: Calendar, label: "Presenças", href: "/attendance" },
@@ -63,7 +63,7 @@ export function getVisibleMenuItems(user: NavigationUser) {
   return menuItems.filter((item) => {
     if (isAdmin) return true;
     if (["/users", "/audit-backup"].includes(item.href)) return false;
-    if (churchRole === "louvor") return ["Dashboard", "Membros", "Louvor"].includes(item.label);
+    if (churchRole === "louvor") return ["Página Inicial", "Membros", "Louvor"].includes(item.label);
     if (churchRole === "oficial") return !["Finanças", "Transferências", "Utilizadores", "Louvor", "Configurações"].includes(item.label);
     return true;
   });

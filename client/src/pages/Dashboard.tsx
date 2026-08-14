@@ -85,6 +85,10 @@ export default function Dashboard() {
 
   const registeredPeopleCount = members?.length ?? 0;
   const activePeopleCount = members?.filter((member) => member.isActive).length ?? 0;
+  const regularMemberCount = members?.filter((member) => {
+    const position = (member.position ?? "").trim().toLocaleLowerCase("pt-PT");
+    return !member.isGuest && position !== "líder";
+  }).length ?? 0;
   const totalActivities = activities?.length ?? 0;
   const chartMembers = useMemo(() => {
     if (dateRangeInvalid) return [];
@@ -129,7 +133,7 @@ export default function Dashboard() {
     <DashboardLayoutCustom>
       <motion.div className="space-y-8" variants={containerVariants} initial="hidden" animate="visible">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Dashboard</h1>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Página Inicial</h1>
           <p className="text-slate-600 dark:text-slate-400">Visão geral baseada exclusivamente nos dados reais do sistema</p>
         </motion.div>
 
@@ -152,6 +156,7 @@ export default function Dashboard() {
         <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas registadas" value={registeredPeopleCount} trendValue="Total no sistema" />
           <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas activas" value={activePeopleCount} trendValue="Estado activo" />
+          <StatCard icon={<Users className="w-6 h-6" />} label="Membros regulares" value={regularMemberCount} trendValue="Sem convidados e líderes" />
           <StatCard icon={<Calendar className="w-6 h-6" />} label="Actividades registadas" value={totalActivities} trendValue="Calendário activo" />
           <StatCard icon={<DollarSign className="w-6 h-6" />} label="Cotas registadas" value={quotas?.length ?? 0} trendValue="Módulo financeiro" />
           <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Grupos operacionais" value={groups?.length ?? 0} trendValue="Dados reais" />
