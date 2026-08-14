@@ -53,6 +53,47 @@ describe("branding dos PDFs", () => {
     expect(branding.headerFontSizePoints).toBe(27.5);
   });
 
+  it("normaliza pontos decimais persistidos e mantém o valor no branding", async () => {
+    getAppSetting.mockResolvedValue(JSON.stringify({ congregationName: "Igreja Local", headerFontSizePoints: "27,5" }));
+
+    const branding = await loadPdfBranding();
+
+    expect(branding.headerFontSizePoints).toBe(27.5);
+  });
+
+  it("passa o tamanho decimal ao PDFKit ao desenhar o cabeçalho", () => {
+    const fontSizes: number[] = [];
+    const document = {
+      y: 0,
+      font() { return this; },
+      fontSize(size: number) { fontSizes.push(size); return this; },
+      widthOfString(text: string) { return text.length * 5; },
+      fillColor() { return this; },
+      text() { return this; },
+      moveTo() { return this; },
+      lineTo() { return this; },
+      lineWidth() { return this; },
+      strokeColor() { return this; },
+      stroke() { return this; },
+    } as any;
+
+    drawPdfHeader(document, {
+      congregationName: "Igreja Local",
+      headerTitleText: "Cabeçalho decimal",
+      logoBuffer: null,
+      logoMimeType: null,
+      logoAlignment: "center",
+      logoSize: "medium",
+      headerTextAlignment: "center",
+      headerFontSize: "medium",
+      headerFontSizePoints: 27.5,
+      headerFontFamily: "Helvetica",
+      headerTextColor: "#064e3b",
+    }, "RELATÓRIO");
+
+    expect(fontSizes).toContain(27.5);
+  });
+
   it("usa o modelo marcado como padrão quando não existe uma seleção explícita", async () => {
     getAppSetting.mockResolvedValue(JSON.stringify({
       congregationName: "Igreja Local",

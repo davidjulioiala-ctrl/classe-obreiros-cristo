@@ -93,6 +93,10 @@ function clearHeaderFormat(value: string, setValue: (value: string) => void) {
   setValue(value.replace(/\[(b|i|u)\]([\s\S]*?)\[\/\1\]/gi, "$2"));
 }
 
+function normalizeHeaderFontSizeDraft(value: string, fallback: number) {
+  return normalizeHeaderFontSizePoints(value.trim().replace(",", "."), fallback);
+}
+
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
@@ -108,6 +112,7 @@ export default function Settings() {
   const [headerTextAlignment, setHeaderTextAlignment] = useState<HeaderTextAlignment>("center");
   const [headerFontSize, setHeaderFontSize] = useState<HeaderFontSizePreset>("medium");
   const [headerFontSizePoints, setHeaderFontSizePoints] = useState(HEADER_FONT_SIZE_POINTS.medium);
+  const [headerFontSizePointsDraft, setHeaderFontSizePointsDraft] = useState(String(HEADER_FONT_SIZE_POINTS.medium));
   const [headerFontFamily, setHeaderFontFamily] = useState<HeaderFontFamily>("Helvetica");
   const [headerTextColor, setHeaderTextColor] = useState(DEFAULT_HEADER_TEXT_COLOR);
   const [headerTemplates, setHeaderTemplates] = useState<HeaderTemplate[]>([
@@ -124,6 +129,7 @@ export default function Settings() {
   const [templateFormTextAlignment, setTemplateFormTextAlignment] = useState<HeaderTextAlignment>("center");
   const [templateFormFontSize, setTemplateFormFontSize] = useState<HeaderFontSizePreset>("medium");
   const [templateFormFontSizePoints, setTemplateFormFontSizePoints] = useState(HEADER_FONT_SIZE_POINTS.medium);
+  const [templateFormFontSizePointsDraft, setTemplateFormFontSizePointsDraft] = useState(String(HEADER_FONT_SIZE_POINTS.medium));
   const [templateFormFontFamily, setTemplateFormFontFamily] = useState<HeaderFontFamily>("Helvetica");
   const [templateFormTextColor, setTemplateFormTextColor] = useState(DEFAULT_HEADER_TEXT_COLOR);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -176,7 +182,10 @@ export default function Settings() {
         if (parsed.logoSize === "small" || parsed.logoSize === "medium" || parsed.logoSize === "large") setLogoSize(parsed.logoSize);
         if (parsed.headerTextAlignment) setHeaderTextAlignment(normalizeHeaderTextAlignment(parsed.headerTextAlignment));
         if (parsed.headerFontSize) setHeaderFontSize(normalizeHeaderFontSize(parsed.headerFontSize));
-        setHeaderFontSizePoints(normalizeHeaderFontSizePoints(parsed.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[normalizeHeaderFontSize(parsed.headerFontSize)]));
+        const parsedHeaderPreset = normalizeHeaderFontSize(parsed.headerFontSize);
+        const parsedHeaderFontSizePoints = normalizeHeaderFontSizePoints(parsed.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[parsedHeaderPreset]);
+        setHeaderFontSizePoints(parsedHeaderFontSizePoints);
+        setHeaderFontSizePointsDraft(String(parsedHeaderFontSizePoints));
         if (parsed.headerFontFamily) setHeaderFontFamily(normalizeHeaderFontFamily(parsed.headerFontFamily));
         if (parsed.headerTextColor) setHeaderTextColor(normalizeHeaderTextColor(parsed.headerTextColor));
         if (Array.isArray(parsed.headerTemplates) && parsed.headerTemplates.length > 0) {
@@ -226,6 +235,23 @@ export default function Settings() {
     }
   }, [appearanceQuery.data]);
 
+  const commitActiveHeaderFontSizePoints = (draft: string, fallback = HEADER_FONT_SIZE_POINTS[headerFontSize]) => {
+    const nextPoints = normalizeHeaderFontSizeDraft(draft, fallback);
+    setHeaderFontSizePoints(nextPoints);
+    setHeaderFontSizePointsDraft(String(nextPoints));
+    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerFontSizePoints: nextPoints } : template));
+    return nextPoints;
+  };
+
+  const updateActiveHeaderFontSizeDraft = (draft: string) => {
+    setHeaderFontSizePointsDraft(draft);
+    if (draft.trim() && /^\d+(?:[.,]\d*)?$/.test(draft.trim())) {
+      const nextPoints = normalizeHeaderFontSizeDraft(draft, HEADER_FONT_SIZE_POINTS[headerFontSize]);
+      setHeaderFontSizePoints(nextPoints);
+      setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerFontSizePoints: nextPoints } : template));
+    }
+  };
+
   const updateActiveHeaderText = (value: string) => {
     setHeaderTitleText(value);
     setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints, headerFontFamily, headerTextColor } : template));
@@ -233,7 +259,12 @@ export default function Settings() {
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints, headerFontFamily, headerTextColor, headerTemplates, activeTemplateId }) });
+    const persistedHeaderFontSizePoints = normalizeHeaderFontSizeDraft(headerFontSizePointsDraft, HEADER_FONT_SIZE_POINTS[headerFontSize]);
+    setHeaderFontSizePoints(persistedHeaderFontSizePoints);
+    setHeaderFontSizePointsDraft(String(persistedHeaderFontSizePoints));
+    const persistedTemplates = headerTemplates.map((template) => template.id === activeTemplateId ? { ...template, headerFontSizePoints: persistedHeaderFontSizePoints } : template);
+    setHeaderTemplates(persistedTemplates);
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -245,7 +276,9 @@ export default function Settings() {
     setTemplateFormTextAlignment(template.headerTextAlignment ?? "center");
     const templatePreset = normalizeHeaderFontSize(template.headerFontSize);
     setTemplateFormFontSize(templatePreset);
-    setTemplateFormFontSizePoints(normalizeHeaderFontSizePoints(template.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]));
+    const templateFontSizePoints = normalizeHeaderFontSizePoints(template.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]);
+    setTemplateFormFontSizePoints(templateFontSizePoints);
+    setTemplateFormFontSizePointsDraft(String(templateFontSizePoints));
     setTemplateFormFontFamily(template.headerFontFamily ?? "Helvetica");
     setTemplateFormTextColor(normalizeHeaderTextColor(template.headerTextColor));
   };
@@ -292,7 +325,8 @@ export default function Settings() {
       toast.error("Indique o nome e o texto do cabeçalho.");
       return;
     }
-    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize, headerTextAlignment: templateFormTextAlignment, headerFontSize: templateFormFontSize, headerFontSizePoints: normalizeHeaderFontSizePoints(templateFormFontSizePoints, HEADER_FONT_SIZE_POINTS[templateFormFontSize]), headerFontFamily: templateFormFontFamily, headerTextColor: normalizeHeaderTextColor(templateFormTextColor) } : template);
+    const nextTemplateFontSizePoints = normalizeHeaderFontSizeDraft(templateFormFontSizePointsDraft, HEADER_FONT_SIZE_POINTS[templateFormFontSize]);
+    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize, headerTextAlignment: templateFormTextAlignment, headerFontSize: templateFormFontSize, headerFontSizePoints: nextTemplateFontSizePoints, headerFontFamily: templateFormFontFamily, headerTextColor: normalizeHeaderTextColor(templateFormTextColor) } : template);
     setHeaderTemplates(nextTemplates);
     setActiveTemplateId(editingTemplateId);
     setHeaderTitleText(templateFormTitle);
@@ -300,7 +334,10 @@ export default function Settings() {
     setLogoSize(templateFormSize);
     setHeaderTextAlignment(templateFormTextAlignment);
     setHeaderFontSize(templateFormFontSize);
-    setHeaderFontSizePoints(normalizeHeaderFontSizePoints(templateFormFontSizePoints, HEADER_FONT_SIZE_POINTS[templateFormFontSize]));
+    setTemplateFormFontSizePoints(nextTemplateFontSizePoints);
+    setTemplateFormFontSizePointsDraft(String(nextTemplateFontSizePoints));
+    setHeaderFontSizePoints(nextTemplateFontSizePoints);
+    setHeaderFontSizePointsDraft(String(nextTemplateFontSizePoints));
     setHeaderFontFamily(templateFormFontFamily);
     setHeaderTextColor(normalizeHeaderTextColor(templateFormTextColor));
     setEditingTemplateId(null);
@@ -440,7 +477,9 @@ export default function Settings() {
                           setHeaderTextAlignment(tpl.headerTextAlignment ?? "center");
                           const templatePreset = normalizeHeaderFontSize(tpl.headerFontSize);
                           setHeaderFontSize(templatePreset);
-                          setHeaderFontSizePoints(normalizeHeaderFontSizePoints(tpl.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]));
+                          const templateFontSizePoints = normalizeHeaderFontSizePoints(tpl.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]);
+                          setHeaderFontSizePoints(templateFontSizePoints);
+                          setHeaderFontSizePointsDraft(String(templateFontSizePoints));
                           setHeaderFontFamily(tpl.headerFontFamily ?? "Helvetica");
                           setHeaderTextColor(normalizeHeaderTextColor(tpl.headerTextColor));
                           toast.success(`Modelo "${tpl.name}" selecionado.`);
@@ -459,7 +498,9 @@ export default function Settings() {
                               setHeaderTextAlignment(tpl.headerTextAlignment ?? "center");
                               const templatePreset = normalizeHeaderFontSize(tpl.headerFontSize);
                               setHeaderFontSize(templatePreset);
-                              setHeaderFontSizePoints(normalizeHeaderFontSizePoints(tpl.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]));
+                              const templateFontSizePoints = normalizeHeaderFontSizePoints(tpl.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[templatePreset]);
+                              setHeaderFontSizePoints(templateFontSizePoints);
+                              setHeaderFontSizePointsDraft(String(templateFontSizePoints));
                               setHeaderFontFamily(tpl.headerFontFamily ?? "Helvetica");
                               setHeaderTextColor(normalizeHeaderTextColor(tpl.headerTextColor));
                               toast.success(`Modelo "${tpl.name}" definido como padrão.`);
@@ -478,7 +519,9 @@ export default function Settings() {
                                 setHeaderTextAlignment(remaining[0].headerTextAlignment ?? "center");
                                 const remainingPreset = normalizeHeaderFontSize(remaining[0].headerFontSize);
                                 setHeaderFontSize(remainingPreset);
-                                setHeaderFontSizePoints(normalizeHeaderFontSizePoints(remaining[0].headerFontSizePoints, HEADER_FONT_SIZE_POINTS[remainingPreset]));
+                                const remainingFontSizePoints = normalizeHeaderFontSizePoints(remaining[0].headerFontSizePoints, HEADER_FONT_SIZE_POINTS[remainingPreset]);
+                                setHeaderFontSizePoints(remainingFontSizePoints);
+                                setHeaderFontSizePointsDraft(String(remainingFontSizePoints));
                                 setHeaderFontFamily(remaining[0].headerFontFamily ?? "Helvetica");
                                 setHeaderTextColor(normalizeHeaderTextColor(remaining[0].headerTextColor));
                               }
@@ -525,14 +568,14 @@ export default function Settings() {
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho da fonte</label>
-                                                  <select value={templateFormFontSize} onChange={(event) => { const nextPreset = event.target.value as HeaderFontSizePreset; setTemplateFormFontSize(nextPreset); setTemplateFormFontSizePoints(HEADER_FONT_SIZE_POINTS[nextPreset]); }} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                                                  <select value={templateFormFontSize} onChange={(event) => { const nextPreset = event.target.value as HeaderFontSizePreset; const nextPoints = HEADER_FONT_SIZE_POINTS[nextPreset]; setTemplateFormFontSize(nextPreset); setTemplateFormFontSizePoints(nextPoints); setTemplateFormFontSizePointsDraft(String(nextPoints)); }} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                           <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
                           </select>
                       </div>
                       <div>
                         <label htmlFor="template-header-font-size-points" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho exacto da fonte (pontos)</label>
-                        <Input id="template-header-font-size-points" type="number" min={8} max={72} step={0.5} value={templateFormFontSizePoints} onChange={(event) => setTemplateFormFontSizePoints(normalizeHeaderFontSizePoints(event.target.value, HEADER_FONT_SIZE_POINTS[templateFormFontSize]))} />
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Entre 8 e 72 pontos.</p>
+                        <Input id="template-header-font-size-points" type="text" inputMode="decimal" value={templateFormFontSizePointsDraft} onChange={(event) => { const draft = event.target.value; setTemplateFormFontSizePointsDraft(draft); if (draft.trim() && /^\d+(?:[.,]\d*)?$/.test(draft.trim())) setTemplateFormFontSizePoints(normalizeHeaderFontSizeDraft(draft, HEADER_FONT_SIZE_POINTS[templateFormFontSize])); }} onBlur={() => { const nextPoints = normalizeHeaderFontSizeDraft(templateFormFontSizePointsDraft, HEADER_FONT_SIZE_POINTS[templateFormFontSize]); setTemplateFormFontSizePoints(nextPoints); setTemplateFormFontSizePointsDraft(String(nextPoints)); }} aria-describedby="template-header-font-size-points-help" />
+                        <p id="template-header-font-size-points-help" className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Entre 8 e 72 pontos. Pode usar valores decimais, por exemplo, 12,5 ou 12.5.</p>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>
@@ -573,14 +616,14 @@ export default function Settings() {
                     </div>
                     <div>
                       <label htmlFor="pdf-header-font-size" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho da fonte</label>
-                      <select id="pdf-header-font-size" value={headerFontSize} onChange={(event) => { const nextPreset = event.target.value as HeaderFontSizePreset; setHeaderFontSize(nextPreset); setHeaderFontSizePoints(HEADER_FONT_SIZE_POINTS[nextPreset]); }} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                      <select id="pdf-header-font-size" value={headerFontSize} onChange={(event) => { const nextPreset = event.target.value as HeaderFontSizePreset; const nextPoints = HEADER_FONT_SIZE_POINTS[nextPreset]; setHeaderFontSize(nextPreset); setHeaderFontSizePoints(nextPoints); setHeaderFontSizePointsDraft(String(nextPoints)); }} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                         <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
                       </select>
                     </div>
                     <div>
                       <label htmlFor="pdf-header-font-size-points" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho exacto da fonte (pontos)</label>
-                      <Input id="pdf-header-font-size-points" type="number" min={8} max={72} step={0.5} value={headerFontSizePoints} onChange={(event) => setHeaderFontSizePoints(normalizeHeaderFontSizePoints(event.target.value, HEADER_FONT_SIZE_POINTS[headerFontSize]))} />
-                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Entre 8 e 72 pontos.</p>
+                      <Input id="pdf-header-font-size-points" type="text" inputMode="decimal" value={headerFontSizePointsDraft} onChange={(event) => updateActiveHeaderFontSizeDraft(event.target.value)} onBlur={() => commitActiveHeaderFontSizePoints(headerFontSizePointsDraft)} aria-describedby="pdf-header-font-size-points-help" />
+                      <p id="pdf-header-font-size-points-help" className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Entre 8 e 72 pontos. Pode usar valores decimais, por exemplo, 12,5 ou 12.5.</p>
                     </div>
                     <div>
                       <label htmlFor="pdf-header-font-family" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>

@@ -34,7 +34,7 @@ export function normalizeHeaderFontSizePoints(value: unknown, fallback = DEFAULT
   const safeFallback = Number.isFinite(fallback)
     ? Math.min(MAX_HEADER_FONT_SIZE_POINTS, Math.max(MIN_HEADER_FONT_SIZE_POINTS, fallback))
     : DEFAULT_HEADER_FONT_SIZE_POINTS;
-  const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+  const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value.trim().replace(",", ".")) : Number.NaN;
   if (!Number.isFinite(numeric)) return safeFallback;
   const clamped = Math.min(MAX_HEADER_FONT_SIZE_POINTS, Math.max(MIN_HEADER_FONT_SIZE_POINTS, numeric));
   return Math.round(clamped * 10) / 10;

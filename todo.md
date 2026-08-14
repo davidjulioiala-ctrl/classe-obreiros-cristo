@@ -6704,3 +6704,13 @@
 - [x] Validar e persistir o tamanho exacto nos modelos e no cabeçalho activo, mantendo os presets.
 - [x] Reflectir o tamanho em pontos na pré-visualização e nos PDFs exportados.
 - [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
+
+
+## Melhoria solicitada — tamanho decimal da fonte
+- [ ] Permitir introduzir valores decimais no campo de tamanho da fonte, como 12,5 pt.
+- [ ] Validar e persistir valores decimais entre 8 e 72 pontos sem perder precisão.
+- [ ] Reflectir valores decimais na pré-visualização e nos PDFs exportados.
+- [ ] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
+- [x] Permitir a edição estável de tamanhos decimais da fonte nos modelos e no cabeçalho PDF activo
+- [x] Validar a aplicação de tamanhos decimais na pré-visualização e no PDF exportado
+- [x] Adicionar regressões e concluir typecheck, testes e build
