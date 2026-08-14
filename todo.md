@@ -7029,7 +7029,7 @@
 - [x] Adicionar testes de regressão para os modelos de colunas.
 
 ## Nova Tarefa — Página Inicial, Destaque de Membros Comuns e Exportação por Grupo
-- [ ] Renomear o menu "Dashboard" para "Página Inicial" na barra de navegação.
-- [ ] Adicionar um novo cartão de destaque na Página Inicial com o total de membros regulares (excluindo convidados e líderes).
-- [ ] Implementar a exportação de membros por grupo (PDF, CSV e Excel) com selecção de colunas e dados filtrados.
-- [ ] Adicionar testes e validar a compilação.
+- [x] Renomear o menu "Dashboard" para "Página Inicial" na barra de navegação.
+- [x] Adicionar um novo cartão de destaque na Página Inicial com o total de membros regulares (excluindo convidados e líderes).
+- [x] Implementar a exportação de membros por grupo (PDF, CSV e Excel) com selecção de colunas e dados filtrados.
+- [x] Adicionar testes e validar a compilação.
