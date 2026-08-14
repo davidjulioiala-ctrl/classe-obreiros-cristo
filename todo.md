@@ -7014,3 +7014,7 @@
 - [x] Adicionar testes de regressão para a pesquisa, filtros, contagem de resultados e acessibilidade dos controlos.
 - [x] Validar typecheck, testes, build e visualização desktop/mobile antes do checkpoint.
 
+
+## Nova Tarefa — Exportação de resultados filtrados de membros
+- [x] Atualizar a rota de exportação e a interface de membros para passar os parâmetros de cargo, sexo, estado, grupo e tipo (membros/convidados) na geração de PDF, CSV e Excel.
+- [x] Validar a preservação dos filtros na exportação e testar a integridade dos ficheiros gerados.

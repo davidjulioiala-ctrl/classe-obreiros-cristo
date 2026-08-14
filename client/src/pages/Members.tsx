@@ -229,9 +229,15 @@ export default function Members() {
     try {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      if (positionFilter !== "all") params.set("position", positionFilter);
+      if (sexFilter !== "all") params.set("sex", sexFilter);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (guestFilter !== "all") params.set("guest", guestFilter);
+      if (groupFilter !== "all") params.set("groupId", String(groupFilter));
       params.set("columns", columns.join(","));
       params.set("includePersonalData", includePersonalData ? "true" : "false");
-      await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${searchQuery.trim() ? "-pesquisa" : ""}.${format}`);
+      const hasActiveFilters = Boolean(searchQuery.trim()) || positionFilter !== "all" || sexFilter !== "all" || statusFilter !== "all" || guestFilter !== "all" || groupFilter !== "all";
+      await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${hasActiveFilters ? "-filtrados" : ""}.${format}`);
       toast.success(`Lista de membros exportada em ${format.toUpperCase()}.`);
       setExportDialogOpen(false);
     } catch (error) {
