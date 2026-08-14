@@ -6697,3 +6697,10 @@
 - [x] Adicionar tipo de letra configurável ao texto dos modelos e do cabeçalho activo.
 - [x] Reflectir cor e tipo de letra na pré-visualização e nos PDFs exportados.
 - [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
+
+
+## Melhoria solicitada — tamanho exacto da fonte em pontos
+- [x] Adicionar um campo numérico para definir o tamanho exacto da fonte em pontos.
+- [x] Validar e persistir o tamanho exacto nos modelos e no cabeçalho activo, mantendo os presets.
+- [x] Reflectir o tamanho em pontos na pré-visualização e nos PDFs exportados.
+- [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.

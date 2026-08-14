@@ -1,8 +1,8 @@
-export type HeaderFormatTag = "b" | "i" | "u";
 
 export type HeaderTextAlignment = "left" | "center" | "right";
 export type HeaderFontSizePreset = "small" | "medium" | "large";
 export type HeaderFontFamily = "Helvetica" | "Times-Roman" | "Courier";
+export type HeaderFormatTag = "b" | "i" | "u";
 
 export const DEFAULT_HEADER_TEXT_COLOR = "#064e3b";
 
@@ -11,6 +11,10 @@ export const HEADER_FONT_SIZE_POINTS: Record<HeaderFontSizePreset, number> = {
   medium: 16,
   large: 20,
 };
+
+export const MIN_HEADER_FONT_SIZE_POINTS = 8;
+export const MAX_HEADER_FONT_SIZE_POINTS = 72;
+export const DEFAULT_HEADER_FONT_SIZE_POINTS = HEADER_FONT_SIZE_POINTS.medium;
 
 export const HEADER_FONT_FAMILIES: Array<{ value: HeaderFontFamily; label: string }> = [
   { value: "Helvetica", label: "Helvetica" },
@@ -24,6 +28,16 @@ export function normalizeHeaderTextAlignment(value: unknown): HeaderTextAlignmen
 
 export function normalizeHeaderFontSize(value: unknown): HeaderFontSizePreset {
   return value === "small" || value === "large" ? value : "medium";
+}
+
+export function normalizeHeaderFontSizePoints(value: unknown, fallback = DEFAULT_HEADER_FONT_SIZE_POINTS): number {
+  const safeFallback = Number.isFinite(fallback)
+    ? Math.min(MAX_HEADER_FONT_SIZE_POINTS, Math.max(MIN_HEADER_FONT_SIZE_POINTS, fallback))
+    : DEFAULT_HEADER_FONT_SIZE_POINTS;
+  const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+  if (!Number.isFinite(numeric)) return safeFallback;
+  const clamped = Math.min(MAX_HEADER_FONT_SIZE_POINTS, Math.max(MIN_HEADER_FONT_SIZE_POINTS, numeric));
+  return Math.round(clamped * 10) / 10;
 }
 
 export function normalizeHeaderFontFamily(value: unknown): HeaderFontFamily {

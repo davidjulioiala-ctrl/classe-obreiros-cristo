@@ -21,6 +21,10 @@ describe("personalização de cabeçalhos", () => {
     expect(settingsSource).toContain("pdf-header-font-size");
     expect(settingsSource).toContain("templateFormTextAlignment");
     expect(settingsSource).toContain("templateFormFontSize");
+    expect(settingsSource).toContain("templateFormFontSizePoints");
+    expect(settingsSource).toContain("template-header-font-size-points");
+    expect(settingsSource).toContain("pdf-header-font-size-points");
+    expect(settingsSource).toContain("normalizeHeaderFontSizePoints");
     expect(settingsSource).toContain("pdf-header-font-family");
     expect(settingsSource).toContain("pdf-header-text-color");
     expect(settingsSource).toContain("headerFontFamily");

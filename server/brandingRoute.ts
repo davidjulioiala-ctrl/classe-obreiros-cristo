@@ -6,7 +6,7 @@ import { storagePut } from "./storage";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { requireSameOrigin } from "./_core/security";
 import { drawPdfHeader, loadPdfBranding } from "./pdfBranding";
-import { normalizeHeaderFontFamily, normalizeHeaderTextColor } from "@shared/headerFormatting";
+import { normalizeHeaderFontFamily, normalizeHeaderFontSizePoints, normalizeHeaderTextColor } from "@shared/headerFormatting";
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg"]);
@@ -48,6 +48,7 @@ export function readPreviewBody(body: unknown) {
     logoSize: source.logoSize === "small" || source.logoSize === "medium" || source.logoSize === "large" ? source.logoSize : undefined,
     headerTextAlignment: source.headerTextAlignment === "left" || source.headerTextAlignment === "center" || source.headerTextAlignment === "right" ? source.headerTextAlignment : undefined,
     headerFontSize: source.headerFontSize === "small" || source.headerFontSize === "medium" || source.headerFontSize === "large" ? source.headerFontSize : undefined,
+    headerFontSizePoints: source.headerFontSizePoints === undefined ? undefined : normalizeHeaderFontSizePoints(source.headerFontSizePoints),
     headerFontFamily: source.headerFontFamily === "Helvetica" || source.headerFontFamily === "Times-Roman" || source.headerFontFamily === "Courier" ? normalizeHeaderFontFamily(source.headerFontFamily) : undefined,
     headerTextColor: typeof source.headerTextColor === "string" && /^#[0-9a-f]{6}$/i.test(source.headerTextColor) ? normalizeHeaderTextColor(source.headerTextColor) : undefined,
     templateId: typeof source.templateId === "string" ? source.templateId.slice(0, 64) : undefined,
@@ -82,7 +83,7 @@ export function registerBrandingRoute(app: Express) {
         });
         drawPdfHeader(document, branding, "PRÉ-VISUALIZAÇÃO DO CABEÇALHO", { subtitle: "Documento de teste — as alterações ainda não guardadas são apenas visuais" });
         document.fontSize(10).fillColor("#334155").text("Este ficheiro serve para confirmar a aparência do cabeçalho antes de guardar as definições.", 42, document.y + 12, { width: 511, align: "left" });
-        document.moveDown(1.2).fontSize(9).fillColor("#64748b").text(`Logótipo: ${branding.logoAlignment} · ${branding.logoSize} | Texto: ${branding.headerTextAlignment} · Fonte: ${branding.headerFontSize} · Tipo: ${branding.headerFontFamily} · Cor: ${branding.headerTextColor}`, { width: 511, align: "left" });
+        document.moveDown(1.2).fontSize(9).fillColor("#64748b").text(`Logótipo: ${branding.logoAlignment} · ${branding.logoSize} | Texto: ${branding.headerTextAlignment} · Fonte: ${branding.headerFontSizePoints} pt · Tipo: ${branding.headerFontFamily} · Cor: ${branding.headerTextColor}`, { width: 511, align: "left" });
         document.end();
       } catch (error) {
         console.error("[OrganizationBrandingPreview]", error);
