@@ -1026,10 +1026,25 @@ const backupRouter = router({
 
 // ============ DASHBOARD ROUTER ============
 
+const dashboardDateRangeInput = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inicial inválida.").optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data final inválida.").optional(),
+}).superRefine((input, ctx) => {
+  const start = input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined;
+  const end = input.endDate ? new Date(`${input.endDate}T23:59:59.999Z`) : undefined;
+  if (start && Number.isNaN(start.getTime())) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["startDate"], message: "Data inicial inválida." });
+  if (end && Number.isNaN(end.getTime())) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endDate"], message: "Data final inválida." });
+  if (start && end && start > end) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endDate"], message: "A data final não pode ser anterior à data inicial." });
+});
+
 const dashboardRouter = router({
-  participationByType: protectedProcedure.query(async () => {
-    return await db.getParticipationByActivityType();
-  }),
+  participationByType: protectedProcedure
+    .input(dashboardDateRangeInput)
+    .query(async ({ input }) => {
+      const startDate = input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined;
+      const endDate = input.endDate ? new Date(`${input.endDate}T23:59:59.999Z`) : undefined;
+      return await db.getParticipationByActivityType({ startDate, endDate });
+    }),
 });
 
 // ============ MAIN ROUTER ============

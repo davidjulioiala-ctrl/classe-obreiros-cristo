@@ -36,6 +36,7 @@ type ActivityForm = {
 
 type CommissionRow = { id?: number; memberId: string; role: string; phone: string };
 type DocumentType = "ata" | "relatorio";
+type PendingActivityDocument = { id: string; file: File; type: DocumentType; progress: number; status: "pending" | "uploading" | "uploaded" | "cancelled" | "error"; error?: string };
 type ActivitySort = "date-desc" | "date-asc" | "status-asc" | "status-desc";
 
 const activityStatusRank: Record<string, number> = {
@@ -46,13 +47,12 @@ const activityStatusRank: Record<string, number> = {
 const MAX_ACTIVITY_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ACTIVITY_DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".odt", ".txt"];
 
-function selectActivityDocument(file: File | null): { file: File | null; error?: string } {
-  if (!file) return { file: null };
+function validateActivityDocument(file: File): string | undefined {
   const lowerName = file.name.toLowerCase();
   const hasAllowedExtension = ACTIVITY_DOCUMENT_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
-  if (!hasAllowedExtension) return { file: null, error: "Seleccione um PDF, DOC, DOCX, ODT ou TXT." };
-  if (file.size > MAX_ACTIVITY_DOCUMENT_BYTES) return { file: null, error: "O ficheiro não pode ultrapassar 15 MB." };
-  return { file };
+  if (!hasAllowedExtension) return "Seleccione um PDF, DOC, DOCX, ODT ou TXT.";
+  if (file.size > MAX_ACTIVITY_DOCUMENT_BYTES) return "O ficheiro não pode ultrapassar 15 MB.";
+  return undefined;
 }
 
 const createBlankForm = (): ActivityForm => ({
@@ -75,11 +75,16 @@ const createBlankForm = (): ActivityForm => ({
 
 const blankCommission = (): CommissionRow => ({ memberId: "", role: "", phone: "" });
 
+type UploadCallbacks = {
+  onProgress?: (progress: number) => void;
+  onRequestReady?: (request: XMLHttpRequest) => void;
+};
+
 async function uploadActivityDocument(
   activityId: number,
   file: File,
   documentType: DocumentType,
-  onProgress?: (progress: number) => void,
+  callbacks: UploadCallbacks = {},
 ) {
   const body = new FormData();
   body.append("documentType", documentType);
@@ -87,12 +92,13 @@ async function uploadActivityDocument(
 
   await new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
+    callbacks.onRequestReady?.(request);
     request.open("POST", `/api/activity-documents/${activityId}`);
     request.withCredentials = true;
     request.timeout = 120_000;
     const rejectWith = (message: string) => reject(new Error(message));
     request.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable) onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+      if (event.lengthComputable) callbacks.onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
     });
     request.addEventListener("load", () => {
       let result: { error?: string } = {};
@@ -102,7 +108,7 @@ async function uploadActivityDocument(
         // O servidor pode responder sem JSON; nesse caso usamos o estado HTTP.
       }
       if (request.status >= 200 && request.status < 300) {
-        onProgress?.(100);
+        callbacks.onProgress?.(100);
         resolve();
         return;
       }
@@ -115,10 +121,23 @@ async function uploadActivityDocument(
   });
 }
 
+async function deleteActivityDocumentRequest(documentId: number) {
+  const response = await fetch(`/api/activity-documents/${documentId}`, { method: "DELETE", credentials: "include" });
+  let result: { error?: string } = {};
+  try {
+    result = (await response.json()) as { error?: string };
+  } catch {
+    // A resposta sem JSON é tratada através do código HTTP.
+  }
+  if (!response.ok) throw new Error(result.error ?? "Não foi possível eliminar o documento.");
+}
+
 function ActivityDocuments({ activityId }: { activityId: number }) {
+  const utils = trpc.useUtils();
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState<number | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
   const documentsQuery = trpc.activities.documentsList.useQuery({ activityId });
   const documents = documentsQuery.data ?? [];
@@ -131,8 +150,27 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
     return <p className="mt-3 text-xs text-slate-500">Ainda não existem atas ou relatórios anexados.</p>;
   }
 
+  const removeDocument = async (documentId: number, originalName: string) => {
+    if (!window.confirm(`Eliminar o ficheiro “${originalName}”? Esta acção remove o registo do sistema e não pode ser desfeita.`)) return;
+    setDeletingDocumentId(documentId);
+    try {
+      await deleteActivityDocumentRequest(documentId);
+      await utils.activities.documentsList.invalidate({ activityId });
+      if (previewDocumentId === documentId) {
+        setPreviewDocumentId(null);
+        setPreviewReady(false);
+      }
+      toast.success("Ficheiro eliminado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível eliminar o ficheiro.");
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
   return (
     <div className="mt-3 space-y-2">
+      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Ficheiros anexados ({documents.length})</p>
       {documents.map((document) => {
         const isPdf = document.mimeType.toLowerCase() === "application/pdf";
         const isPreviewing = previewDocumentId === document.id;
@@ -152,9 +190,7 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
           }
         };
         const printPreview = () => {
-          if (!printPdfFrame(previewFrameRef.current)) {
-            toast.error("A pré-visualização ainda não está pronta para impressão.");
-          }
+          if (!printPdfFrame(previewFrameRef.current)) toast.error("A pré-visualização ainda não está pronta para impressão.");
         };
         return (
           <div key={document.id} className="rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
@@ -165,43 +201,19 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
                 <span className="shrink-0 text-xs uppercase text-slate-500">{document.type}</span>
               </span>
               <span className="flex shrink-0 flex-wrap gap-2">
-                {isPdf ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={togglePreview}
-                    aria-expanded={isPreviewing}
-                    aria-controls={`activity-document-preview-${document.id}`}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    {isPreviewing ? "Fechar pré-visualização" : "Pré-visualizar"}
-                  </Button>
-                ) : (
-                  <span className="self-center text-xs text-slate-500">Pré-visualização disponível para PDF</span>
-                )}
-                <Button type="button" variant="outline" size="sm" onClick={() => void downloadDocument()} disabled={downloadingDocumentId === document.id}>
-                  <Download className="mr-2 h-4 w-4 text-slate-500" />
-                  {downloadingDocumentId === document.id ? "A descarregar…" : "Descarregar"}
-                </Button>
+                {isPdf && <Button type="button" variant="outline" size="sm" onClick={togglePreview} aria-expanded={isPreviewing} aria-controls={`activity-document-preview-${document.id}`}><Eye className="mr-2 h-4 w-4" />{isPreviewing ? "Fechar pré-visualização" : "Pré-visualizar"}</Button>}
+                {!isPdf && <span className="self-center text-xs text-slate-500">Pré-visualização disponível para PDF</span>}
+                <Button type="button" variant="outline" size="sm" onClick={() => void downloadDocument()} disabled={downloadingDocumentId === document.id}><Download className="mr-2 h-4 w-4 text-slate-500" />{downloadingDocumentId === document.id ? "A descarregar…" : "Descarregar"}</Button>
+                <Button type="button" variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => void removeDocument(document.id, document.originalName)} disabled={deletingDocumentId === document.id} aria-label={`Eliminar ${document.originalName}`}><Trash2 className="mr-2 h-4 w-4" />{deletingDocumentId === document.id ? "A eliminar…" : "Eliminar"}</Button>
               </span>
             </div>
             {isPreviewing && (
               <div id={`activity-document-preview-${document.id}`} className="border-t border-slate-200 p-3 dark:border-slate-700">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-slate-500">Pré-visualização PDF autenticada. Depois de carregado, pode imprimir directamente.</p>
-                  <Button type="button" variant="outline" size="sm" onClick={printPreview} disabled={!previewReady} title={previewReady ? "Imprimir sem descarregar o PDF" : "A aguardar o carregamento do PDF"}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Imprimir documento
-                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={printPreview} disabled={!previewReady} title={previewReady ? "Imprimir sem descarregar o PDF" : "A aguardar o carregamento do PDF"}><Printer className="mr-2 h-4 w-4" />Imprimir documento</Button>
                 </div>
-                <iframe
-                  ref={previewFrameRef}
-                  src={`/api/activity-documents/${document.id}/preview`}
-                  title={`Pré-visualização de ${document.originalName}`}
-                  onLoad={() => setPreviewReady(true)}
-                  className="h-[min(70vh,720px)] w-full rounded-md border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950"
-                />
+                <iframe ref={previewFrameRef} src={`/api/activity-documents/${document.id}/preview`} title={`Pré-visualização de ${document.originalName}`} onLoad={() => setPreviewReady(true)} className="h-[min(70vh,720px)] w-full rounded-md border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950" />
               </div>
             )}
           </div>
@@ -218,9 +230,10 @@ export default function Activities() {
   const [formData, setFormData] = useState<ActivityForm>(() => createBlankForm());
   const [commissionRows, setCommissionRows] = useState<CommissionRow[]>([blankCommission()]);
   const [commissionMemberSearch, setCommissionMemberSearch] = useState("");
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<DocumentType>("ata");
+  const [documentFiles, setDocumentFiles] = useState<PendingActivityDocument[]>([]);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const uploadRequestsRef = useRef<Record<string, XMLHttpRequest>>({});
+  const uploadCancelledRef = useRef(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -302,8 +315,9 @@ export default function Activities() {
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
     setEditingId(null);
-    setDocumentFile(null);
-    setDocumentType("ata");
+    setDocumentFiles([]);
+    uploadRequestsRef.current = {};
+    uploadCancelledRef.current = false;
     setIsUploadingDocument(false);
     setUploadProgress(0);
     setUploadError(null);
@@ -316,8 +330,9 @@ export default function Activities() {
     setFormData(createBlankForm());
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
-    setDocumentFile(null);
-    setDocumentType("ata");
+    setDocumentFiles([]);
+    uploadRequestsRef.current = {};
+    uploadCancelledRef.current = false;
     setIsUploadingDocument(false);
     setUploadProgress(0);
     setUploadError(null);
@@ -348,8 +363,9 @@ export default function Activities() {
     });
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
-    setDocumentFile(null);
-    setDocumentType("ata");
+    setDocumentFiles([]);
+    uploadRequestsRef.current = {};
+    uploadCancelledRef.current = false;
     setShowForm(true);
   };
 
@@ -377,6 +393,78 @@ export default function Activities() {
         }),
       ),
     );
+  };
+
+  const updatePendingDocument = (id: string, patch: Partial<PendingActivityDocument>) => {
+    setDocumentFiles((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
+  };
+
+  const handleDocumentSelection = (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? []);
+    if (!selectedFiles.length) return;
+    const invalidMessages: string[] = [];
+    const validFiles = selectedFiles.filter((file) => {
+      const error = validateActivityDocument(file);
+      if (error) invalidMessages.push(`${file.name}: ${error}`);
+      return !error;
+    });
+    if (invalidMessages.length) setUploadError(invalidMessages.join(" "));
+    setUploadSuccess(false);
+    setUploadProgress(0);
+    setDocumentFiles((current) => [
+      ...current,
+      ...validFiles.map((file) => ({ id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`, file, type: "ata" as DocumentType, progress: 0, status: "pending" as const })),
+    ]);
+  };
+
+  const removePendingDocument = (id: string) => {
+    if (isUploadingDocument) return;
+    setDocumentFiles((current) => current.filter((item) => item.id !== id));
+  };
+
+  const cancelDocumentUploads = () => {
+    if (!isUploadingDocument) return;
+    uploadCancelledRef.current = true;
+    Object.values(uploadRequestsRef.current).forEach((request) => request.abort());
+    uploadRequestsRef.current = {};
+    setIsUploadingDocument(false);
+    setDocumentFiles((current) => current.map((item) => item.status === "uploading" || item.status === "pending" ? { ...item, status: "cancelled", error: "Envio cancelado pelo utilizador." } : item));
+    setUploadError("O carregamento dos ficheiros foi cancelado. Pode manter a actividade e tentar novamente.");
+    toast.info("Carregamento cancelado.");
+  };
+
+  const uploadPendingDocuments = async (activityId: number) => {
+    const pending = documentFiles.filter((item) => item.status === "pending" || item.status === "error");
+    if (!pending.length) return;
+    uploadCancelledRef.current = false;
+    uploadRequestsRef.current = {};
+    let completed = 0;
+    setIsUploadingDocument(true);
+    setUploadProgress(0);
+    for (const item of pending) {
+      if (uploadCancelledRef.current) throw new Error("O carregamento dos ficheiros foi cancelado.");
+      updatePendingDocument(item.id, { status: "uploading", progress: 0, error: undefined });
+      try {
+        await uploadActivityDocument(activityId, item.file, item.type, {
+          onProgress: (progress) => {
+            updatePendingDocument(item.id, { progress });
+            setUploadProgress(Math.min(99, Math.round(((completed + progress / 100) / pending.length) * 100)));
+          },
+          onRequestReady: (request) => { uploadRequestsRef.current[item.id] = request; },
+        });
+        completed += 1;
+        updatePendingDocument(item.id, { status: "uploaded", progress: 100 });
+        setUploadProgress(Math.round((completed / pending.length) * 100));
+      } catch (error) {
+        const message = uploadCancelledRef.current ? "Envio cancelado pelo utilizador." : (error instanceof Error ? error.message : "Não foi possível guardar o ficheiro.");
+        updatePendingDocument(item.id, { status: uploadCancelledRef.current ? "cancelled" : "error", error: message });
+        throw new Error(message);
+      } finally {
+        delete uploadRequestsRef.current[item.id];
+      }
+    }
+    setIsUploadingDocument(false);
+    setUploadSuccess(true);
   };
 
   const saveActivity = async (event: FormEvent) => {
@@ -417,9 +505,10 @@ export default function Activities() {
     };
 
     let documentUploadStarted = false;
+    let persistedActivityId: number | null = editingId;
     setUploadError(null);
     setUploadSuccess(false);
-    setUploadProgress(documentFile ? 0 : 100);
+    setUploadProgress(documentFiles.length ? 0 : 100);
 
     try {
       let activityId = editingId;
@@ -429,18 +518,15 @@ export default function Activities() {
         const created = await createActivity.mutateAsync(payload);
         activityId = Number((created as { insertId?: number }).insertId);
       }
+      persistedActivityId = activityId;
 
       if (activityId) {
         await saveCommission(activityId);
       }
 
-      if (activityId && documentFile) {
+      if (activityId && documentFiles.length) {
         documentUploadStarted = true;
-        setIsUploadingDocument(true);
-        setUploadProgress(0);
-        await uploadActivityDocument(activityId, documentFile, documentType, setUploadProgress);
-        setUploadSuccess(true);
-        setIsUploadingDocument(false);
+        await uploadPendingDocuments(activityId);
       }
 
       await utils.activities.list.invalidate();
@@ -448,7 +534,8 @@ export default function Activities() {
       resetForm();
     } catch (error) {
       setIsUploadingDocument(false);
-      const message = error instanceof Error ? error.message : "Não foi possível guardar a atividade.";
+      if (documentUploadStarted && persistedActivityId) await utils.activities.list.invalidate();
+      const message = error instanceof Error ? error.message : "Não foi possível guardar a actividade.";
       if (documentUploadStarted) setUploadError(message);
       toast.error(message);
     }
@@ -669,48 +756,48 @@ export default function Activities() {
               )}
 
               <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p id="activity-document-help" className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à atividade.</p></div>
-                <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
-                  <Input
-                    key={documentFile ? `${documentFile.name}-${documentFile.lastModified}` : "activity-document-empty"}
-                    type="file"
-                    accept="application/pdf,.pdf,.doc,.docx,.odt,.txt"
-                    disabled={isBusy}
-                    aria-describedby="activity-document-help activity-document-status"
-                    onChange={(event) => {
-                      const selectedFile = event.currentTarget.files?.item(0) ?? null;
-                      const selection = selectActivityDocument(selectedFile);
-                      setUploadError(null);
-                      setUploadSuccess(false);
-                      setUploadProgress(0);
-                      if (selection.error) {
-                        setDocumentFile(null);
-                        event.currentTarget.value = "";
-                        toast.error(selection.error);
-                        return;
-                      }
-                      setDocumentFile(selection.file);
-                    }}
-                  />
-                  <Select value={documentType} onValueChange={(value) => setDocumentType(value === "relatorio" ? "relatorio" : "ata")}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="ata">Ata</SelectItem><SelectItem value="relatorio">Relatório</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                {documentFile && <p className="break-all text-xs text-emerald-700">Documento seleccionado: {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)</p>}
+                <div><h3 className="font-semibold">Anexar atas ou relatórios</h3><p id="activity-document-help" className="text-xs text-slate-500">Pode seleccionar vários ficheiros PDF, DOC, DOCX, ODT ou TXT, cada um até 15 MB. Os ficheiros ficam associados permanentemente à actividade.</p></div>
+                <Input
+                  type="file"
+                  multiple
+                  accept="application/pdf,.pdf,.doc,.docx,.odt,.txt"
+                  disabled={isBusy}
+                  aria-describedby="activity-document-help activity-document-status"
+                  onChange={(event) => {
+                    handleDocumentSelection(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                {documentFiles.length > 0 && (
+                  <div className="space-y-2" aria-label="Ficheiros seleccionados">
+                    {documentFiles.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0"><p className="break-all text-xs font-medium text-slate-800 dark:text-slate-200">{item.file.name}</p><p className="text-[11px] text-slate-500">{Math.ceil(item.file.size / 1024)} KB · {item.status === "uploaded" ? "enviado" : item.status === "cancelled" ? "cancelado" : item.status === "error" ? "erro" : item.status === "uploading" ? "a enviar" : "pendente"}</p></div>
+                          <div className="flex items-center gap-2">
+                            <Select value={item.type} disabled={isBusy} onValueChange={(value) => updatePendingDocument(item.id, { type: value === "relatorio" ? "relatorio" : "ata" })}>
+                              <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+                              <SelectContent><SelectItem value="ata">Ata</SelectItem><SelectItem value="relatorio">Relatório</SelectItem></SelectContent>
+                            </Select>
+                            <Button type="button" variant="ghost" size="sm" disabled={isBusy} onClick={() => removePendingDocument(item.id)} aria-label={`Remover ${item.file.name}`}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                          </div>
+                        </div>
+                        {(item.status === "uploading" || item.status === "uploaded") && <Progress value={item.progress} className="mt-2" aria-label={`Progresso de ${item.file.name}: ${item.progress}%`} />}
+                        {item.error && <p className="mt-1 text-xs text-red-700 dark:text-red-400">{item.error}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {(isUploadingDocument || uploadSuccess || uploadError) && (
                   <div id="activity-document-status" className="space-y-2" aria-live="polite">
                     {isUploadingDocument && (
                       <>
-                        <div className="flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-300">
-                          <span>A enviar o {documentType === "ata" ? "ata" : "relatório"}…</span>
-                          <span>{uploadProgress}%</span>
-                        </div>
-                        <Progress value={uploadProgress} aria-label={`Progresso do upload: ${uploadProgress}%`} />
-                        <p className="text-xs text-slate-500">Não feche esta página até o envio terminar.</p>
+                        <div className="flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-300"><span>A enviar os ficheiros…</span><span>{uploadProgress}%</span></div>
+                        <Progress value={uploadProgress} aria-label={`Progresso global dos uploads: ${uploadProgress}%`} />
+                        <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-slate-500">Pode cancelar o carregamento; os ficheiros já enviados permanecem guardados.</p><Button type="button" variant="outline" size="sm" onClick={cancelDocumentUploads}><X className="mr-2 h-4 w-4" />Cancelar carregamento</Button></div>
                       </>
                     )}
-                    {uploadSuccess && !isUploadingDocument && <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Documento enviado com sucesso.</p>}
+                    {uploadSuccess && !isUploadingDocument && <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Ficheiros enviados com sucesso.</p>}
                     {uploadError && <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">{uploadError}</p>}
                   </div>
                 )}

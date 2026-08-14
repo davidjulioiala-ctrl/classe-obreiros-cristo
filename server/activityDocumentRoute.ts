@@ -1,7 +1,7 @@
 import multer from "multer";
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
-import { createActivityDocument, getActivityDocumentById, getActivityById } from "./db";
+import { createActivityDocument, createAuditLog, deleteActivityDocument, getActivityDocumentById, getActivityById } from "./db";
 import { storageGetSignedUrl, storagePut } from "./storage";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { requireSameOrigin } from "./_core/security";
@@ -76,6 +76,7 @@ export function registerActivityDocumentRoute(app: Express) {
       void (async () => {
         try {
           if (error) return res.status(400).json({ error: "Anexe um PDF, DOC, DOCX, ODT ou TXT válido até 15 MB." });
+          if (req.aborted) return;
           const user = await getLocalUserFromRequest(req);
           if (!user || !canManageDocuments(user)) return res.status(403).json({ error: "Não tem permissão para anexar documentos." });
           const activityId = Number(req.params.activityId);
@@ -88,6 +89,7 @@ export function registerActivityDocumentRoute(app: Express) {
           }
 
           const stored = await storagePut(`activity-documents/${activityId}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeFileName(req.file.originalname)}`, req.file.buffer, req.file.mimetype);
+          if (req.aborted) return;
           const result = await createActivityDocument({
             activityId,
             type: parsedType.data,
@@ -103,8 +105,32 @@ export function registerActivityDocumentRoute(app: Express) {
           console.error("[ActivityDocumentUpload]", uploadError);
           return res.status(503).json({ error: "Não foi possível guardar o documento neste momento." });
         }
-      })();
+      });
     });
+  });
+
+  app.delete("/api/activity-documents/:documentId", requireSameOrigin, (req: Request, res: Response) => {
+    void (async () => {
+      try {
+        const user = await getLocalUserFromRequest(req);
+        if (!user || !canManageDocuments(user)) return res.status(403).json({ error: "Não tem permissão para eliminar documentos." });
+        const documentId = Number(req.params.documentId);
+        if (!Number.isInteger(documentId) || documentId <= 0) return res.status(400).json({ error: "Documento inválido." });
+        const document = await deleteActivityDocument(documentId);
+        if (!document) return res.status(404).json({ error: "Documento não encontrado." });
+        await createAuditLog({
+          userId: user.id,
+          action: "apagar",
+          entityType: "activityDocument",
+          entityId: document.id,
+          details: JSON.stringify({ activityId: document.activityId, type: document.type, originalName: document.originalName }),
+        });
+        return res.status(200).json({ success: true, documentId: document.id });
+      } catch (deleteError) {
+        console.error("[ActivityDocumentDelete]", deleteError);
+        return res.status(503).json({ error: "Não foi possível eliminar o documento." });
+      }
+    })();
   });
 
   app.get("/api/activity-documents/:documentId/preview", (req: Request, res: Response) => {

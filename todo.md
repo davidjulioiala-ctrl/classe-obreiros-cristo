@@ -6801,3 +6801,11 @@
 - [x] Completar o gráfico de participação por tipo de actividade, incluindo categorias sem presenças.
 - [x] Remover o campo "Código interno" da interface e dos payloads de Materiais.
 - [x] Rever testes Vitest, typecheck, build e validação visual dos fluxos corrigidos.
+
+## Nova revisão — filtros de gráficos e documentos de actividades
+- [ ] Adicionar um filtro reutilizável de intervalo de datas a todos os gráficos do sistema.
+- [ ] Aplicar o intervalo de datas às consultas/agregações e manter estados vazio, erro e limpeza.
+- [ ] Permitir cancelar um upload de documento em curso, limpando progresso e estado.
+- [ ] Permitir eliminar um ficheiro já carregado com confirmação e autorização no servidor.
+- [ ] Permitir vários ficheiros por actividade, preservando visualização, download e impressão por ficheiro.
+- [ ] Adicionar testes Vitest, typecheck, build e validação visual dos novos fluxos.

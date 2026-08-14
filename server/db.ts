@@ -383,6 +383,15 @@ export async function getActivityDocumentById(id: number) {
   return rows[0] ?? null;
 }
 
+export async function deleteActivityDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const document = await getActivityDocumentById(id);
+  if (!document) return null;
+  await db.delete(activityDocuments).where(eq(activityDocuments.id, id));
+  return document;
+}
+
 // ============ ATTENDANCE ============
 
 export async function recordAttendance(data: typeof attendance.$inferInsert) {
@@ -463,9 +472,17 @@ export function completeParticipationByActivityType(rows: ParticipationByActivit
   return [...catalogRows, ...extraRows];
 }
 
-export async function getParticipationByActivityType() {
+export async function getParticipationByActivityType(options?: { startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  const dateFilter = options?.startDate && options?.endDate
+    ? between(activities.date, options.startDate, options.endDate)
+    : options?.startDate
+      ? sql`${activities.date} >= ${options.startDate}`
+      : options?.endDate
+        ? sql`${activities.date} <= ${options.endDate}`
+        : undefined;
 
   const rows = await db
     .select({
@@ -476,6 +493,7 @@ export async function getParticipationByActivityType() {
     })
     .from(activities)
     .leftJoin(attendance, eq(attendance.activityId, activities.id))
+    .where(dateFilter)
     .groupBy(activities.type)
     .orderBy(desc(sql`presentCount`), asc(activities.type));
 

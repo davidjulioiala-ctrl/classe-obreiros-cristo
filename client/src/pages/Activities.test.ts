@@ -21,9 +21,10 @@ describe("fluxos de actividades", () => {
 
   it("mantém o campo Data e valida o ficheiro antes de iniciar o upload", () => {
     expect(activitiesSource).toContain('<Label htmlFor="activity-date">Data</Label>');
-    expect(activitiesSource).toContain("selectActivityDocument");
+    expect(activitiesSource).toContain("validateActivityDocument");
     expect(activitiesSource).toContain("MAX_ACTIVITY_DOCUMENT_BYTES");
-    expect(activitiesSource).toContain("event.currentTarget.files?.item(0)");
+    expect(activitiesSource).toContain("multiple");
+    expect(activitiesSource).toContain("event.currentTarget.files");
     expect(activitiesSource).toContain("event.currentTarget.value = \"\"");
   });
 
@@ -38,10 +39,20 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain("XMLHttpRequest");
     expect(activitiesSource).toContain("request.upload.addEventListener(\"progress\"");
     expect(activitiesSource).toContain("uploadProgress");
-    expect(activitiesSource).toContain("Não feche esta página até o envio terminar.");
+    expect(activitiesSource).toContain("cancelDocumentUploads");
+    expect(activitiesSource).toContain("Cancelar carregamento");
     expect(activitiesSource).toContain("Falha de rede ao enviar o documento.");
     expect(activitiesSource).toContain("O envio demorou demasiado tempo.");
-    expect(activitiesSource).toContain("Documento enviado com sucesso.");
+    expect(activitiesSource).toContain("Ficheiros enviados com sucesso.");
+    expect(activitiesSource).toContain("deleteActivityDocumentRequest");
+  });
+
+  it("permite múltiplos ficheiros, tipos individuais e eliminação autenticada", () => {
+    expect(activitiesSource).toContain("type PendingActivityDocument");
+    expect(activitiesSource).toContain("setDocumentFiles((current) => [");
+    expect(activitiesSource).toContain("activity-documents/${documentId}");
+    expect(activitiesSource).toContain("Ficheiros anexados");
+    expect(activitiesSource).toContain("Eliminar");
   });
 
   it("oferece filtros avançados por texto, intervalo de datas e estado", () => {
