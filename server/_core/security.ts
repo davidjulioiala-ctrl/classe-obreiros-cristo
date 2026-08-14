@@ -155,7 +155,7 @@ export function safeText(maxLength: number, required = true): z.ZodString | z.Zo
 }
 
 export function safeEmail() {
-  return z.string().trim().email().max(320);
+  return z.string().trim().max(320).refine((val) => !val || z.string().email().safeParse(val).success, "Email inválido.").optional().transform(val => val === "" ? undefined : val);
 }
 
 export const positiveId = z.number().int().positive();

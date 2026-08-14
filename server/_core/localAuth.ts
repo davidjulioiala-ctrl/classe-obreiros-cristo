@@ -56,7 +56,7 @@ export function registerLocalAuthRoutes(app: Express) {
   app.post("/api/auth/login", requireSameOrigin, async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body as { username?: string; password?: string };
-      if (!username || !password) return res.status(400).json({ success: false, error: "Username and password are required" });
+      if (!username || !password) return res.status(400).json({ success: false, error: "Por favor, preencha o nome de utilizador e a senha." });
 
       const rate = checkLoginRateLimit(req, username);
       if (!rate.allowed) {
@@ -68,7 +68,7 @@ export function registerLocalAuthRoutes(app: Express) {
       if (!user) {
         recordLoginFailure(req, username);
         void notifySecurityEvent({ kind: "login_failure", title: "Falha de login local detectada", metadata: { ip: req.ip ?? "desconhecido" } });
-        return res.status(401).json({ success: false, error: "Credenciais inválidas" });
+        return res.status(401).json({ success: false, error: "Nome de utilizador ou palavra-passe incorretos. Por favor, verifique os dados inseridos." });
       }
 
       clearLoginFailures(req, username);

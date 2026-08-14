@@ -12,8 +12,14 @@ const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg"]);
 
 const logoUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_LOGO_BYTES, files: 1, fields: 0, parts: 1 },
-  fileFilter: (_req, file, callback) => callback(null, ALLOWED_LOGO_TYPES.has(file.mimetype)),
+  limits: { fileSize: MAX_LOGO_BYTES, files: 1, fields: 5, parts: 5 },
+  fileFilter: (_req, file, callback) => {
+    if (ALLOWED_LOGO_TYPES.has(file.mimetype)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Formato de imagem inválido. Apenas PNG e JPEG são permitidos."));
+    }
+  },
 });
 
 function hasValidLogoSignature(file: Express.Multer.File) {
@@ -84,8 +90,15 @@ export function registerBrandingRoute(app: Express) {
     logoUpload.single("logo")(req, res, (error: unknown) => {
       void (async () => {
         try {
-          if (error || !req.file || !req.file.size || req.file.size > MAX_LOGO_BYTES || !hasValidLogoSignature(req.file)) {
-            return res.status(400).json({ error: "Anexe um logótipo PNG ou JPEG válido até 5 MB." });
+          if (error) {
+            const errMessage = error instanceof Error ? error.message : "Erro no carregamento do ficheiro.";
+            return res.status(400).json({ error: errMessage });
+          }
+          if (!req.file || !req.file.size || req.file.size > MAX_LOGO_BYTES) {
+            return res.status(400).json({ error: "O ficheiro excede o tamanho máximo de 5 MB ou está vazio." });
+          }
+          if (!hasValidLogoSignature(req.file)) {
+            return res.status(400).json({ error: "O conteúdo do ficheiro não corresponde a uma imagem PNG ou JPEG válida." });
           }
           const user = await getLocalUserFromRequest(req);
           if (!user || !canManageBranding(user)) return res.status(403).json({ error: "Sem permissão para alterar a identidade da congregação." });

@@ -78,7 +78,7 @@ export const authRouter = router({
         input.username,
         input.password,
         input.name,
-        input.email,
+        input.email ?? "",
         input.churchRole,
         input.role,
       );
