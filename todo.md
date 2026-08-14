@@ -6961,3 +6961,8 @@
 - [x] Auditar o comportamento do modal/formulário de membros em ecrãs estreitos.
 - [x] Corrigir eventuais dependências de resize, focus ou animação Framer Motion que quebram o DOM virtual no telemóvel.
 - [x] Validar testes unitários e build de produção.
+
+## Correção da Alternância de Tema e Cor do Cabeçalho
+- [ ] Auditar o contexto de tema e a página de Definições para o seletor de claro/escuro e cor do cabeçalho.
+- [ ] Corrigir eventuais falhas de ligação com o ThemeContext e persistência nas definições do cabeçalho.
+- [ ] Validar testes unitários e build de produção.
