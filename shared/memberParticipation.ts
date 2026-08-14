@@ -94,3 +94,43 @@ export function summarizeMemberParticipation(
     inactive: summaries.filter((member) => member.attendancePercentage < threshold),
   };
 }
+
+
+export type ParticipationMemberSort = "percentage-desc" | "percentage-asc" | "name-asc" | "name-desc";
+
+export type ParticipationMemberFilterOptions = {
+  search?: string;
+  groupId?: number | null;
+  sex?: string | null;
+  sortBy?: ParticipationMemberSort;
+};
+
+function normalizeSearchValue(value: string | number | null | undefined) {
+  return String(value ?? "").trim().toLocaleLowerCase("pt-PT");
+}
+
+export function filterAndSortParticipationMembers(
+  members: MemberParticipationSummary[],
+  options: ParticipationMemberFilterOptions = {},
+) {
+  const search = normalizeSearchValue(options.search);
+  const selectedSex = normalizeSearchValue(options.sex);
+  const sortBy = options.sortBy ?? "percentage-desc";
+
+  return members
+    .filter((member) => {
+      const matchesSearch = !search || normalizeSearchValue(member.name).includes(search) || String(member.id).includes(search);
+      const matchesGroup = options.groupId === undefined || options.groupId === null || member.groupId === options.groupId;
+      const matchesSex = !selectedSex || selectedSex === "todos" || selectedSex === "all" || normalizeSearchValue(member.sex) === selectedSex;
+      return matchesSearch && matchesGroup && matchesSex;
+    })
+    .slice()
+    .sort((left, right) => {
+      if (sortBy === "name-asc" || sortBy === "name-desc") {
+        const comparison = left.name.localeCompare(right.name, "pt-PT", { sensitivity: "base" });
+        return (sortBy === "name-desc" ? -comparison : comparison) || left.id - right.id;
+      }
+      const comparison = left.attendancePercentage - right.attendancePercentage;
+      return (sortBy === "percentage-asc" ? comparison : -comparison) || left.name.localeCompare(right.name, "pt-PT", { sensitivity: "base" }) || left.id - right.id;
+    });
+}

@@ -7040,3 +7040,9 @@
 - [x] Atualizar o Dashboard/Página Inicial com os cartões de destaque clicáveis para Ativos e Inativos.
 - [x] Criar modal ou painel interativo ao clicar em cada destaque para listar os membros, a sua percentagem de presença e as últimas 7 atividades frequentadas.
 - [x] Adicionar testes de regressão e validar a compilação, typecheck e build de produção.
+
+## Nova Tarefa — Modais de Ativos e Inativos (Ordenação, Pesquisa, Filtros e Definições)
+- [x] Adicionar suporte a ordenação (por percentagem decrescente/crescente e nome alfabético), barra de pesquisa e filtros rápidos (por grupo ou sexo) nos modais de ativos e inativos da Página Inicial.
+- [x] Aplicar um contorno azul suave (`border-blue-200 dark:border-blue-800/60 ring-1 ring-blue-100 dark:ring-blue-900/30`) em todos os cartões de destaque e estatísticas da Página Inicial.
+- [x] Adicionar nas Definições campos para personalizar as etiquetas/nomes dos destaques de ativos e inativos, salvando a preferência na base de dados/definições da aplicação.
+- [x] Adicionar testes unitários para a ordenação e filtros dos modais e validar a compilação.

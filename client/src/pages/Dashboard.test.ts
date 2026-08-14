@@ -24,10 +24,18 @@ describe("filtro temporal do Dashboard", () => {
 
   it("apresenta destaques de activos e inactivos com o limiar de 60% e acesso às últimas sete actividades", () => {
     expect(dashboardSource).toContain("memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 })");
-    expect(dashboardSource).toContain("Membros activos por participação");
-    expect(dashboardSource).toContain("Membros inactivos por participação");
+    expect(dashboardSource).toContain('label={`${participationLabels.active} por participação`}');
+    expect(dashboardSource).toContain('label={`${participationLabels.inactive} por participação`}');
+    expect(dashboardSource).toContain('activeHighlightLabel');
+    expect(dashboardSource).toContain('inactiveHighlightLabel');
     expect(dashboardSource).toContain('setParticipationGroup("active")');
     expect(dashboardSource).toContain('setParticipationGroup("inactive")');
     expect(dashboardSource).toContain("Últimas 7 actividades frequentadas");
+    expect(dashboardSource).toContain("participation-member-search");
+    expect(dashboardSource).toContain("participation-sex-filter");
+    expect(dashboardSource).toContain("participation-group-filter");
+    expect(dashboardSource).toContain("participation-sort");
+    expect(dashboardSource).toContain("filterAndSortParticipationMembers");
+    expect(dashboardSource).toContain("shadow-[0_0_0_1px_rgba(147,197,253,0.18)]");
   });
 });

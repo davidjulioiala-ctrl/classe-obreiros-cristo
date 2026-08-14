@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
+import { filterAndSortParticipationMembers, type ParticipationMemberSort } from "@shared/memberParticipation";
 
 const COLORS = ["#10b981", "#06b6d4", "#8b5cf6", "#ec4899", "#f59e0b"];
 const PARTICIPATION_COLORS = ["#059669", "#0891b2", "#7c3aed", "#db2777", "#d97706", "#2563eb", "#65a30d"];
@@ -81,7 +82,7 @@ const StatCard = ({
       transition={{ duration: 0.3 }}
       className={onClick ? "cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" : undefined}
     >
-      <Card className="p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      <Card className="p-6 bg-white dark:bg-slate-800 border-blue-200/80 dark:border-blue-900/50 shadow-[0_0_0_1px_rgba(147,197,253,0.18)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">{label}</p>
@@ -103,7 +104,7 @@ const StatCard = ({
 
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-    <Card className="p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+    <Card className="p-6 bg-white dark:bg-slate-800 border-blue-200/80 dark:border-blue-900/50 shadow-[0_0_0_1px_rgba(147,197,253,0.18)]">
       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{title}</h3>
       {children}
     </Card>
@@ -119,7 +120,12 @@ export default function Dashboard() {
   const { data: quotas } = trpc.quotas.list.useQuery?.() || { data: [] };
   const { data: groups } = trpc.groups.list.useQuery();
   const [participationGroup, setParticipationGroup] = useState<"active" | "inactive" | null>(null);
+  const [participationSearch, setParticipationSearch] = useState("");
+  const [participationSexFilter, setParticipationSexFilter] = useState("all");
+  const [participationGroupFilter, setParticipationGroupFilter] = useState<number | "all">("all");
+  const [participationSort, setParticipationSort] = useState<ParticipationMemberSort>("percentage-desc");
   const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 });
+  const organizationSettingsQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const participationQuery = trpc.dashboard.participationByType.useQuery(
     { startDate: dateFrom || undefined, endDate: dateTo || undefined },
     { enabled: !dateRangeInvalid },
@@ -128,11 +134,35 @@ export default function Dashboard() {
   const registeredPeopleCount = members?.length ?? 0;
   const activePeopleCount = participationHighlightsQuery.data?.active.length ?? 0;
   const inactivePeopleCount = participationHighlightsQuery.data?.inactive.length ?? 0;
-  const selectedParticipationMembers = participationGroup === "active"
+  const participationLabels = useMemo(() => {
+    const fallback = { active: "Membros activos", inactive: "Membros inactivos" };
+    if (!organizationSettingsQuery.data) return fallback;
+    try {
+      const parsed = JSON.parse(organizationSettingsQuery.data) as { activeHighlightLabel?: unknown; inactiveHighlightLabel?: unknown };
+      return {
+        active: typeof parsed.activeHighlightLabel === "string" && parsed.activeHighlightLabel.trim() ? parsed.activeHighlightLabel.trim() : fallback.active,
+        inactive: typeof parsed.inactiveHighlightLabel === "string" && parsed.inactiveHighlightLabel.trim() ? parsed.inactiveHighlightLabel.trim() : fallback.inactive,
+      };
+    } catch {
+      return fallback;
+    }
+  }, [organizationSettingsQuery.data]);
+  const participationMembersForGroup = participationGroup === "active"
     ? participationHighlightsQuery.data?.active ?? []
     : participationGroup === "inactive"
       ? participationHighlightsQuery.data?.inactive ?? []
       : [];
+  const selectedParticipationMembers = useMemo(() => filterAndSortParticipationMembers(participationMembersForGroup, {
+    search: participationSearch,
+    sex: participationSexFilter,
+    groupId: participationGroupFilter === "all" ? null : participationGroupFilter,
+    sortBy: participationSort,
+  }), [participationGroupFilter, participationMembersForGroup, participationSearch, participationSexFilter, participationSort]);
+  const participationGroups = useMemo(() => {
+    const ids = new Set(participationMembersForGroup.map((member) => member.groupId).filter((id): id is number => typeof id === "number"));
+    return (groups ?? []).filter((group) => ids.has(group.id)).sort((left, right) => left.name.localeCompare(right.name, "pt-PT"));
+  }, [groups, participationMembersForGroup]);
+  const hasParticipationFilters = Boolean(participationSearch.trim()) || participationSexFilter !== "all" || participationGroupFilter !== "all";
   const regularMemberCount = members?.filter((member) => {
     const position = (member.position ?? "").trim().toLocaleLowerCase("pt-PT");
     return !member.isGuest && position !== "líder";
@@ -205,14 +235,14 @@ export default function Dashboard() {
           <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas registadas" value={registeredPeopleCount} trendValue="Total no sistema" />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            label="Membros activos por participação"
+            label={`${participationLabels.active} por participação`}
             value={activePeopleCount}
             trendValue="60% ou mais de presença"
             onClick={() => setParticipationGroup("active")}
           />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            label="Membros inactivos por participação"
+            label={`${participationLabels.inactive} por participação`}
             value={inactivePeopleCount}
             trendValue="Menos de 60% de presença"
             accent="amber"
@@ -327,17 +357,49 @@ export default function Dashboard() {
         <Dialog open={participationGroup !== null} onOpenChange={(open) => !open && setParticipationGroup(null)}>
           <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-4xl">
             <DialogHeader>
-              <DialogTitle>{participationGroup === "active" ? "Membros activos por participação" : "Membros inactivos por participação"}</DialogTitle>
+              <DialogTitle>{participationGroup === "active" ? `${participationLabels.active} por participação` : `${participationLabels.inactive} por participação`}</DialogTitle>
               <DialogDescription>
                 Classificação calculada sobre {participationHighlightsQuery.data?.totalActivities ?? 0} actividades registadas. Activo significa presença igual ou superior a 60%; inactivo significa presença inferior a 60%.
               </DialogDescription>
             </DialogHeader>
+            <div className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3 dark:border-blue-900/50 dark:bg-blue-950/20 sm:grid-cols-[1.5fr_1fr_1fr_1fr_auto] sm:items-end">
+              <div>
+                <label htmlFor="participation-member-search" className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Pesquisar</label>
+                <input id="participation-member-search" value={participationSearch} onChange={(event) => setParticipationSearch(event.target.value)} placeholder="Nome ou ID" className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+              </div>
+              <div>
+                <label htmlFor="participation-sex-filter" className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Sexo</label>
+                <select id="participation-sex-filter" value={participationSexFilter} onChange={(event) => setParticipationSexFilter(event.target.value)} className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                  <option value="all">Todos</option>
+                  <option value="m">Masculino</option>
+                  <option value="f">Feminino</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="participation-group-filter" className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Grupo</label>
+                <select id="participation-group-filter" value={participationGroupFilter} onChange={(event) => setParticipationGroupFilter(event.target.value === "all" ? "all" : Number(event.target.value))} className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                  <option value="all">Todos</option>
+                  {participationGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="participation-sort" className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Ordenar por</label>
+                <select id="participation-sort" value={participationSort} onChange={(event) => setParticipationSort(event.target.value as ParticipationMemberSort)} className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                  <option value="percentage-desc">Percentagem: maior primeiro</option>
+                  <option value="percentage-asc">Percentagem: menor primeiro</option>
+                  <option value="name-asc">Nome: A–Z</option>
+                  <option value="name-desc">Nome: Z–A</option>
+                </select>
+              </div>
+              <button type="button" onClick={() => { setParticipationSearch(""); setParticipationSexFilter("all"); setParticipationGroupFilter("all"); setParticipationSort("percentage-desc"); }} className="h-9 rounded-md border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40">Limpar</button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">A mostrar {selectedParticipationMembers.length} de {participationMembersForGroup.length} pessoas{hasParticipationFilters ? " após os filtros" : ""}.</p>
             {participationHighlightsQuery.isLoading ? (
               <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400" aria-busy="true">A calcular a participação dos membros…</div>
             ) : participationHighlightsQuery.isError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300" role="alert">Não foi possível carregar os detalhes de participação.</div>
             ) : selectedParticipationMembers.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">Não existem pessoas nesta classificação.</div>
+                <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">{hasParticipationFilters ? "Nenhum membro corresponde aos filtros seleccionados." : "Não existem pessoas nesta classificação."}</div>
             ) : (
               <div className="grid gap-3">
                 {selectedParticipationMembers.map((member) => (

@@ -166,6 +166,8 @@ export default function Settings() {
   const defaultTab = requestedTab === "notifications" || requestedTab === "appearance" ? requestedTab : "organization";
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
   const [defaultQuotaAmount, setDefaultQuotaAmount] = useState("100");
+  const [activeHighlightLabel, setActiveHighlightLabel] = useState("Membros activos");
+  const [inactiveHighlightLabel, setInactiveHighlightLabel] = useState("Membros inactivos");
   const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
@@ -237,6 +239,8 @@ export default function Settings() {
         if (parsed.organizationName) setOrganizationName(parsed.organizationName);
         const parsedQuotaAmount = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
         if (/^\d+(?:\.\d{1,2})?$/.test(parsedQuotaAmount) && Number(parsedQuotaAmount) >= 0) setDefaultQuotaAmount(parsedQuotaAmount);
+        if (typeof parsed.activeHighlightLabel === "string" && parsed.activeHighlightLabel.trim()) setActiveHighlightLabel(parsed.activeHighlightLabel.trim());
+        if (typeof parsed.inactiveHighlightLabel === "string" && parsed.inactiveHighlightLabel.trim()) setInactiveHighlightLabel(parsed.inactiveHighlightLabel.trim());
         if (parsed.headerTitleText) setHeaderTitleText(parsed.headerTitleText);
         else if (parsed.organizationName) setHeaderTitleText(parsed.organizationName);
         if (parsed.email) setEmail(parsed.email);
@@ -357,7 +361,11 @@ export default function Settings() {
       return;
     }
     setDefaultQuotaAmount(normalizedQuotaAmount);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName: organizationName.trim(), defaultQuotaAmount: normalizedQuotaAmount, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
+    const normalizedActiveHighlightLabel = activeHighlightLabel.trim() || "Membros activos";
+    const normalizedInactiveHighlightLabel = inactiveHighlightLabel.trim() || "Membros inactivos";
+    setActiveHighlightLabel(normalizedActiveHighlightLabel);
+    setInactiveHighlightLabel(normalizedInactiveHighlightLabel);
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName: organizationName.trim(), defaultQuotaAmount: normalizedQuotaAmount, activeHighlightLabel: normalizedActiveHighlightLabel, inactiveHighlightLabel: normalizedInactiveHighlightLabel, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -553,6 +561,23 @@ export default function Settings() {
                   <label htmlFor="default-quota-amount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Valor padrão da quota</label>
                   <Input id="default-quota-amount" type="number" min="0" step="0.01" inputMode="decimal" value={defaultQuotaAmount} onChange={(event) => setDefaultQuotaAmount(event.target.value)} placeholder="Ex: 100" />
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Este valor será pré-preenchido em novos lançamentos. Os lançamentos históricos permanecem inalterados.</p>
+                </div>
+
+                <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-4 dark:border-blue-900/50 dark:bg-blue-950/20 space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Nomes dos destaques de participação</h3>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Personalize as etiquetas apresentadas nos cartões e nos modais da Página Inicial. A regra de 60% mantém-se inalterada.</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="active-highlight-label" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destaque de participação igual ou superior a 60%</label>
+                      <Input id="active-highlight-label" value={activeHighlightLabel} onChange={(event) => setActiveHighlightLabel(event.target.value)} placeholder="Membros activos" maxLength={60} />
+                    </div>
+                    <div>
+                      <label htmlFor="inactive-highlight-label" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destaque de participação inferior a 60%</label>
+                      <Input id="inactive-highlight-label" value={inactiveHighlightLabel} onChange={(event) => setInactiveHighlightLabel(event.target.value)} placeholder="Membros inactivos" maxLength={60} />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 space-y-3">

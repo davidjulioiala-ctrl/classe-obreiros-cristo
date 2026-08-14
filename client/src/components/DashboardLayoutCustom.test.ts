@@ -30,6 +30,6 @@ describe("navegação principal", () => {
 
   it("mantém o módulo de Louvor limitado ao seu conjunto autorizado", () => {
     const labels = getVisibleMenuItems({ role: "user", churchRole: "louvor" }).map((item) => item.label);
-    expect(labels).toEqual(["Dashboard", "Membros", "Louvor"]);
+    expect(labels).toEqual(["Página Inicial", "Membros", "Louvor"]);
   });
 });
