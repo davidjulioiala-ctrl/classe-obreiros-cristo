@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Users, Check, X, Download, Search, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,14 +22,20 @@ export default function Attendance() {
   const { data: activities, isLoading: activitiesLoading } =
     trpc.activities.list.useQuery();
   const { data: members } = trpc.members.list.useQuery();
-  const { data: attendance, refetch: refetchAttendance } = selectedActivity
-    ? trpc.activities.getAttendance.useQuery({ activityId: selectedActivity })
-    : { data: undefined, refetch: async () => undefined };
+  const attendanceQuery = trpc.activities.getAttendance.useQuery(
+    { activityId: selectedActivity ?? 1 },
+    { enabled: selectedActivity !== null },
+  );
+  const { data: attendance, refetch: refetchAttendance } = attendanceQuery;
 
   useEffect(() => {
+    if (!selectedActivity) {
+      setAttendanceRecords({});
+      return;
+    }
     if (!attendance) return;
     setAttendanceRecords(Object.fromEntries(attendance.map((record) => [record.memberId, record.isPresent])));
-  }, [attendance]);
+  }, [attendance, selectedActivity]);
 
   const recordAttendanceMutation = trpc.activities.recordAttendance.useMutation({
     onSuccess: () => {

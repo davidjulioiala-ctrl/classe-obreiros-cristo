@@ -6857,3 +6857,7 @@
 - [x] Corrigir os erros de carregamento e processamento no menu Transferências.
 - [x] Mostrar apenas sete registos como atalhos iniciais, revelando o restante através de pesquisa.
 - [x] Adicionar exportação das presenças registadas para PDF.
+
+## Correcção — Presenças ao seleccionar actividade
+- [x] Corrigir o crash ao seleccionar uma actividade no menu Presenças.
+- [x] Validar o carregamento da lista de presenças e manter a exportação PDF funcional.

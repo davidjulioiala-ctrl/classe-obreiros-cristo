@@ -46,3 +46,13 @@ describe("attendance export and shortcut regression guards", () => {
     expect(attendanceSource).toContain("Exportar PDF");
   });
 });
+
+
+describe("attendance activity selection stability", () => {
+  it("keeps the attendance query mounted and toggles it with enabled", () => {
+    expect(attendanceSource).toContain("const attendanceQuery = trpc.activities.getAttendance.useQuery(");
+    expect(attendanceSource).toContain("{ activityId: selectedActivity ?? 1 }");
+    expect(attendanceSource).toContain("{ enabled: selectedActivity !== null }");
+    expect(attendanceSource).not.toContain("selectedActivity\n    ? trpc.activities.getAttendance.useQuery");
+  });
+});
