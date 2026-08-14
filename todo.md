@@ -6934,3 +6934,15 @@
 - [x] Mapear as 12 colunas exatas da referência (ID, Nome, Sexo, Data de nascimento, Idade, Cargo, Grupo ID, Convidado, Estado, Telefone Orange, Telefone Telecel, Email).
 - [x] Garantir o preenchimento de campos vazios com travessão (`—`) exatamente como no modelo.
 - [x] Validar a ordem vertical e atualizar os testes de exportação.
+
+## Exportação de Pagamentos de Quotas
+- [x] Implementar as colunas exatas: ID, Nome, Ano, Mês pagos, Valor, Responsável.
+- [x] Garantir organização vertical (uma linha por pagamento) com ordenação por ID.
+- [x] Respeitar a opção de privacidade para ocultar o responsável ou dados pessoais quando solicitado.
+- [x] Gerar PDF horizontal, CSV e Excel com totais e testes de regressão.
+
+## Exportação de Quotas em 12 Folhas (Mensais)
+- [x] Criar gerador de quotas com colunas: ID, Nome, Ano, Mês pagos, Valor, Responsável.
+- [x] Dividir a exportação em 12 folhas/páginas (Janeiro a Dezembro) em orientação horizontal (paisagem).
+- [x] Ordenar verticalmente por ID do membro/registo e respeitar a privacidade do responsável.
+- [x] Validar testes unitários e build de produção.

@@ -12,6 +12,7 @@ import { registerReportPdfRoute } from "../reportPdf";
 import { registerTransferPdfRoute } from "../transferPdf";
 import { registerAttendancePdfRoute } from "../attendancePdf";
 import { registerFinancialReportRoutes } from "../financialReportRoute";
+import { registerQuotaExportRoutes } from "../quotaExportRoute";
 import { registerBackupRoutes } from "../backupRoutes";
 import { serveStatic, setupVite } from "./vite";
 import { requireSameOrigin, SECURITY_LIMITS, securityHeaders } from "./security";
@@ -83,6 +84,7 @@ async function startServer() {
   registerTransferPdfRoute(app);
   registerAttendancePdfRoute(app);
   registerFinancialReportRoutes(app);
+  registerQuotaExportRoutes(app);
   registerBackupRoutes(app);
   // tRPC API
   app.use(
