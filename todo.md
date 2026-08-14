@@ -6659,3 +6659,8 @@
 - [x] Garantir que o carregador de branding usa automaticamente o modelo marcado como padrão quando nenhum override for especificado.
 - [x] Adicionar o botão "Definir como Padrão" na biblioteca de modelos em `Settings.tsx`.
 - [x] Validar a compilação TypeScript, testes unitários, build de produção e publicação.
+
+## Fase 18: Correção do Fluxo de Login — 2026-08-14
+- [x] Diagnosticar a causa raiz da falha de login nas rotas de autenticação local.
+- [x] Corrigir o manipulador de login e garantir persistência correta de sessão e cookies.
+- [x] Executar testes de login, typecheck, build de produção, checkpoint e publicação.
