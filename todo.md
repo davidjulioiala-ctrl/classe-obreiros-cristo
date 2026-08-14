@@ -6966,3 +6966,8 @@
 - [x] Auditar o contexto de tema e a página de Definições para o seletor de claro/escuro e cor do cabeçalho.
 - [x] Corrigir eventuais falhas de ligação com o ThemeContext e persistência nas definições do cabeçalho.
 - [x] Validar testes unitários e build de produção.
+
+## Ajuste de Permissões para Oficiais
+- [x] Atualizar regras de backend e frontend para permitir que Oficiais criem membros.
+- [x] Ocultar os menus Configurações e Louvor para utilizadores com papel de Oficial.
+- [x] Validar testes e build de produção.

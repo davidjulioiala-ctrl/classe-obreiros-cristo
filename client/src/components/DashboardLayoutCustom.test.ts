@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { getVisibleMenuItems, menuItems } from "./DashboardLayoutCustom";
 
 describe("navegação principal", () => {
-  it("mantém Configurações visível para um oficial autorizado", () => {
+  it("oculta Configurações e Louvor para um perfil de oficial", () => {
     const labels = getVisibleMenuItems({ role: "user", churchRole: "oficial" }).map((item) => item.label);
-    expect(labels).toContain("Configurações");
+    expect(labels).not.toContain("Configurações");
+    expect(labels).not.toContain("Louvor");
     expect(labels).not.toContain("Finanças");
     expect(labels).not.toContain("Transferências");
     expect(labels).not.toContain("Utilizadores");

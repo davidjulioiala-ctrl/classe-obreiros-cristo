@@ -64,7 +64,7 @@ export function getVisibleMenuItems(user: NavigationUser) {
     if (isAdmin) return true;
     if (["/users", "/audit-backup"].includes(item.href)) return false;
     if (churchRole === "louvor") return ["Dashboard", "Membros", "Louvor"].includes(item.label);
-    if (churchRole === "oficial") return !["Finanças", "Transferências", "Utilizadores"].includes(item.label);
+    if (churchRole === "oficial") return !["Finanças", "Transferências", "Utilizadores", "Louvor", "Configurações"].includes(item.label);
     return true;
   });
 }

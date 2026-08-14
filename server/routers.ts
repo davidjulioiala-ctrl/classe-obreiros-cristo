@@ -71,7 +71,7 @@ const membersRouter = router({
       return await db.searchMembers(input.query, input.isGuest);
     }),
 
-  create: liderProcedure
+  create: oficialProcedure
     .input(
       z.object({
         name: safeText(255),
@@ -882,9 +882,9 @@ async function assignGroupAutomatically(isGuest: boolean): Promise<number | unde
 // ============ LOUVOR ROUTER ============
 
 const louvorRouter = router({
-  listMembers: protectedProcedure.query(() => db.listLouvorMembers()),
-  listScales: protectedProcedure.input(z.object({ activityId: positiveId.optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
-  createScale: oficialProcedure
+  listMembers: liderProcedure.query(() => db.listLouvorMembers()),
+  listScales: liderProcedure.input(z.object({ activityId: positiveId.optional() }).optional()).query(({ input }) => db.listLouvorScales(input?.activityId)),
+  createScale: liderProcedure
     .input(z.object({ activityId: positiveId, louvorMemberId: positiveId, roleInScale: safeText(120), songs: safeText(4000, false), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).default("escalado") }))
     .mutation(async ({ input, ctx }) => {
       await requireLouvorMember(input.louvorMemberId);
@@ -892,7 +892,7 @@ const louvorRouter = router({
       await writeAudit(ctx, "criar", "louvorScale", undefined, input);
       return result;
     }),
-  updateScale: oficialProcedure
+  updateScale: liderProcedure
     .input(z.object({ id: positiveId, roleInScale: safeText(120).optional(), songs: safeText(4000, false), status: z.enum(["escalado", "confirmado", "realizado", "ausente"]).optional() }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
@@ -900,7 +900,7 @@ const louvorRouter = router({
       await writeAudit(ctx, "editar", "louvorScale", id, data);
       return result;
     }),
-  deleteScale: oficialProcedure
+  deleteScale: liderProcedure
     .input(z.object({ id: positiveId }))
     .mutation(async ({ input, ctx }) => {
       const result = await db.deleteLouvorScale(input.id);
