@@ -6905,3 +6905,17 @@
 - [x] Integrar pesquisa da pessoa, valor recebido e pré-visualização dos meses que serão preenchidos.
 - [x] Guardar os lançamentos automaticamente, impedir duplicação e registar a operação no log.
 - [x] Cobrir o fluxo com testes e validar que o valor oficial continua a vir de Definições.
+
+## Exportações — tabelas estruturadas
+- [ ] Auditar exportações actuais de membros, quotas, finanças, presenças, atividades e relatórios.
+- [ ] Organizar PDFs exportados em tabelas com cabeçalhos, linhas e colunas alinhadas.
+- [ ] Manter CSV e Excel como tabelas estruturadas, respeitando colunas seleccionadas e privacidade.
+- [ ] Incluir totais e resumos separados da tabela quando aplicável.
+- [ ] Validar tabelas, paginação, dados pessoais e testes de exportação.
+
+## Exportações em tabelas estruturadas (Concluído)
+- [x] Auditar geradores e formatos de exportação existentes (membros, relatórios, finanças, presenças).
+- [x] Implementar motor reutilizável de tabelas PDF (`pdfTable.ts`) com colunas ponderadas, quebra de página e repetição de cabeçalhos.
+- [x] Organizar exportações PDF, CSV e Excel de membros, relatórios e finanças em tabelas estruturadas.
+- [x] Incluir totais, resumos e opção de privacidade (ocultar dados pessoais / responsáveis) nas exportações.
+- [x] Validar com 142 testes Vitest aprovados, typecheck sem erros e build de produção concluído.

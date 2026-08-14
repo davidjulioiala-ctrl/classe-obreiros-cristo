@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { generateCsv, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
+import { generateCsv, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf } from "./listExport";
 
 describe("list exports", () => {
   it("generates UTF-8 CSV with semicolon delimiters and escaped values", () => {
@@ -87,11 +87,27 @@ describe("list exports", () => {
     expect(csv).toContain("Reunião concluída");
   });
 
-  it("generates PDF buffers for both lists", async () => {
+  it("exports reports to a structured XLSX sheet with selected headers", () => {
+    const output = generateReportsExcel([{
+      id: 1,
+      activityId: 4,
+      type: "relatorio",
+      content: "Conteúdo",
+      createdAt: "2026-08-13T10:00:00.000Z",
+    }], ["id", "type", "activityId"]);
+    const workbook = XLSX.read(output, { type: "buffer" });
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets["Relatórios"], { header: 1, raw: false }) as unknown[][];
+    expect(rows[0]).toEqual(["ID", "Tipo", "Actividade ID"]);
+    expect(rows[1]).toEqual(["1", "Relatório", "4"]);
+  });
+
+  it("generates table-based PDF buffers for both lists, including empty-state rows", async () => {
     const membersPdf = await generateMembersPdf([]);
     const reportsPdf = await generateReportsPdf([]);
 
     expect(membersPdf.subarray(0, 5).toString()).toBe("%PDF-");
     expect(reportsPdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(membersPdf.length).toBeGreaterThan(1000);
+    expect(reportsPdf.length).toBeGreaterThan(1000);
   });
 });

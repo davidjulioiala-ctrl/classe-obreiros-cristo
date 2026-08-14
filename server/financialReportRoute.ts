@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getFinancialReportData } from "./db";
-import { generateFinancialExcel, generateFinancialPdf } from "./financialReport";
+import { generateFinancialCsv, generateFinancialExcel, generateFinancialPdf } from "./financialReport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
 
 function canManageFinance(user: { role: string; churchRole: string } | null) {
@@ -18,7 +18,7 @@ function parseRange(req: Request) {
 }
 
 export function registerFinancialReportRoutes(app: Express) {
-  const handle = async (req: Request, res: Response, format: "pdf" | "xlsx") => {
+  const handle = async (req: Request, res: Response, format: "pdf" | "xlsx" | "csv") => {
     try {
       const user = await getLocalUserFromRequest(req);
       if (!user || !canManageFinance(user)) return res.status(403).json({ error: "Sem permissão para exportar relatórios financeiros." });
@@ -34,6 +34,13 @@ export function registerFinancialReportRoutes(app: Express) {
         void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate, includePersonalData } });
         return res.send(buffer);
       }
+      if (format === "csv") {
+        const csv = generateFinancialCsv(payload);
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename=relatorio-financeiro-${range.startDate}-${range.endDate}.csv`);
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate, includePersonalData } });
+        return res.send(csv);
+      }
       const buffer = generateFinancialExcel(payload);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=relatorio-financeiro-${range.startDate}-${range.endDate}.xlsx`);
@@ -46,4 +53,5 @@ export function registerFinancialReportRoutes(app: Express) {
   };
   app.get("/api/finances/report/pdf", (req, res) => void handle(req, res, "pdf"));
   app.get("/api/finances/report/xlsx", (req, res) => void handle(req, res, "xlsx"));
+  app.get("/api/finances/report/csv", (req, res) => void handle(req, res, "csv"));
 }

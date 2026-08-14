@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import * as XLSX from "xlsx";
 import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
+import { drawPdfTable, type PdfTableColumn } from "./pdfTable";
 import {
   MEMBER_EXPORT_COLUMN_KEYS,
   MEMBER_EXPORT_COLUMNS,
@@ -35,6 +36,29 @@ type ExportReport = {
 
 const memberLabels = Object.fromEntries(MEMBER_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<MemberExportColumn, string>;
 const reportLabels = Object.fromEntries(REPORT_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<ReportExportColumn, string>;
+
+const memberPdfWeights: Record<MemberExportColumn, number> = {
+  id: 0.55,
+  name: 2.2,
+  sex: 0.85,
+  birthDate: 1.2,
+  age: 0.55,
+  position: 1.45,
+  groupId: 0.75,
+  isGuest: 0.8,
+  isActive: 0.85,
+  phoneOrange: 1.1,
+  phoneTelecel: 1.1,
+  email: 1.7,
+};
+
+const reportPdfWeights: Record<ReportExportColumn, number> = {
+  id: 0.55,
+  type: 1.25,
+  activityId: 0.9,
+  createdAt: 1.35,
+  content: 4.2,
+};
 
 export function sanitizeMemberExportColumns(columns: MemberExportColumn[], includePersonalData: boolean) {
   if (includePersonalData) return columns;
@@ -107,15 +131,25 @@ export function generateMembersCsv(members: ExportMember[], columns: MemberExpor
   );
 }
 
+function applyWorksheetTableFormatting(worksheet: XLSX.WorkSheet, rows: unknown[][], columnCount: number, widths: number[]) {
+  worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+  worksheet["!autofilter"] = { ref: `A1:${XLSX.utils.encode_col(Math.max(0, columnCount - 1))}${Math.max(rows.length, 1)}` };
+  worksheet["!cols"] = widths.map((wch) => ({ wch }));
+  if (rows.length > 0) {
+    const headerRange = XLSX.utils.decode_range(worksheet["!ref"] ?? `A1:${XLSX.utils.encode_col(Math.max(0, columnCount - 1))}1`);
+    headerRange.s.r = 0;
+    headerRange.e.r = 0;
+    worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(worksheet["!ref"] ?? "A1:A1")) };
+  }
+}
+
 export function generateMembersExcel(members: ExportMember[], columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
   const rows = [
     columns.map((column) => memberLabels[column]),
     ...members.map((member) => columns.map((column) => memberValue(member, column))),
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
-  worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-  worksheet["!autofilter"] = { ref: `A1:${XLSX.utils.encode_col(columns.length - 1)}${Math.max(rows.length, 1)}` };
-  worksheet["!cols"] = columns.map((column) => ({ wch: column === "name" || column === "email" ? 30 : 18 }));
+  applyWorksheetTableFormatting(worksheet, rows, columns.length, columns.map((column) => column === "name" || column === "email" ? 30 : 18));
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Membros");
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
@@ -128,43 +162,51 @@ export function generateReportsCsv(reports: ExportReport[], columns: ReportExpor
   );
 }
 
-async function createPdf(title: string) {
-  const document = new PDFDocument({ size: "A4", margin: 42 });
+export function generateReportsExcel(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
+  const rows = [
+    columns.map((column) => reportLabels[column]),
+    ...reports.map((report) => columns.map((column) => reportValue(report, column))),
+  ];
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  applyWorksheetTableFormatting(worksheet, rows, columns.length, columns.map((column) => column === "content" ? 60 : column === "type" ? 22 : 18));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Relatórios");
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
+async function createPdf(title: string, landscape: boolean) {
+  const document = new PDFDocument({ size: "A4", layout: landscape ? "landscape" : "portrait", margin: 42 });
   const chunks: Buffer[] = [];
   const branding = await loadPdfBranding();
   document.on("data", (chunk: Buffer) => chunks.push(chunk));
-  drawPdfHeader(document, branding, title);
+  drawPdfHeader(document, branding, title, { landscape });
   document.fontSize(9).fillColor("#64748b").text(`Gerado em ${displayDateTime(new Date())}`, { align: "center" });
   document.moveDown(1);
   return { document, chunks, branding };
 }
 
-export async function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
-  const { document, chunks, branding } = await createPdf("Lista de membros");
-  document.fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
-  document.moveDown(0.6);
-  for (const member of members) {
-    const values = columns.map((column) => `${memberLabels[column]}: ${memberValue(member, column)}`);
-    document.fontSize(9).fillColor("#0f172a").text(values.join(" · "), { lineGap: 2 });
-    document.moveDown(0.45);
-  }
-  if (members.length === 0) document.fontSize(10).fillColor("#64748b").text("Nenhum membro encontrado.");
-  document.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "exportação protegida pelo sistema"), { align: "center" });
+function finishPdf(document: InstanceType<typeof PDFDocument>, chunks: Buffer[], branding: Awaited<ReturnType<typeof loadPdfBranding>>) {
+  document.moveDown(0.8);
+  document.font("Helvetica").fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "exportação protegida pelo sistema"), { align: "center" });
   const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
   document.end();
   return result;
 }
 
+export async function generateMembersPdf(members: ExportMember[], search = "", columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
+  const landscape = columns.length > 6;
+  const { document, chunks, branding } = await createPdf("Lista de membros", landscape);
+  document.font("Helvetica").fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
+  document.moveDown(0.6);
+  const tableColumns: PdfTableColumn[] = columns.map((column) => ({ title: memberLabels[column], weight: memberPdfWeights[column], align: column === "id" || column === "age" || column === "groupId" ? "center" : column === "isActive" || column === "isGuest" ? "center" : "left" }));
+  drawPdfTable(document, branding, "Lista de membros", tableColumns, members.map((member) => columns.map((column) => memberValue(member, column))), { landscape, emptyLabel: "Nenhum membro encontrado." });
+  return finishPdf(document, chunks, branding);
+}
+
 export async function generateReportsPdf(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
-  const { document, chunks, branding } = await createPdf("Lista de relatórios e atas");
-  for (const report of reports) {
-    const values = columns.map((column) => `${reportLabels[column]}: ${reportValue(report, column)}`);
-    document.fontSize(9).fillColor("#0f172a").text(values.join(" · "), { lineGap: 3 });
-    document.moveDown(0.8);
-  }
-  if (reports.length === 0) document.fontSize(10).fillColor("#64748b").text("Ainda não existem relatórios.");
-  document.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "exportação protegida pelo sistema"), { align: "center" });
-  const result = new Promise<Buffer>((resolve) => document.on("end", () => resolve(Buffer.concat(chunks))));
-  document.end();
-  return result;
+  const landscape = columns.includes("content");
+  const { document, chunks, branding } = await createPdf("Lista de relatórios e atas", landscape);
+  const tableColumns: PdfTableColumn[] = columns.map((column) => ({ title: reportLabels[column], weight: reportPdfWeights[column], align: column === "id" || column === "activityId" ? "center" : "left" }));
+  drawPdfTable(document, branding, "Lista de relatórios e atas", tableColumns, reports.map((report) => columns.map((column) => reportValue(report, column))), { landscape, emptyLabel: "Ainda não existem relatórios." });
+  return finishPdf(document, chunks, branding);
 }

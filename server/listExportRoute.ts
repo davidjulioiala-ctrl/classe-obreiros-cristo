@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers, listReports } from "./db";
-import { generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf, sanitizeMemberExportColumns } from "./listExport";
+import { generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf, sanitizeMemberExportColumns } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
 import { MEMBER_EXPORT_COLUMN_KEYS, REPORT_EXPORT_COLUMN_KEYS, type MemberExportColumn, type ReportExportColumn } from "../shared/exportColumns";
 
@@ -82,6 +82,13 @@ export function registerListExportRoutes(app: Express) {
         res.setHeader("Content-Disposition", 'attachment; filename="relatorios.pdf"');
         void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de relatórios concluída", actorId: user.id, resource: "relatorios:pdf", metadata: { count: reports.length } });
         return res.send(buffer);
+      }
+      if (format === "xlsx") {
+        const workbook = generateReportsExcel(reports, columns as ReportExportColumn[]);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", 'attachment; filename="relatorios.xlsx"');
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de relatórios concluída", actorId: user.id, resource: "relatorios:xlsx", metadata: { count: reports.length } });
+        return res.send(workbook);
       }
       const csv = generateReportsCsv(reports, columns as ReportExportColumn[]);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");

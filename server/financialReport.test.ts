@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { generateFinancialExcel, summarizeFinancialReport } from "./financialReport";
+import { generateFinancialCsv, generateFinancialExcel, summarizeFinancialReport } from "./financialReport";
 
 describe("financial reports", () => {
   const payload = {
@@ -41,5 +41,17 @@ describe("financial reports", () => {
     const workbook = XLSX.read(output, { type: "buffer" });
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Outras receitas"]);
     expect(rows[0]).not.toHaveProperty("Responsável");
+  });
+
+  it("generates a single structured CSV table for the financial ledger", () => {
+    const output = generateFinancialCsv({
+      ...payload,
+      includePersonalData: false,
+      otherIncome: [{ ...payload.otherIncome[0], responsible: "Pessoa confidencial" }],
+    });
+    expect(output).toContain("Tipo;ID;Membro ID;Data/período;Descrição");
+    expect(output).toContain("Quota;;1;01/2026;Quota");
+    expect(output).toContain("Resumo;;;2026-01-01 a 2026-12-31;Saldo;;;250;");
+    expect(output).not.toContain("Pessoa confidencial");
   });
 });
