@@ -233,7 +233,15 @@ export function drawPdfHeader(
   const headerTextFontSize = normalizeHeaderFontSizePoints(branding.headerFontSizePoints, HEADER_FONT_SIZE_POINTS[normalizeHeaderFontSize(branding.headerFontSize)]);
   const textAlignment = normalizeHeaderTextAlignment(branding.headerTextAlignment);
   const headerTitleHeight = Math.max(20, parseHeaderText(branding.headerTitleText).length * headerTextFontSize * 1.25);
-  if (typeof document.font === "function") document.font(branding.headerFontFamily);
+  if (typeof document.font === "function") {
+    try {
+      document.font(branding.headerFontFamily);
+    } catch {
+      try {
+        document.font("Helvetica");
+      } catch {}
+    }
+  }
 
   if (branding.logoBuffer && branding.logoMimeType) {
     if (branding.logoAlignment === "left") {

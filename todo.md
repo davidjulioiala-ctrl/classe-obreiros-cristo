@@ -6819,15 +6819,18 @@
 - [x] Guardar checkpoint publicado com a revisão concluída.
 
 ## Correcção — paleta de cores de texto
-- [ ] Corrigir o selector de cores do texto no editor de cabeçalhos, sem alterar o tema claro/escuro.
-- [ ] Garantir que a cor textual escolhida é aplicada imediatamente à pré-visualização e persistida nos modelos.
-- [ ] Garantir que a mesma cor textual é usada na pré-visualização PDF e no PDF exportado.
-- [ ] Adicionar testes de regressão, executar typecheck e build, e publicar a correcção.
+- [x] Corrigir o selector de cores do texto no editor de cabeçalhos, sem alterar o tema claro/escuro.
+- [x] Garantir que a cor textual escolhida é aplicada imediatamente à pré-visualização e persistida nos modelos.
+- [x] Garantir que a mesma cor textual é usada na pré-visualização PDF e no PDF exportado.
+- [x] Adicionar testes de regressão, executar typecheck e build, e publicar a correcção.
 
 ## Correcção bloqueadora — login local
-- [ ] Reproduzir a quebra ao submeter o login e identificar a origem nos logs do browser e do servidor.
-- [ ] Corrigir a regressão no fluxo de autenticação, transição para a aplicação e carregamento da sessão.
-- [ ] Garantir mensagem clara para credenciais inválidas sem expor dados sensíveis.
-- [ ] Adicionar testes de regressão para login bem-sucedido, falhado, sessão autenticada e logout.
-- [ ] Executar typecheck, testes completos, build, reinício do servidor e validação visual.
-- [ ] Guardar checkpoint publicado com o login restaurado.
+- [x] Reproduzir a quebra ao submeter o login e identificar a origem nos logs do browser e do servidor.
+- [x] Corrigir a regressão no fluxo de autenticação, transição para a aplicação e carregamento da sessão.
+- [x] Garantir mensagem clara para credenciais inválidas sem expor dados sensíveis.
+- [x] Adicionar testes de regressão para login bem-sucedido, falhado, sessão autenticada e logout.
+- [x] Executar typecheck, testes completos, build, reinício do servidor e validação visual.
+- [x] Guardar checkpoint publicado com o login restaurado.
+
+## Incidente — servidor de desenvolvimento indisponível
+- [ ] Reiniciar o servidor de desenvolvimento e confirmar que a pré-visualização responde.
