@@ -6757,11 +6757,11 @@
 - [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
 
 ## Correções Solicitadas — Rótulo ID, Menus, Ata/Relatório e Formatação
-- [ ] Corrigir o rótulo "Eu IA" para "ID" em todas as tabelas e ecrãs do sistema.
-- [ ] Atualizar e estabilizar os menus Membros e Atividades.
-- [ ] Corrigir a quebra ao abrir o visualizador de Ata/Relatório em Atividades.
-- [ ] Reparar o funcionamento de Negrito, Sublinhado e Itálico nas Definições e nos modelos de cabeçalho.
-- [ ] Executar typecheck, testes Vitest, build de produção e guardar checkpoint.
+- [x] Corrigir o rótulo "Eu IA" para "ID" em todas as tabelas e ecrãs do sistema.
+- [x] Atualizar e estabilizar os menus Membros e Atividades.
+- [x] Corrigir a quebra ao abrir o visualizador de Ata/Relatório em Atividades.
+- [x] Reparar o funcionamento de Negrito, Sublinhado e Itálico nas Definições e nos modelos de cabeçalho.
+- [x] Executar typecheck, testes Vitest, build de produção e guardar checkpoint.
 
 ## Correções Recentes — ID, Membros, Atividades e Estilos Office
 - [x] Corrigido o rótulo de identificação para "ID" em todos os componentes.
@@ -6771,10 +6771,10 @@
 - [x] Executado typecheck, 115 testes unitários aprovados e build de produção concluído.
 
 ## Nova Funcionalidade — Progresso e Feedback de Erros no Upload de Atividades
-- [ ] Implementar XMLHttpRequest ou hook de progresso para exibir barra de progresso durante o envio do documento.
-- [ ] Apresentar mensagens de erro detalhadas em caso de falha de validação, formato não suportado, limite de tamanho ou erro de rede.
-- [ ] Adicionar indicadores visuais de sucesso e limpeza de estado após a conclusão.
-- [ ] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
+- [x] Implementar XMLHttpRequest ou hook de progresso para exibir barra de progresso durante o envio do documento.
+- [x] Apresentar mensagens de erro detalhadas em caso de falha de validação, formato não suportado, limite de tamanho ou erro de rede.
+- [x] Adicionar indicadores visuais de sucesso e limpeza de estado após a conclusão.
+- [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
 
 ## Nova Funcionalidade — Barra de Progresso e Mensagens Claras no Upload de Atividades
 - [x] Implementar XMLHttpRequest com monitorização de progresso percentual (0% a 100%) no envio de atas e relatórios.
@@ -6782,15 +6782,15 @@
 - [x] Criar testes unitários de regressão, validar typecheck, 116 testes Vitest, build de produção e publicação.
 
 ## Revisão Abrangente Solicitada — Correções e Melhorias Finais
-- [ ] Corrigir e estabilizar o menu Membros.
-- [ ] Restaurar e garantir o funcionamento de Negrito, Itálico e Sublinhado nas Definições e nos PDFs.
-- [ ] Unificar as opções de tipografia num único selector partilhado entre interface e PDF.
-- [ ] Corrigir o rótulo do campo "data" (em vez de "dados") no menu Atividades.
-- [ ] Reparar o submenu Notificações para que funcione corretamente.
-- [ ] Completar e refinar o gráfico de participação por tipo de atividade no Dashboard.
-- [ ] Substituir todas as ocorrências de "Eu IA" (ou variantes) por "ID" em todo o sistema.
-- [ ] Remover o campo de código interno no menu Materiais.
-- [ ] Executar typecheck, suíte completa de testes, build de produção e publicação.
+- [x] Corrigir e estabilizar o menu Membros.
+- [x] Restaurar e garantir o funcionamento de Negrito, Itálico e Sublinhado nas Definições e nos PDFs.
+- [x] Unificar as opções de tipografia num único selector partilhado entre interface e PDF.
+- [x] Corrigir o rótulo do campo "data" (em vez de "dados") no menu Atividades.
+- [x] Reparar o submenu Notificações para que funcione corretamente.
+- [x] Completar e refinar o gráfico de participação por tipo de atividade no Dashboard.
+- [x] Substituir todas as ocorrências de "Eu IA" (ou variantes) por "ID" em todo o sistema.
+- [x] Remover o campo de código interno no menu Materiais.
+- [x] Executar typecheck, suíte completa de testes, build de produção e publicação.
 
 ## Revisão abrangente — correcções de estabilidade e consistência
 - [x] Diagnosticar e corrigir o crash ao abrir o formulário "Novo membro".
