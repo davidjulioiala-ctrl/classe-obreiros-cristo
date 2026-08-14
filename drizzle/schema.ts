@@ -232,6 +232,7 @@ export const transfers = mysqlTable("transfers", {
   toGroupId: int("toGroupId"),
   toChurch: text("toChurch"), // Name of destination church; encrypted at rest
   reason: text("reason"),
+  processName: varchar("processName", { length: 180 }),
   status: mysqlEnum("status", ["pendente", "aprovada", "concluida", "cancelada"]).default("pendente").notNull(),
   approvedBy: int("approvedBy"),
   approvedAt: timestamp("approvedAt"),

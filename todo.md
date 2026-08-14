@@ -6839,15 +6839,15 @@
 - [x] Indicadores de total de pessoas registadas e pessoas ativas no Dashboard.
 - [x] Confirmação de inclusão de dados pessoais em todas as exportações do sistema.
 - [x] Atalho no menu "Campos em falta" para abrir diretamente o formulário do membro.
-- [ ] Filtros avançados e atalhos das últimas 7 atividades no menu Presenças.
-- [ ] Listagem organizada das últimas 7 atividades por nome no menu Atividades.
-- [ ] Edição de atividades finalizadas restrita ao administrador, com motivo obrigatório e registo visível.
+- [x] Filtros avançados e atalhos das últimas 7 atividades no menu Presenças.
+- [x] Listagem organizada das últimas 7 atividades por nome no menu Atividades.
+- [x] Edição de atividades finalizadas restrita ao administrador, com motivo obrigatório e registo visível.
 - [x] Inclusão do nome do utilizador responsável em todas as operações financeiras.
-- [ ] Gestão de transferências com processo nomeado em lote, revisão de maiores de idade e atribuição de nova função.
-- [ ] Filtros por nome, cargo e estado no menu Histórico.
+- [x] Gestão de transferências com processo nomeado em lote, revisão de maiores de idade e atribuição de nova função.
+- [x] Filtros por nome, cargo e estado no menu Histórico.
 - [x] Listagem dos últimos 7 relatórios e atas gerados no menu Relatórios.
 - [x] Escala de louvor vinculada diretamente a cada atividade.
-- [ ] Notificações internas para eventos e alterações de preferências.
-- [ ] Funcionalidade de mudança de senha com segurança e validação.
-- [ ] Sistema de backup automático e prático.
-- [ ] Seleção múltipla para eliminação em lote de logs de operações.
+- [x] Notificações internas para eventos e alterações de preferências.
+- [x] Funcionalidade de mudança de senha com segurança e validação.
+- [x] Sistema de backup automático e prático.
+- [x] Seleção múltipla para eliminação em lote de logs de operações.

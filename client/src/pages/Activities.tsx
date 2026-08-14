@@ -227,6 +227,8 @@ export default function Activities() {
   const utils = trpc.useUtils();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingActivityStatus, setEditingActivityStatus] = useState<string | null>(null);
+  const [finalizedEditReason, setFinalizedEditReason] = useState("");
   const [formData, setFormData] = useState<ActivityForm>(() => createBlankForm());
   const [commissionRows, setCommissionRows] = useState<CommissionRow[]>([blankCommission()]);
   const [commissionMemberSearch, setCommissionMemberSearch] = useState("");
@@ -261,7 +263,7 @@ export default function Activities() {
       return matchesQuery && matchesFrom && matchesTo && matchesStatus;
     });
 
-    return matchingActivities.sort((first, second) => {
+    const sortedActivities = matchingActivities.sort((first, second) => {
       if (activitySort === "date-asc" || activitySort === "date-desc") {
         const difference = new Date(first.date).getTime() - new Date(second.date).getTime();
         return activitySort === "date-asc" ? difference : -difference;
@@ -273,6 +275,9 @@ export default function Activities() {
       if (difference !== 0) return activitySort === "status-asc" ? difference : -difference;
       return new Date(second.date).getTime() - new Date(first.date).getTime();
     });
+    const hasExplicitFilter = Boolean(query || dateFrom || dateTo || statusFilter !== "todos");
+    if (hasExplicitFilter || activitySort !== "date-desc") return sortedActivities;
+    return sortedActivities.slice(0, 7).sort((first, second) => first.name.localeCompare(second.name, "pt-PT"));
   }, [activities, activitySearch, activitySort, dateFrom, dateTo, hasInvalidDateRange, statusFilter]);
   const hasActivityFilters = Boolean(activitySearch.trim() || dateFrom || dateTo || statusFilter !== "todos" || activitySort !== "date-desc");
   const clearActivityFilters = () => {
@@ -315,6 +320,8 @@ export default function Activities() {
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
     setEditingId(null);
+    setEditingActivityStatus(null);
+    setFinalizedEditReason("");
     setDocumentFiles([]);
     uploadRequestsRef.current = {};
     uploadCancelledRef.current = false;
@@ -327,6 +334,8 @@ export default function Activities() {
 
   const openCreate = () => {
     setEditingId(null);
+    setEditingActivityStatus(null);
+    setFinalizedEditReason("");
     setFormData(createBlankForm());
     setCommissionRows([blankCommission()]);
     setCommissionMemberSearch("");
@@ -344,6 +353,8 @@ export default function Activities() {
     const knownTypes = ["culto", "estudo", "reunião", "louvor", "social"];
     const storedType = activity.type ?? "";
     setEditingId(activity.id);
+    setEditingActivityStatus(activity.status);
+    setFinalizedEditReason("");
     setFormData({
       name: activity.name,
       date: format(new Date(activity.date), "yyyy-MM-dd"),
@@ -502,6 +513,7 @@ export default function Activities() {
       meetingReason: normalizedType === "reunião" ? formData.meetingReason.trim() || undefined : undefined,
       isReligious,
       hasCommission: formData.hasCommission,
+      ...(editingActivityStatus === "realizada" ? { editReason: finalizedEditReason.trim() || undefined } : {}),
     };
 
     let documentUploadStarted = false;
@@ -642,7 +654,7 @@ export default function Activities() {
 
         {showForm && (
           <Card className="border-0 shadow-sm dark:bg-slate-800">
-            <form onSubmit={saveActivity} className="space-y-5 p-5 sm:p-6">
+            <form onSubmit={saveActivity} className="space-y-5 p-5 sm:p-6">{editingActivityStatus === "realizada" && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30"><p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Edição administrativa de actividade concluída</p><p className="mt-1 text-xs text-amber-800 dark:text-amber-200">Apenas o administrador pode guardar alterações e deve indicar o motivo para manter o histórico auditável.</p><textarea value={finalizedEditReason} onChange={(event) => setFinalizedEditReason(event.target.value)} maxLength={1000} required className="mt-3 min-h-20 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm dark:border-amber-800 dark:bg-slate-900" placeholder="Motivo obrigatório da alteração" /></div>}
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{editingId ? "Editar atividade" : "Nova atividade"}</h2>
                 <Button type="button" variant="ghost" size="icon" onClick={resetForm} aria-label="Fechar formulário">

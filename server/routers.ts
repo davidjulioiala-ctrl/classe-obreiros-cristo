@@ -272,7 +272,8 @@ const activitiesRouter = router({
       type: safeText(100, false),
       audience: safeText(100, false),
       hasCommission: z.boolean(),
-              theme: safeText(255, false),
+      editReason: safeText(1000, false).optional(),
+      theme: safeText(255, false),
         speakerName: safeText(255, false),
         biblicalReference: safeText(255, false),
         meetingAgenda: safeText(5000, false),
@@ -281,7 +282,13 @@ const activitiesRouter = router({
       }))
 
     .mutation(async ({ input, ctx }) => {
-      const { id, date, ...data } = input;
+      const { id, date, editReason, ...data } = input;
+      const currentActivity = await db.getActivityById(id);
+      if (!currentActivity) throw new TRPCError({ code: "NOT_FOUND", message: "Actividade não encontrada." });
+      if (currentActivity.status === "realizada") {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Só o administrador pode editar uma actividade concluída." });
+        if (!editReason?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "Indique o motivo obrigatório para editar uma actividade concluída." });
+      }
       let rules;
       try {
         rules = applyActivityTypeRules(input);
@@ -296,7 +303,7 @@ const activitiesRouter = router({
         meetingReason: rules.meetingReason,
         isReligious: rules.isReligious,
       });
-      await writeAudit(ctx, "editar", "activity", id, { name: input.name, type: input.type });
+      await writeAudit(ctx, "editar", "activity", id, { name: input.name, type: input.type, ...(editReason ? { editReason } : {}) });
       return result;
     }),
 
@@ -560,6 +567,11 @@ const auditRouter = router({
     await writeAudit(ctx, "eliminar", "audit_log", input.id);
     return { success: true };
   }),
+  deleteMany: liderProcedure.input(z.object({ ids: z.array(positiveId).min(1).max(250) })).mutation(async ({ input, ctx }) => {
+    for (const id of input.ids) await db.deleteAuditLog(id);
+    await writeAudit(ctx, "eliminar_em_lote", "audit_log", undefined, { count: input.ids.length });
+    return { success: true, count: input.ids.length };
+  }),
 });
 
 const settingsRouter = router({
@@ -703,7 +715,7 @@ const transfersRouter = router({
   }),
 
   processAdultTransfers: liderProcedure
-    .input(z.object({ memberIds: z.array(positiveId).min(1).max(200), reason: safeText(300), toGroupId: positiveId.optional() }))
+    .input(z.object({ memberIds: z.array(positiveId).min(1).max(200), processName: safeText(180), reason: safeText(300), toGroupId: positiveId.optional() }))
     .mutation(async ({ input, ctx }) => {
       const candidates = await db.getAllMembers(true);
       const selected = candidates.filter((member) => {
@@ -726,6 +738,7 @@ const transfersRouter = router({
           fromGroupId: member.groupId ?? undefined,
           toGroupId: input.toGroupId,
           toChurch: "Jovens",
+          processName: input.processName,
           reason: input.reason,
           status: "concluida",
           approvedBy: ctx.user.id,
@@ -743,7 +756,7 @@ const transfersRouter = router({
         });
         await db.updateMember(member.id, { isActive: false, isTransferred: true, transferredAt: now });
       }
-      await writeAudit(ctx, "processar", "adult_transfer", undefined, { memberIds: input.memberIds, reason: input.reason, toGroupId: input.toGroupId });
+      await writeAudit(ctx, "processar", "adult_transfer", undefined, { processName: input.processName, memberIds: input.memberIds, reason: input.reason, toGroupId: input.toGroupId });
       return { success: true, count: selected.length, members: selected };
     }),
 
@@ -754,6 +767,7 @@ const transfersRouter = router({
         fromGroupId: positiveId.optional(),
         toGroupId: positiveId.optional(),
         toChurch: safeText(120).optional(),
+        processName: safeText(180, false).optional(),
         reason: safeText(300).optional(),
       })
     )

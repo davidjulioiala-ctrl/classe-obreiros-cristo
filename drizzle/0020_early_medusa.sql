@@ -1,0 +1,1 @@
+ALTER TABLE `transfers` ADD `processName` varchar(180);

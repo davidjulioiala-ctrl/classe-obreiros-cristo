@@ -14,6 +14,7 @@ export default function AuditAndBackup() {
   const [backupMinute, setBackupMinute] = useState("00");
   const [backupEnabled, setBackupEnabled] = useState(false);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
   const [editAction, setEditAction] = useState("");
   const [editEntityType, setEditEntityType] = useState("");
   const [editDetails, setEditDetails] = useState("");
@@ -33,6 +34,7 @@ export default function AuditAndBackup() {
   const saveSchedule = trpc.backup.saveSchedule.useMutation();
   const updateLog = trpc.audit.update.useMutation();
   const deleteLog = trpc.audit.delete.useMutation();
+  const deleteManyLogs = trpc.audit.deleteMany.useMutation();
   const incidentStateQuery = trpc.incident.getState.useQuery();
   const incidentQuery = trpc.incident.list.useQuery({ limit: 100 });
   const incidentDiagnose = trpc.incident.diagnose.useQuery(undefined, { enabled: false });
@@ -184,6 +186,12 @@ export default function AuditAndBackup() {
     }
   };
 
+  const removeManyLogs = async () => {
+    if (!selectedLogIds.length || !window.confirm(`Eliminar ${selectedLogIds.length} registos de auditoria?`)) return;
+    try { await deleteManyLogs.mutateAsync({ ids: selectedLogIds }); setSelectedLogIds([]); await utils.audit.list.invalidate(); toast.success("Registos eliminados em lote."); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Erro ao eliminar registos."); }
+  };
+
   const removeLog = async (id: number) => {
     if (!window.confirm("Tem certeza que deseja eliminar este registo de auditoria?")) return;
     try {
@@ -264,7 +272,7 @@ export default function AuditAndBackup() {
 
         <Card className="border-0 shadow-sm dark:bg-slate-800">
           <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-600" /> Log de operações</CardTitle></CardHeader>
-          <CardContent>{auditQuery.isLoading ? <p className="text-sm text-slate-500">A carregar registos…</p> : logs.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem operações registadas.</p> : <div className="max-h-[30rem] space-y-2 overflow-auto pr-1">{logs.map((log) => <div key={log.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">{editingLogId === log.id ? <div className="space-y-2"><div className="grid grid-cols-2 gap-2"><Input value={editAction} onChange={(event) => setEditAction(event.target.value)} placeholder="Acção" /><Input value={editEntityType} onChange={(event) => setEditEntityType(event.target.value)} placeholder="Entidade" /></div><Input value={editDetails} onChange={(event) => setEditDetails(event.target.value)} placeholder="Detalhes" /><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setEditingLogId(null)}>Cancelar</Button><Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void saveEditedLog(log.id)}>Guardar</Button></div></div> : <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium text-slate-900 dark:text-white">{log.action} · {log.entityType}</p><p className="mt-1 text-xs text-slate-500">Utilizador #{log.userId}{log.entityId ? ` · Registo #${log.entityId}` : ""} {log.details ? `· ${log.details}` : ""}</p><time className="text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleString("pt-PT")}</time></div><div className="flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => startEditLog(log)}><Edit2 className="h-4 w-4 text-blue-600" /></Button><Button size="sm" variant="ghost" onClick={() => void removeLog(log.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button></div></div>}</div>)}</div>}</CardContent>
+          <CardContent><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-500">{selectedLogIds.length ? `${selectedLogIds.length} selecionado(s)` : "Seleccione operações para eliminar em lote"}</p><Button type="button" size="sm" variant="outline" disabled={!selectedLogIds.length || deleteManyLogs.isPending} onClick={() => void removeManyLogs}><Trash2 className="mr-2 h-4 w-4" />Eliminar seleccionados</Button></div>{auditQuery.isLoading ? <p className="text-sm text-slate-500">A carregar registos…</p> : logs.length === 0 ? <p className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-900">Ainda não existem operações registadas.</p> : <div className="max-h-[30rem] space-y-2 overflow-auto pr-1">{logs.map((log) => <div key={log.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><label className="mb-2 flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={selectedLogIds.includes(log.id)} onChange={(event) => setSelectedLogIds((current) => event.target.checked ? (current.includes(log.id) ? current : [...current, log.id]) : current.filter((id) => id !== log.id))} /> Seleccionar este registo</label>{editingLogId === log.id ? <div className="space-y-2"><div className="grid grid-cols-2 gap-2"><Input value={editAction} onChange={(event) => setEditAction(event.target.value)} placeholder="Acção" /><Input value={editEntityType} onChange={(event) => setEditEntityType(event.target.value)} placeholder="Entidade" /></div><Input value={editDetails} onChange={(event) => setEditDetails(event.target.value)} placeholder="Detalhes" /><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setEditingLogId(null)}>Cancelar</Button><Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void saveEditedLog(log.id)}>Guardar</Button></div></div> : <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium text-slate-900 dark:text-white">{log.action} · {log.entityType}</p><p className="mt-1 text-xs text-slate-500">Utilizador #{log.userId}{log.entityId ? ` · Registo #${log.entityId}` : ""} {log.details ? `· ${log.details}` : ""}</p><time className="text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleString("pt-PT")}</time></div><div className="flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => startEditLog(log)}><Edit2 className="h-4 w-4 text-blue-600" /></Button><Button size="sm" variant="ghost" onClick={() => void removeLog(log.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button></div></div>}</div>)}</div>}</CardContent>
         </Card>
       </div>
     </DashboardLayoutCustom>
