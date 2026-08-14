@@ -6690,3 +6690,10 @@
 - [x] Adicionar tamanho de fonte configurável ao texto do cabeçalho.
 - [x] Reflectir alinhamento e tamanho na pré-visualização, gravação dos modelos e PDFs exportados.
 - [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.
+
+
+## Melhoria solicitada — cor e tipo de letra do cabeçalho
+- [x] Adicionar cor configurável ao texto dos modelos e do cabeçalho activo.
+- [x] Adicionar tipo de letra configurável ao texto dos modelos e do cabeçalho activo.
+- [x] Reflectir cor e tipo de letra na pré-visualização e nos PDFs exportados.
+- [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.

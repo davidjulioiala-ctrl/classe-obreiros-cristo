@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { getAppSetting } from "./db";
 import { storageGetSignedUrl } from "./storage";
-import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontSize, normalizeHeaderTextAlignment, parseHeaderText, type HeaderFontSizePreset, type HeaderTextAlignment, type HeaderTextSegment } from "@shared/headerFormatting";
+import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderTextAlignment, type HeaderTextSegment } from "@shared/headerFormatting";
 
 export const DEFAULT_CONGREGATION_NAME = "Classe Obreiros de Cristo";
 
@@ -17,6 +17,8 @@ export type PdfBranding = {
   logoSize: LogoSizePreset;
   headerTextAlignment: HeaderTextAlignment;
   headerFontSize: HeaderFontSizePreset;
+  headerFontFamily: HeaderFontFamily;
+  headerTextColor: string;
 };
 
 type OrganizationSettings = {
@@ -28,6 +30,8 @@ type OrganizationSettings = {
   logoSize?: unknown;
   headerTextAlignment?: unknown;
   headerFontSize?: unknown;
+  headerFontFamily?: unknown;
+  headerTextColor?: unknown;
   headerTemplates?: unknown;
   activeTemplateId?: unknown;
 };
@@ -62,6 +66,8 @@ export type PdfHeaderTemplate = {
   logoSize: LogoSizePreset;
   headerTextAlignment?: HeaderTextAlignment;
   headerFontSize?: HeaderFontSizePreset;
+  headerFontFamily?: HeaderFontFamily;
+  headerTextColor?: string;
   isDefault?: boolean;
 };
 
@@ -72,6 +78,8 @@ export type PdfBrandingOverrides = {
   logoSize?: unknown;
   headerTextAlignment?: unknown;
   headerFontSize?: unknown;
+  headerFontFamily?: unknown;
+  headerTextColor?: unknown;
   templateId?: unknown;
 };
 
@@ -89,6 +97,8 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
   let selectedSize = overrides.logoSize;
   let selectedTextAlignment = overrides.headerTextAlignment;
   let selectedFontSize = overrides.headerFontSize;
+  let selectedFontFamily = overrides.headerFontFamily;
+  let selectedTextColor = overrides.headerTextColor;
 
   const templates = Array.isArray(settings.headerTemplates) ? (settings.headerTemplates as PdfHeaderTemplate[]) : [];
   const explicitTemplateId = typeof overrides.templateId === "string" && overrides.templateId.trim() ? overrides.templateId.trim() : null;
@@ -107,6 +117,8 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
   }
   if (!selectedTextAlignment && matchedTemplate?.headerTextAlignment) selectedTextAlignment = matchedTemplate.headerTextAlignment;
   if (!selectedFontSize && matchedTemplate?.headerFontSize) selectedFontSize = matchedTemplate.headerFontSize;
+  if (!selectedFontFamily && matchedTemplate?.headerFontFamily) selectedFontFamily = matchedTemplate.headerFontFamily;
+  if (!selectedTextColor && matchedTemplate?.headerTextColor) selectedTextColor = matchedTemplate.headerTextColor;
 
   const headerTitleText = selectedHeaderTitle ? selectedHeaderTitle.slice(0, 250) : congregationName;
   const logoKey = typeof settings.logoKey === "string" ? settings.logoKey.trim().slice(0, 512) : "";
@@ -116,24 +128,38 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
   const logoSize: LogoSizePreset = requestedSize === "small" || requestedSize === "large" ? requestedSize : "medium";
   const headerTextAlignment = normalizeHeaderTextAlignment(selectedTextAlignment ?? settings.headerTextAlignment);
   const headerFontSize = normalizeHeaderFontSize(selectedFontSize ?? settings.headerFontSize);
+  const headerFontFamily = normalizeHeaderFontFamily(selectedFontFamily ?? settings.headerFontFamily);
+  const headerTextColor = normalizeHeaderTextColor(selectedTextColor ?? settings.headerTextColor);
 
-  if (!logoKey) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize };
+  if (!logoKey) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor };
 
   try {
     const signedUrl = await storageGetSignedUrl(logoKey);
     const response = await fetch(signedUrl);
-    if (!response.ok) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize };
+    if (!response.ok) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor };
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > 5 * 1024 * 1024) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize };
+    if (bytes.length === 0 || bytes.length > 5 * 1024 * 1024) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor };
     const logoMimeType = detectLogoType(bytes);
-    return logoMimeType ? { congregationName, headerTitleText, logoBuffer: bytes, logoMimeType, logoAlignment, logoSize, headerTextAlignment, headerFontSize } : { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize };
+    return logoMimeType ? { congregationName, headerTitleText, logoBuffer: bytes, logoMimeType, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor } : { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor };
   } catch (error) {
     console.warn("[PdfBranding] Não foi possível carregar o logótipo configurado:", error);
-    return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize };
+    return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor };
   }
 }
 
-function headerFont(segment: HeaderTextSegment) {
+function headerFont(segment: HeaderTextSegment, family: HeaderFontFamily) {
+  if (family === "Times-Roman") {
+    if (segment.bold && segment.italic) return "Times-BoldItalic";
+    if (segment.bold) return "Times-Bold";
+    if (segment.italic) return "Times-Italic";
+    return "Times-Roman";
+  }
+  if (family === "Courier") {
+    if (segment.bold && segment.italic) return "Courier-BoldOblique";
+    if (segment.bold) return "Courier-Bold";
+    if (segment.italic) return "Courier-Oblique";
+    return "Courier";
+  }
   if (segment.bold && segment.italic) return "Helvetica-BoldOblique";
   if (segment.bold) return "Helvetica-Bold";
   if (segment.italic) return "Helvetica-Oblique";
@@ -146,7 +172,7 @@ function drawFormattedHeaderText(
   x: number,
   y: number,
   width: number,
-  options: { fontSize: number; color: string; align: "left" | "center" | "right" },
+  options: { fontSize: number; color: string; align: "left" | "center" | "right"; fontFamily: HeaderFontFamily },
 ) {
   const lines = parseHeaderText(value);
   const lineHeight = options.fontSize * 1.25;
@@ -155,7 +181,7 @@ function drawFormattedHeaderText(
     widthOfString?: (text: string) => number;
   };
   const setFont = (segment: HeaderTextSegment) => {
-    compatibleDocument.font?.(headerFont(segment));
+    compatibleDocument.font?.(headerFont(segment, options.fontFamily));
     compatibleDocument.fontSize(options.fontSize);
   };
 
@@ -199,20 +225,21 @@ export function drawPdfHeader(
   const headerTextFontSize = HEADER_FONT_SIZE_POINTS[normalizeHeaderFontSize(branding.headerFontSize)];
   const textAlignment = normalizeHeaderTextAlignment(branding.headerTextAlignment);
   const headerTitleHeight = Math.max(20, parseHeaderText(branding.headerTitleText).length * headerTextFontSize * 1.25);
+  if (typeof document.font === "function") document.font(branding.headerFontFamily);
 
   if (branding.logoBuffer && branding.logoMimeType) {
     if (branding.logoAlignment === "left") {
       document.image(branding.logoBuffer, 42, headerTop, { fit: [logoDim, logoDim] });
       const textX = 42 + logoDim + 12;
       const textWidth = contentWidth - logoDim - 12;
-      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: headerTextFontSize, color: "#064e3b", align: textAlignment });
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: headerTextFontSize, color: branding.headerTextColor, align: textAlignment, fontFamily: branding.headerFontFamily });
       const subtitleY = headerTop + 2 + titleHeight + 3;
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, subtitleY, { width: textWidth, align: textAlignment });
       document.fontSize(13).fillColor("#047857").text(title, textX, subtitleY + 16, { width: textWidth, align: textAlignment });
     } else if (branding.logoAlignment === "right") {
       const textX = 42;
       const textWidth = contentWidth - logoDim - 12;
-      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: headerTextFontSize, color: "#064e3b", align: textAlignment });
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, textX, headerTop + 2, textWidth, { fontSize: headerTextFontSize, color: branding.headerTextColor, align: textAlignment, fontFamily: branding.headerFontFamily });
       const subtitleY = headerTop + 2 + titleHeight + 3;
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, subtitleY, { width: textWidth, align: textAlignment });
       document.fontSize(13).fillColor("#047857").text(title, textX, subtitleY + 16, { width: textWidth, align: textAlignment });
@@ -222,7 +249,7 @@ export function drawPdfHeader(
       const currentLogoH = Math.max(logoDim, 40);
       document.image(branding.logoBuffer, (pageWidth - logoDim) / 2, headerTop, { fit: [logoDim, logoDim] });
       const textY = headerTop + currentLogoH + 6;
-      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, 42, textY, contentWidth, { fontSize: headerTextFontSize, color: "#064e3b", align: textAlignment });
+      const titleHeight = drawFormattedHeaderText(document, branding.headerTitleText, 42, textY, contentWidth, { fontSize: headerTextFontSize, color: branding.headerTextColor, align: textAlignment, fontFamily: branding.headerFontFamily });
       const subtitleY = textY + titleHeight + 3;
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, subtitleY, { width: contentWidth, align: textAlignment });
       document.fontSize(13).fillColor("#047857").text(title, 42, subtitleY + 16, { width: contentWidth, align: textAlignment });
@@ -233,7 +260,7 @@ export function drawPdfHeader(
     }
   } else {
     // no logo
-    drawFormattedHeaderText(document, branding.headerTitleText, 42, headerTop + 2, contentWidth, { fontSize: headerTextFontSize, color: "#064e3b", align: textAlignment });
+    drawFormattedHeaderText(document, branding.headerTitleText, 42, headerTop + 2, contentWidth, { fontSize: headerTextFontSize, color: branding.headerTextColor, align: textAlignment, fontFamily: branding.headerFontFamily });
     const subtitleY = headerTop + 2 + headerTitleHeight + 3;
     document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, subtitleY, { width: contentWidth, align: textAlignment });
     document.fontSize(13).fillColor("#047857").text(title, 42, subtitleY + 16, { width: contentWidth, align: textAlignment });

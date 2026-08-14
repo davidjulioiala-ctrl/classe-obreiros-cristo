@@ -2,6 +2,9 @@ export type HeaderFormatTag = "b" | "i" | "u";
 
 export type HeaderTextAlignment = "left" | "center" | "right";
 export type HeaderFontSizePreset = "small" | "medium" | "large";
+export type HeaderFontFamily = "Helvetica" | "Times-Roman" | "Courier";
+
+export const DEFAULT_HEADER_TEXT_COLOR = "#064e3b";
 
 export const HEADER_FONT_SIZE_POINTS: Record<HeaderFontSizePreset, number> = {
   small: 12,
@@ -9,12 +12,32 @@ export const HEADER_FONT_SIZE_POINTS: Record<HeaderFontSizePreset, number> = {
   large: 20,
 };
 
+export const HEADER_FONT_FAMILIES: Array<{ value: HeaderFontFamily; label: string }> = [
+  { value: "Helvetica", label: "Helvetica" },
+  { value: "Times-Roman", label: "Times New Roman" },
+  { value: "Courier", label: "Courier" },
+];
+
 export function normalizeHeaderTextAlignment(value: unknown): HeaderTextAlignment {
   return value === "left" || value === "right" ? value : "center";
 }
 
 export function normalizeHeaderFontSize(value: unknown): HeaderFontSizePreset {
   return value === "small" || value === "large" ? value : "medium";
+}
+
+export function normalizeHeaderFontFamily(value: unknown): HeaderFontFamily {
+  return value === "Times-Roman" || value === "Courier" ? value : "Helvetica";
+}
+
+export function normalizeHeaderTextColor(value: unknown): string {
+  if (typeof value !== "string") return DEFAULT_HEADER_TEXT_COLOR;
+  const normalized = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
+  if (/^#[0-9a-f]{3}$/.test(normalized)) {
+    return `#${normalized.slice(1).split("").map((digit) => `${digit}${digit}`).join("")}`;
+  }
+  return DEFAULT_HEADER_TEXT_COLOR;
 }
 
 export type HeaderTextSegment = {

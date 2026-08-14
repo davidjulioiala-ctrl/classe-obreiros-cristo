@@ -19,7 +19,7 @@ describe("branding dos PDFs", () => {
 
     const branding = await loadPdfBranding();
 
-    expect(branding).toEqual({ congregationName: "Congregação Esperança", headerTitleText: "Congregação Esperança", logoBuffer: null, logoMimeType: null, logoAlignment: "center", logoSize: "medium", headerTextAlignment: "center", headerFontSize: "medium" });
+    expect(branding).toEqual({ congregationName: "Congregação Esperança", headerTitleText: "Congregação Esperança", logoBuffer: null, logoMimeType: null, logoAlignment: "center", logoSize: "medium", headerTextAlignment: "center", headerFontSize: "medium", headerFontFamily: "Helvetica", headerTextColor: "#064e3b" });
     expect(storageGetSignedUrl).not.toHaveBeenCalled();
     expect(pdfFooterText(branding, "documento gerado pelo sistema")).toContain("Congregação Esperança");
   });
@@ -43,11 +43,13 @@ describe("branding dos PDFs", () => {
   it("aplica as preferências temporárias ao gerar uma amostra", async () => {
     getAppSetting.mockResolvedValue(JSON.stringify({ congregationName: "Nome guardado", logoAlignment: "left", logoSize: "small" }));
 
-    const branding = await loadPdfBranding({ congregationName: "Nome ainda não guardado", logoAlignment: "right", logoSize: "large" });
+    const branding = await loadPdfBranding({ congregationName: "Nome ainda não guardado", logoAlignment: "right", logoSize: "large", headerFontFamily: "Courier", headerTextColor: "#123456" });
 
     expect(branding.congregationName).toBe("Nome ainda não guardado");
     expect(branding.logoAlignment).toBe("right");
     expect(branding.logoSize).toBe("large");
+    expect(branding.headerFontFamily).toBe("Courier");
+    expect(branding.headerTextColor).toBe("#123456");
   });
 
   it("usa o modelo marcado como padrão quando não existe uma seleção explícita", async () => {
@@ -119,6 +121,10 @@ describe("branding dos PDFs", () => {
       logoMimeType: "image/png",
       logoAlignment,
       logoSize,
+      headerTextAlignment: "center",
+      headerFontSize: "medium",
+      headerFontFamily: "Helvetica",
+      headerTextColor: "#064e3b",
     }, "RELATÓRIO");
 
     expect(imageCalls).toHaveLength(1);

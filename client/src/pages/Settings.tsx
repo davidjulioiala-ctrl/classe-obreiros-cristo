@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
-import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontSize, normalizeHeaderTextAlignment, parseHeaderText, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
+import { DEFAULT_HEADER_TEXT_COLOR, HEADER_FONT_FAMILIES, HEADER_FONT_SIZE_POINTS, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
 
 type HeaderTemplate = {
   id: string;
@@ -20,6 +20,8 @@ type HeaderTemplate = {
   logoSize: "small" | "medium" | "large";
   headerTextAlignment: HeaderTextAlignment;
   headerFontSize: HeaderFontSizePreset;
+  headerFontFamily: HeaderFontFamily;
+  headerTextColor: string;
   isDefault?: boolean;
 };
 
@@ -46,6 +48,12 @@ function HeaderFormattingToolbar({ onFormat, onClear }: HeaderFormattingToolbarP
       <span className="ml-1 text-[11px] text-slate-500 dark:text-slate-400">Selecione o texto e escolha uma opção.</span>
     </div>
   );
+}
+
+function headerFontCssFamily(fontFamily: HeaderFontFamily) {
+  if (fontFamily === "Times-Roman") return "'Times New Roman', Times, serif";
+  if (fontFamily === "Courier") return "'Courier New', Courier, monospace";
+  return "Arial, Helvetica, sans-serif";
 }
 
 function FormattedHeaderPreview({ value }: { value: string }) {
@@ -98,8 +106,10 @@ export default function Settings() {
   const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
   const [headerTextAlignment, setHeaderTextAlignment] = useState<HeaderTextAlignment>("center");
   const [headerFontSize, setHeaderFontSize] = useState<HeaderFontSizePreset>("medium");
+  const [headerFontFamily, setHeaderFontFamily] = useState<HeaderFontFamily>("Helvetica");
+  const [headerTextColor, setHeaderTextColor] = useState(DEFAULT_HEADER_TEXT_COLOR);
   const [headerTemplates, setHeaderTemplates] = useState<HeaderTemplate[]>([
-    { id: "default", name: "Modelo Principal (Padrão)", headerTitleText: "Classe Obreiros de Cristo", logoAlignment: "center", logoSize: "medium", headerTextAlignment: "center", headerFontSize: "medium", isDefault: true }
+    { id: "default", name: "Modelo Principal (Padrão)", headerTitleText: "Classe Obreiros de Cristo", logoAlignment: "center", logoSize: "medium", headerTextAlignment: "center", headerFontSize: "medium", headerFontFamily: "Helvetica", headerTextColor: DEFAULT_HEADER_TEXT_COLOR, isDefault: true }
   ]);
   const [activeTemplateId, setActiveTemplateId] = useState("default");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -111,6 +121,8 @@ export default function Settings() {
   const [templateFormSize, setTemplateFormSize] = useState<"small" | "medium" | "large">("medium");
   const [templateFormTextAlignment, setTemplateFormTextAlignment] = useState<HeaderTextAlignment>("center");
   const [templateFormFontSize, setTemplateFormFontSize] = useState<HeaderFontSizePreset>("medium");
+  const [templateFormFontFamily, setTemplateFormFontFamily] = useState<HeaderFontFamily>("Helvetica");
+  const [templateFormTextColor, setTemplateFormTextColor] = useState(DEFAULT_HEADER_TEXT_COLOR);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloadingPreview, setIsDownloadingPreview] = useState(false);
   const [showOrganizationSaved, setShowOrganizationSaved] = useState(false);
@@ -161,6 +173,8 @@ export default function Settings() {
         if (parsed.logoSize === "small" || parsed.logoSize === "medium" || parsed.logoSize === "large") setLogoSize(parsed.logoSize);
         if (parsed.headerTextAlignment) setHeaderTextAlignment(normalizeHeaderTextAlignment(parsed.headerTextAlignment));
         if (parsed.headerFontSize) setHeaderFontSize(normalizeHeaderFontSize(parsed.headerFontSize));
+        if (parsed.headerFontFamily) setHeaderFontFamily(normalizeHeaderFontFamily(parsed.headerFontFamily));
+        if (parsed.headerTextColor) setHeaderTextColor(normalizeHeaderTextColor(parsed.headerTextColor));
         if (Array.isArray(parsed.headerTemplates) && parsed.headerTemplates.length > 0) {
           setHeaderTemplates(parsed.headerTemplates.map((template: Partial<HeaderTemplate>, index: number) => ({
             id: typeof template.id === "string" && template.id ? template.id : `tpl_${index + 1}`,
@@ -170,6 +184,8 @@ export default function Settings() {
             logoSize: template.logoSize === "small" || template.logoSize === "large" ? template.logoSize : "medium",
             headerTextAlignment: normalizeHeaderTextAlignment(template.headerTextAlignment),
             headerFontSize: normalizeHeaderFontSize(template.headerFontSize),
+            headerFontFamily: normalizeHeaderFontFamily(template.headerFontFamily),
+            headerTextColor: normalizeHeaderTextColor(template.headerTextColor),
             isDefault: Boolean(template.isDefault),
           })));
         }
@@ -207,12 +223,12 @@ export default function Settings() {
 
   const updateActiveHeaderText = (value: string) => {
     setHeaderTitleText(value);
-    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize, headerTextAlignment, headerFontSize } : template));
+    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor } : template));
   };
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerTemplates, activeTemplateId }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor, headerTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -223,6 +239,8 @@ export default function Settings() {
     setTemplateFormSize(template.logoSize);
     setTemplateFormTextAlignment(template.headerTextAlignment ?? "center");
     setTemplateFormFontSize(template.headerFontSize ?? "medium");
+    setTemplateFormFontFamily(template.headerFontFamily ?? "Helvetica");
+    setTemplateFormTextColor(normalizeHeaderTextColor(template.headerTextColor));
   };
 
   const handleCreateHeaderTemplate = () => {
@@ -235,6 +253,8 @@ export default function Settings() {
       logoSize,
       headerTextAlignment,
       headerFontSize,
+      headerFontFamily,
+      headerTextColor,
       isDefault: false,
     };
     const nextTemplates = [...headerTemplates, newTemplate];
@@ -245,10 +265,12 @@ export default function Settings() {
     setLogoSize(newTemplate.logoSize);
     setHeaderTextAlignment(newTemplate.headerTextAlignment);
     setHeaderFontSize(newTemplate.headerFontSize);
+    setHeaderFontFamily(newTemplate.headerFontFamily);
+    setHeaderTextColor(newTemplate.headerTextColor);
     beginEditTemplate(newTemplate);
     organizationSaveMutation.mutate({
       keyName: "organization",
-      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTextAlignment: newTemplate.headerTextAlignment, headerFontSize: newTemplate.headerFontSize, headerTemplates: nextTemplates, activeTemplateId: newId }),
+      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTextAlignment: newTemplate.headerTextAlignment, headerFontSize: newTemplate.headerFontSize, headerFontFamily: newTemplate.headerFontFamily, headerTextColor: newTemplate.headerTextColor, headerTemplates: nextTemplates, activeTemplateId: newId }),
     });
     toast.success("Novo modelo criado. Preencha os dados e guarde as alterações.");
   };
@@ -261,7 +283,7 @@ export default function Settings() {
       toast.error("Indique o nome e o texto do cabeçalho.");
       return;
     }
-    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize, headerTextAlignment: templateFormTextAlignment, headerFontSize: templateFormFontSize } : template);
+    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize, headerTextAlignment: templateFormTextAlignment, headerFontSize: templateFormFontSize, headerFontFamily: templateFormFontFamily, headerTextColor: normalizeHeaderTextColor(templateFormTextColor) } : template);
     setHeaderTemplates(nextTemplates);
     setActiveTemplateId(editingTemplateId);
     setHeaderTitleText(templateFormTitle);
@@ -269,6 +291,8 @@ export default function Settings() {
     setLogoSize(templateFormSize);
     setHeaderTextAlignment(templateFormTextAlignment);
     setHeaderFontSize(templateFormFontSize);
+    setHeaderFontFamily(templateFormFontFamily);
+    setHeaderTextColor(normalizeHeaderTextColor(templateFormTextColor));
     setEditingTemplateId(null);
     toast.success("Modelo de cabeçalho actualizado. Guarde as alterações para confirmar.");
   };
@@ -306,7 +330,7 @@ export default function Settings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ congregationName: organizationName, headerTitleText, logoAlignment, logoSize, headerTextAlignment, headerFontSize }),
+        body: JSON.stringify({ congregationName: organizationName, headerTitleText, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontFamily, headerTextColor }),
       });
       if (!response.ok) {
         const result = (await response.json().catch(() => ({}))) as { error?: string };
@@ -344,6 +368,7 @@ export default function Settings() {
 
   const previewLogoSize = getPdfPreviewLogoSize(logoSize);
   const previewHeaderFontSize = HEADER_FONT_SIZE_POINTS[headerFontSize];
+  const previewFontFamily = headerFontCssFamily(headerFontFamily);
   const previewName = getPdfPreviewName(headerTitleText || organizationName);
   const editingTemplate = editingTemplateId ? headerTemplates.find((template) => template.id === editingTemplateId) : null;
 
@@ -403,6 +428,8 @@ export default function Settings() {
                           if (tpl.logoSize) setLogoSize(tpl.logoSize);
                           setHeaderTextAlignment(tpl.headerTextAlignment ?? "center");
                           setHeaderFontSize(tpl.headerFontSize ?? "medium");
+                          setHeaderFontFamily(tpl.headerFontFamily ?? "Helvetica");
+                          setHeaderTextColor(normalizeHeaderTextColor(tpl.headerTextColor));
                           toast.success(`Modelo "${tpl.name}" selecionado.`);
                         }} className="min-w-0 flex-1 text-left">
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{tpl.name} {activeTemplateId === tpl.id ? "(Ativo)" : ""}</p>
@@ -433,6 +460,8 @@ export default function Settings() {
                                 setLogoSize(remaining[0].logoSize);
                                 setHeaderTextAlignment(remaining[0].headerTextAlignment ?? "center");
                                 setHeaderFontSize(remaining[0].headerFontSize ?? "medium");
+                                setHeaderFontFamily(remaining[0].headerFontFamily ?? "Helvetica");
+                                setHeaderTextColor(normalizeHeaderTextColor(remaining[0].headerTextColor));
                               }
                               toast.success("Modelo removido.");
                             }}>Apagar</Button>
@@ -481,6 +510,19 @@ export default function Settings() {
                           <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>
+                        <select value={templateFormFontFamily} onChange={(event) => setTemplateFormFontFamily(normalizeHeaderFontFamily(event.target.value))} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                          {HEADER_FONT_FAMILIES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Cor do texto</label>
+                        <div className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                          <input type="color" value={templateFormTextColor} onChange={(event) => setTemplateFormTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor do texto do cabeçalho" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+                          <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{templateFormTextColor}</span>
+                        </div>
+                      </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Texto do cabeçalho</label>
                         <textarea ref={templateTitleRef} rows={4} value={templateFormTitle} onChange={(event) => setTemplateFormTitle(event.target.value)} className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Escreva o texto que deve aparecer no cabeçalho" />
@@ -510,6 +552,19 @@ export default function Settings() {
                       <select id="pdf-header-font-size" value={headerFontSize} onChange={(event) => setHeaderFontSize(event.target.value as HeaderFontSizePreset)} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                         <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
                       </select>
+                    </div>
+                    <div>
+                      <label htmlFor="pdf-header-font-family" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tipo de letra</label>
+                      <select id="pdf-header-font-family" value={headerFontFamily} onChange={(event) => setHeaderFontFamily(normalizeHeaderFontFamily(event.target.value))} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                        {HEADER_FONT_FAMILIES.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="pdf-header-text-color" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Cor do texto</label>
+                      <div className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-2 dark:border-slate-600 dark:bg-slate-900">
+                        <input id="pdf-header-text-color" type="color" value={headerTextColor} onChange={(event) => setHeaderTextColor(normalizeHeaderTextColor(event.target.value))} aria-label="Cor do texto do cabeçalho PDF" className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+                        <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{headerTextColor}</span>
+                      </div>
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pressione Enter para iniciar uma nova linha.</p>
@@ -587,7 +642,7 @@ export default function Settings() {
                                     <ImageIcon className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <p className="mt-3 max-w-full break-words text-emerald-900 dark:text-emerald-200" style={{ fontSize: `${previewHeaderFontSize}px`, textAlign: headerTextAlignment }}><FormattedHeaderPreview value={previewName} /></p>
+                                <p className="mt-3 max-w-full break-words text-emerald-900 dark:text-emerald-200" style={{ color: headerTextColor, fontFamily: previewFontFamily, fontSize: `${previewHeaderFontSize}px`, textAlign: headerTextAlignment }}><FormattedHeaderPreview value={previewName} /></p>
                                 <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                               </div>
@@ -601,7 +656,7 @@ export default function Settings() {
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1" style={{ textAlign: headerTextAlignment }}>
-                                  <p className="break-words text-emerald-900 dark:text-emerald-200" style={{ fontSize: `${previewHeaderFontSize}px` }}><FormattedHeaderPreview value={previewName} /></p>
+                                  <p className="break-words" style={{ color: headerTextColor, fontFamily: previewFontFamily, fontSize: `${previewHeaderFontSize}px`, textAlign: headerTextAlignment }}><FormattedHeaderPreview value={previewName} /></p>
                                   <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                   <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                                 </div>
