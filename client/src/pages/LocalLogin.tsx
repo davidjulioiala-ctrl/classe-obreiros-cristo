@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 export default function LocalLogin() {
   const [username, setUsername] = useState("");
@@ -24,6 +25,8 @@ export default function LocalLogin() {
   const [bootstrapPassword, setBootstrapPassword] = useState("");
   const { login, verifyTwoFactor } = useLocalAuth();
   const [, navigate] = useLocation();
+  const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
+  const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
 
   useEffect(() => {
     let active = true;
@@ -155,8 +158,8 @@ export default function LocalLogin() {
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span className="text-white font-bold text-2xl">C</span>
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                Classe Obreiros
+              <h1 className="text-3xl font-bold text-white mb-2 break-words">
+                {organizationName}
               </h1>
               <p className="text-emerald-400 text-sm font-medium">
                 Sistema de Gestão Eclesiástica
@@ -293,7 +296,7 @@ export default function LocalLogin() {
               transition={{ delay: 0.4 }}
               className="mt-6 text-center text-xs text-slate-500"
             >
-              <p>© 2026 Classe Obreiros de Cristo</p>
+              <p>© 2026 {organizationName}</p>
               <p>Todos os direitos reservados</p>
             </motion.div>
           </div>

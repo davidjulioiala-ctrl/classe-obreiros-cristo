@@ -6861,3 +6861,17 @@
 ## Correcção — Presenças ao seleccionar actividade
 - [x] Corrigir o crash ao seleccionar uma actividade no menu Presenças.
 - [x] Validar o carregamento da lista de presenças e manter a exportação PDF funcional.
+
+## Configuração — Quota e organização
+- [x] Adicionar definição persistente e editável para o valor da quota.
+- [x] Aplicar o valor configurado em novos lançamentos de quotas sem alterar históricos existentes.
+- [x] Adicionar definição persistente para o nome da organização.
+- [x] Aplicar o nome da organização no sistema e na tela de login.
+- [x] Validar permissões, persistência, testes e compatibilidade com dados existentes.
+
+## Normalização de IDs — todos os menus
+- [x] Auditar todas as colunas de ID, chaves estrangeiras e tipos usados no schema e nos routers.
+- [x] Garantir IDs inteiros positivos com contador iniciado em 1 e geração automática segura.
+- [x] Preservar IDs históricos e relações existentes durante a migração, sem reiniciar contadores com dados já guardados.
+- [x] Aplicar a apresentação consistente de ID nos menus e validar pesquisa por ID.
+- [x] Acrescentar testes de integridade para criação, relações e exportações.

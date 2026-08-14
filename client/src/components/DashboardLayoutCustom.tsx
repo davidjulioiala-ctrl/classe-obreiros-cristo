@@ -24,6 +24,7 @@ import {
   Package,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 interface DashboardLayoutCustomProps {
   children: ReactNode;
@@ -74,6 +75,8 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, logout } = useLocalAuth();
   const [location, navigate] = useLocation();
+  const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
+  const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
 
   const filteredMenuItems = getVisibleMenuItems(user);
 
@@ -118,7 +121,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 <span className="text-lg font-bold text-white">C</span>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">COC</p>
+                <p className="max-w-[180px] truncate text-sm font-bold text-slate-900 dark:text-white">{organizationName}</p>
                 <p className="truncate text-xs text-slate-500 dark:text-slate-400">Gestão eclesiástica</p>
               </div>
             </div>
@@ -187,7 +190,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
-            <p className="truncate text-sm font-semibold text-slate-900 sm:hidden dark:text-white">Classe Obreiros de Cristo</p>
+            <p className="truncate text-sm font-semibold text-slate-900 sm:hidden dark:text-white">{organizationName}</p>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">

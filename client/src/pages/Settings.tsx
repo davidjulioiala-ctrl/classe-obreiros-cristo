@@ -165,6 +165,7 @@ export default function Settings() {
   const requestedTab = new URLSearchParams(settingsLocation.split("?")[1] ?? "").get("tab");
   const defaultTab = requestedTab === "notifications" || requestedTab === "appearance" ? requestedTab : "organization";
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
+  const [defaultQuotaAmount, setDefaultQuotaAmount] = useState("100");
   const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
@@ -234,6 +235,8 @@ export default function Settings() {
       try {
         const parsed = JSON.parse(orgQuery.data);
         if (parsed.organizationName) setOrganizationName(parsed.organizationName);
+        const parsedQuotaAmount = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
+        if (/^\d+(?:\.\d{1,2})?$/.test(parsedQuotaAmount) && Number(parsedQuotaAmount) >= 0) setDefaultQuotaAmount(parsedQuotaAmount);
         if (parsed.headerTitleText) setHeaderTitleText(parsed.headerTitleText);
         else if (parsed.organizationName) setHeaderTitleText(parsed.organizationName);
         if (parsed.email) setEmail(parsed.email);
@@ -348,7 +351,13 @@ export default function Settings() {
     } : template);
     setHeaderTextColor(persistedHeaderTextColor);
     setHeaderTemplates(persistedTemplates);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
+    const normalizedQuotaAmount = defaultQuotaAmount.trim().replace(",", ".");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedQuotaAmount) || Number(normalizedQuotaAmount) < 0) {
+      toast.error("Indique um valor de quota válido, com no máximo duas casas decimais.");
+      return;
+    }
+    setDefaultQuotaAmount(normalizedQuotaAmount);
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName: organizationName.trim(), defaultQuotaAmount: normalizedQuotaAmount, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -538,6 +547,12 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome Oficial da Organização</label>
                   <Input value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo" />
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nome institucional que aparece nos registos gerais e rodapés.</p>
+                </div>
+
+                <div>
+                  <label htmlFor="default-quota-amount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Valor padrão da quota</label>
+                  <Input id="default-quota-amount" type="number" min="0" step="0.01" inputMode="decimal" value={defaultQuotaAmount} onChange={(event) => setDefaultQuotaAmount(event.target.value)} placeholder="Ex: 100" />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Este valor será pré-preenchido em novos lançamentos. Os lançamentos históricos permanecem inalterados.</p>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 space-y-3">
