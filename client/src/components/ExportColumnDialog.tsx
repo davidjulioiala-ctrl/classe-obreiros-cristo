@@ -52,14 +52,15 @@ export function ExportColumnDialog({ open, title, description, columns, selected
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={selectAll}><CheckSquare className="mr-2 h-4 w-4" /> Selecionar Todas</Button>
-          <Button type="button" variant="outline" size="sm" onClick={clearAll}><Square className="mr-2 h-4 w-4" /> Desmarcar Todas</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={selectAll} aria-label="Selecionar todas as colunas"><CheckSquare className="mr-2 h-4 w-4" /> Selecionar Todas</Button>
+          <Button type="button" variant="outline" size="sm" onClick={clearAll} aria-label="Desmarcar todas as colunas"><Square className="mr-2 h-4 w-4" /> Desmarcar Todas</Button>
+          <span className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{draft.length} de {columns.length} colunas seleccionadas</span>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {columns.map((column) => (
             <label key={column.key} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 text-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-              <Checkbox checked={draft.includes(column.key)} onCheckedChange={(checked) => toggle(column.key, checked === true)} />
+              <Checkbox aria-label={`Incluir coluna ${column.label}`} checked={draft.includes(column.key)} onCheckedChange={(checked) => toggle(column.key, checked === true)} />
               <span className="text-slate-700 dark:text-slate-200">{column.label}</span>
             </label>
           ))}

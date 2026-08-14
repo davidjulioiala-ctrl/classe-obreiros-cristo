@@ -7018,3 +7018,7 @@
 ## Nova Tarefa — Exportação de resultados filtrados de membros
 - [x] Atualizar a rota de exportação e a interface de membros para passar os parâmetros de cargo, sexo, estado, grupo e tipo (membros/convidados) na geração de PDF, CSV e Excel.
 - [x] Validar a preservação dos filtros na exportação e testar a integridade dos ficheiros gerados.
+
+## Nova Tarefa — Selecção de colunas na exportação de membros
+- [x] Adicionar botões de "Selecionar Todas" e "Desmarcar Todas" no modal de exportação de membros.
+- [x] Validar a inclusão apenas das colunas escolhidas na exportação em PDF, CSV e Excel, mantendo os filtros activos.

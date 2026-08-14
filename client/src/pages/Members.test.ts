@@ -38,4 +38,14 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("const clearMemberFilters = ()");
     expect(membersSource).toContain("Limpar filtros");
   });
+
+  it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
+    expect(membersSource).toContain('import { ExportColumnDialog } from "@/components/ExportColumnDialog"');
+    expect(membersSource).toContain("const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS])");
+    expect(membersSource).toContain("columns={MEMBER_EXPORT_COLUMNS}");
+    expect(membersSource).toContain("onConfirm={(columns, includePersonalData)");
+    expect(membersSource).toContain("exportMembers(columns, includePersonalData)");
+    expect(membersSource).toContain('params.set("columns", columns.join(","))');
+    expect(membersSource).toContain('params.set("includePersonalData", includePersonalData ? "true" : "false")');
+  });
 });
