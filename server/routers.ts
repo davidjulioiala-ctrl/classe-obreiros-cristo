@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { parse as parseCookie } from "cookie";
+import { randomUUID } from "node:crypto";
 import { createHeartbeatJob, updateHeartbeatJob, deleteHeartbeatJob } from "./_core/heartbeat";
 import { systemRouter } from "./_core/systemRouter";
 import { authRouter } from "./routers/auth";
@@ -917,7 +918,6 @@ const materialsRouter = router({
   create: liderProcedure
     .input(
       z.object({
-        code: safeText(100),
         name: safeText(255),
         category: safeText(120),
         quantity: z.number().int().min(1).max(1000000).default(1),
@@ -930,19 +930,19 @@ const materialsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const material = await db.createMaterial({
+        code: `LEGACY-${randomUUID()}`,
         ...input,
         location: input.location ?? null,
         purchaseDate: input.purchaseDate ?? null,
         notes: input.notes ?? null,
       });
-      await writeAudit(ctx, "criar", "material", material.id, { code: input.code, name: input.name, custodian: input.custodian });
+      await writeAudit(ctx, "criar", "material", material.id, { name: input.name, custodian: input.custodian });
       return material;
     }),
   update: liderProcedure
     .input(
       z.object({
         id: positiveId,
-        code: safeText(100).optional(),
         name: safeText(255).optional(),
         category: safeText(120).optional(),
         quantity: z.number().int().min(1).max(1000000).optional(),

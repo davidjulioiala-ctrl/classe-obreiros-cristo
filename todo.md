@@ -6780,3 +6780,24 @@
 - [x] Implementar XMLHttpRequest com monitorização de progresso percentual (0% a 100%) no envio de atas e relatórios.
 - [x] Adicionar mensagens específicas para tamanho excedido, formato não suportado, falha de rede e timeout.
 - [x] Criar testes unitários de regressão, validar typecheck, 116 testes Vitest, build de produção e publicação.
+
+## Revisão Abrangente Solicitada — Correções e Melhorias Finais
+- [ ] Corrigir e estabilizar o menu Membros.
+- [ ] Restaurar e garantir o funcionamento de Negrito, Itálico e Sublinhado nas Definições e nos PDFs.
+- [ ] Unificar as opções de tipografia num único selector partilhado entre interface e PDF.
+- [ ] Corrigir o rótulo do campo "data" (em vez de "dados") no menu Atividades.
+- [ ] Reparar o submenu Notificações para que funcione corretamente.
+- [ ] Completar e refinar o gráfico de participação por tipo de atividade no Dashboard.
+- [ ] Substituir todas as ocorrências de "Eu IA" (ou variantes) por "ID" em todo o sistema.
+- [ ] Remover o campo de código interno no menu Materiais.
+- [ ] Executar typecheck, suíte completa de testes, build de produção e publicação.
+
+## Revisão abrangente — correcções de estabilidade e consistência
+- [x] Diagnosticar e corrigir o crash ao abrir o formulário "Novo membro".
+- [x] Restaurar a formatação Negrito, Itálico e Sublinhado no editor de cabeçalhos, na pré-visualização e no PDF.
+- [x] Unificar os selectores de fontes Office/PDF num único catálogo partilhado.
+- [x] Corrigir globalmente o rótulo "Eu IA" para "ID" e confirmar o rótulo "Data" em Atividades.
+- [x] Ligar o botão/submenu de Notificações e tornar as preferências funcionais.
+- [x] Completar o gráfico de participação por tipo de actividade, incluindo categorias sem presenças.
+- [x] Remover o campo "Código interno" da interface e dos payloads de Materiais.
+- [x] Rever testes Vitest, typecheck, build e validação visual dos fluxos corrigidos.

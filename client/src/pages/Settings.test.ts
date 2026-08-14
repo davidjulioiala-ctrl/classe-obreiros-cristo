@@ -44,4 +44,15 @@ describe("personalização de cabeçalhos", () => {
     expect(settingsSource).toContain("pdf-header-text-color");
     expect(settingsSource).toContain("customInputLabel");
   });
+
+  it("mantém formatação B/I/U e navegação directa para Notificações", () => {
+    expect(settingsSource).toContain('const buttons: Array<{ tag: HeaderFormatTag; label: string; title: string }>');
+    expect(settingsSource).toContain('tag: "b"');
+    expect(settingsSource).toContain('tag: "i"');
+    expect(settingsSource).toContain('tag: "u"');
+    expect(settingsSource).toContain("parseHeaderText");
+    expect(settingsSource).toContain('value="notifications"');
+    expect(settingsSource).toContain("handleSaveNotifications");
+    expect(settingsSource).toContain("requestedTab === \"notifications\"");
+  });
 });

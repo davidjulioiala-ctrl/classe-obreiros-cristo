@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ChangeEvent, type RefObject } from "react";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -41,11 +42,11 @@ function HeaderFormattingToolbar({ onFormat, onClear }: HeaderFormattingToolbarP
     <div className="mt-2 flex flex-wrap items-center gap-1" aria-label="Formatação básica do texto">
       <span className="mr-1 text-[11px] text-slate-500 dark:text-slate-400">Formatar:</span>
       {buttons.map((button) => (
-        <Button key={button.tag} type="button" variant="outline" size="sm" title={button.title} aria-label={button.title} onMouseDown={(event) => event.preventDefault()} onClick={() => onFormat(button.tag)} className={`h-7 min-w-7 px-2 text-xs ${button.tag === "b" ? "font-bold" : button.tag === "i" ? "italic" : "underline"}`}>
+        <Button key={button.tag} type="button" variant="outline" size="sm" title={button.title} aria-label={button.title} onPointerDown={(event) => event.preventDefault()} onMouseDown={(event) => event.preventDefault()} onClick={() => onFormat(button.tag)} className={`h-7 min-w-7 px-2 text-xs ${button.tag === "b" ? "font-bold" : button.tag === "i" ? "italic" : "underline"}`}>
           {button.label}
         </Button>
       ))}
-      <Button type="button" variant="ghost" size="sm" onMouseDown={(event) => event.preventDefault()} onClick={onClear} className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300">Limpar</Button>
+      <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.preventDefault()} onMouseDown={(event) => event.preventDefault()} onClick={onClear} className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300">Limpar</Button>
       <span className="ml-1 text-[11px] text-slate-500 dark:text-slate-400">Selecione o texto e escolha uma opção.</span>
     </div>
   );
@@ -73,22 +74,25 @@ function FormattedHeaderPreview({ value }: { value: string }) {
 
 function applyHeaderFormat(ref: RefObject<HTMLTextAreaElement | null>, value: string, setValue: (value: string) => void, tag: HeaderFormatTag) {
   const textarea = ref.current;
-  const start = textarea?.selectionStart ?? value.length;
-  const end = textarea?.selectionEnd ?? value.length;
-  const selectedText = value.slice(start, end) || "texto";
+  if (!textarea) return;
+  const start = Math.max(0, Math.min(textarea.selectionStart, value.length));
+  const end = Math.max(start, Math.min(textarea.selectionEnd, value.length));
+  if (start === end) {
+    textarea.focus();
+    return;
+  }
   const prefix = `[${tag}]`;
   const suffix = `[/${tag}]`;
-  const nextValue = `${value.slice(0, start)}${prefix}${selectedText}${suffix}${value.slice(end)}`;
+  const nextValue = `${value.slice(0, start)}${prefix}${value.slice(start, end)}${suffix}${value.slice(end)}`;
   setValue(nextValue);
   window.requestAnimationFrame(() => {
-    textarea?.focus();
-    const nextStart = start + prefix.length;
-    textarea?.setSelectionRange(nextStart, nextStart + selectedText.length);
+    textarea.focus();
+    textarea.setSelectionRange(start + prefix.length, end + prefix.length);
   });
 }
 
 function clearHeaderFormat(value: string, setValue: (value: string) => void) {
-  setValue(value.replace(/\[(b|i|u)\]([\s\S]*?)\[\/\1\]/gi, "$2"));
+  setValue(value.replace(/\[\/?(?:b|i|u)\]/gi, ""));
 }
 
 type OfficeFontPickerProps = {
@@ -98,31 +102,17 @@ type OfficeFontPickerProps = {
 };
 
 function OfficeFontPicker({ id, value, onChange }: OfficeFontPickerProps) {
-  const officeFonts = HEADER_FONT_FAMILIES.filter((font) => !["Helvetica", "Times-Roman", "Courier"].includes(font.value));
-  const pdfFonts = HEADER_FONT_FAMILIES.filter((font) => ["Helvetica", "Times-Roman", "Courier"].includes(font.value));
   return (
-    <div id={id} role="radiogroup" aria-label="Selector visual de fontes Office 365" className="mt-2 space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-950/40">
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Office / Microsoft</p>
-        <div className="grid max-h-48 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-          {officeFonts.map((font) => (
-            <button key={font.value} type="button" role="radio" aria-checked={value === font.value} onClick={() => onChange(font.value)} title={`Aplicar a fonte ${font.label}`} className={`flex min-h-12 items-center justify-between gap-2 rounded-md border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${value === font.value ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"}`}>
-              <span className="min-w-0 truncate text-xs font-medium">{font.label}</span>
-              <span className="shrink-0 text-base" style={{ fontFamily: font.cssFamily }}>Aa</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fontes PDF incorporadas</p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {pdfFonts.map((font) => (
-            <button key={font.value} type="button" role="radio" aria-checked={value === font.value} onClick={() => onChange(font.value)} title={`Aplicar a fonte ${font.label}`} className={`flex min-h-11 items-center justify-between gap-2 rounded-md border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${value === font.value ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"}`}>
-              <span className="min-w-0 truncate text-xs font-medium">{font.label}</span>
-              <span className="shrink-0 text-base" style={{ fontFamily: font.cssFamily }}>Aa</span>
-            </button>
-          ))}
-        </div>
+    <div id={id} role="radiogroup" aria-label="Selector unificado de fontes Office e PDF" className="mt-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-950/40">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Fontes Office 365 e PDF</p>
+      <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Escolha uma única família. O navegador usa a fonte Office instalada e o PDF aplica automaticamente a família incorporada compatível.</p>
+      <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+        {HEADER_FONT_FAMILIES.map((font) => (
+          <button key={font.value} type="button" role="radio" aria-checked={value === font.value} onClick={() => onChange(font.value)} title={`Aplicar a fonte ${font.label}`} className={`flex min-h-11 items-center justify-between gap-2 rounded-md border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${value === font.value ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"}`}>
+            <span className="min-w-0 truncate text-xs font-medium">{font.label}</span>
+            <span className="shrink-0 text-base" style={{ fontFamily: font.cssFamily }}>Aa</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -167,6 +157,9 @@ function normalizeHeaderFontSizeDraft(value: string, fallback: number) {
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
+  const [settingsLocation] = useLocation();
+  const requestedTab = new URLSearchParams(settingsLocation.split("?")[1] ?? "").get("tab");
+  const defaultTab = requestedTab === "notifications" || requestedTab === "appearance" ? requestedTab : "organization";
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
   const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
@@ -505,7 +498,7 @@ export default function Settings() {
           <p className="text-slate-600 dark:text-slate-400 mt-1">Gerencie as configurações e preferências do sistema</p>
         </motion.div>
 
-        <Tabs defaultValue="organization" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <div className="overflow-x-auto pb-1">
             <TabsList className="grid min-w-[400px] grid-cols-3 sm:min-w-0">
               <TabsTrigger value="organization">Organização</TabsTrigger>

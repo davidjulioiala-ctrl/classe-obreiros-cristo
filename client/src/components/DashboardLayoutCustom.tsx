@@ -188,7 +188,9 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <button
               type="button"
-              aria-label="Notificações"
+              aria-label="Abrir preferências de notificações"
+              title="Abrir preferências de notificações"
+              onClick={() => goTo("/settings?tab=notifications")}
               className="relative rounded-lg p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />

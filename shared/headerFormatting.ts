@@ -160,39 +160,53 @@ export type HeaderTextSegment = {
 
 export type HeaderTextLine = HeaderTextSegment[];
 
-const TAG_PATTERN = /\[(b|i|u)\]([\s\S]*?)\[\/\1\]/gi;
+const TAG_PATTERN = /\[\/?(b|i|u)\]/gi;
 
 /**
- * Interpreta apenas as marcações criadas pela barra de formatação do cabeçalho.
- * O texto continua a ser texto simples e as quebras de linha são preservadas.
+ * Interpreta marcações simples ou combinadas criadas pela barra de formatação.
+ * O parser usa uma pilha de estilos para suportar, por exemplo,
+ * [b][i]texto[/i][/b], preservando também as quebras de linha.
  */
 export function parseHeaderText(value: string): HeaderTextLine[] {
   const safeValue = typeof value === "string" ? value.slice(0, 250) : "";
   return safeValue.split(/\r?\n/).map((line) => {
     const segments: HeaderTextSegment[] = [];
+    const active = { bold: false, italic: false, underline: false };
+    const stack: HeaderFormatTag[] = [];
+    const matcher = new RegExp(TAG_PATTERN.source, "gi");
     let cursor = 0;
 
-    const matcher = new RegExp(TAG_PATTERN.source, "gi");
+    const pushText = (text: string) => {
+      if (!text) return;
+      const previous = segments[segments.length - 1];
+      if (previous && previous.bold === active.bold && previous.italic === active.italic && previous.underline === active.underline) {
+        previous.text += text;
+      } else {
+        segments.push({ text, bold: active.bold, italic: active.italic, underline: active.underline });
+      }
+    };
+
     let match = matcher.exec(line);
     while (match) {
-      const start = match.index ?? 0;
-      if (start > cursor) {
-        segments.push({ text: line.slice(cursor, start), bold: false, italic: false, underline: false });
+      pushText(line.slice(cursor, match.index));
+      const isClosing = match[0].startsWith("[/");
+      const tag = match[1]?.toLowerCase() as HeaderFormatTag | undefined;
+      if (tag) {
+        if (isClosing) {
+          const index = stack.lastIndexOf(tag);
+          if (index >= 0) stack.splice(index, 1);
+        } else if (stack.length < 12) {
+          stack.push(tag);
+        }
+        active.bold = stack.includes("b");
+        active.italic = stack.includes("i");
+        active.underline = stack.includes("u");
       }
-      const tag = match[1]?.toLowerCase();
-      segments.push({
-        text: match[2] ?? "",
-        bold: tag === "b",
-        italic: tag === "i",
-        underline: tag === "u",
-      });
-      cursor = start + match[0].length;
+      cursor = matcher.lastIndex;
       match = matcher.exec(line);
     }
 
-    if (cursor < line.length) {
-      segments.push({ text: line.slice(cursor), bold: false, italic: false, underline: false });
-    }
+    pushText(line.slice(cursor));
     if (segments.length === 0) segments.push({ text: "", bold: false, italic: false, underline: false });
     return segments;
   });

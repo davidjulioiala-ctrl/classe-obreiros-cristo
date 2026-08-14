@@ -31,6 +31,7 @@ import { storageGetSignedUrl, storagePut } from "./storage";
 import { decryptFields, decryptJson, encryptFields, encryptJson } from "./_core/fieldEncryption";
 import { filterRestorableSettings } from "./_core/backupRecovery";
 import { normalizeMemberSearch } from "../shared/memberSearch";
+import { ACTIVITY_TYPE_CATALOG, activityTypeLabel } from "../shared/activityTypes";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -448,6 +449,20 @@ export function normalizeParticipationByActivityType(rows: ParticipationByActivi
   }));
 }
 
+export function completeParticipationByActivityType(rows: ParticipationByActivityTypeRow[]) {
+  const normalized = normalizeParticipationByActivityType(rows);
+  const byType = new Map(normalized.map((row) => [row.type.toLowerCase(), row]));
+  const catalogRows = ACTIVITY_TYPE_CATALOG.map(({ value, label }) => {
+    const existing = byType.get(value.toLowerCase());
+    return existing ? { ...existing, type: label } : { type: label, activityCount: 0, presentCount: 0, recordedCount: 0 };
+  });
+  const catalogValues = new Set(ACTIVITY_TYPE_CATALOG.map(({ value }) => value.toLowerCase()));
+  const extraRows = normalized
+    .filter((row) => !catalogValues.has(row.type.toLowerCase()))
+    .map((row) => ({ ...row, type: activityTypeLabel(row.type) }));
+  return [...catalogRows, ...extraRows];
+}
+
 export async function getParticipationByActivityType() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -464,7 +479,7 @@ export async function getParticipationByActivityType() {
     .groupBy(activities.type)
     .orderBy(desc(sql`presentCount`), asc(activities.type));
 
-  return normalizeParticipationByActivityType(rows);
+  return completeParticipationByActivityType(rows);
 }
 
 // ============ QUOTAS ============
@@ -980,30 +995,35 @@ export async function updateBackupSchedule(id: number, data: Partial<typeof back
 
 // ============ MATERIALS HELPERS ============
 
+/** O identificador legado continua persistido apenas para compatibilidade da tabela,
+ * mas nunca é exposto à interface nem aos payloads do CRUD. */
+function sanitizeMaterial<T extends { code?: unknown }>(material: T) {
+  const { code: _legacyCode, ...publicMaterial } = material;
+  return publicMaterial;
+}
+
 export async function listMaterials() {
+
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const rows = await db.select().from(materials).orderBy(desc(materials.createdAt));
-  return rows.map((row) => reveal(row, MATERIAL_PRIVATE_FIELDS));
+    return rows.map((row) => sanitizeMaterial(reveal(row, MATERIAL_PRIVATE_FIELDS)));
 }
-
 export async function createMaterial(data: typeof materials.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(materials).values(protect(data as Record<string, unknown>, MATERIAL_PRIVATE_FIELDS) as typeof data);
   const id = Number((result as { insertId?: number }).insertId ?? 0);
   const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
-  return rows[0] ? reveal(rows[0], MATERIAL_PRIVATE_FIELDS) : { id, ...data };
+    return rows[0] ? sanitizeMaterial(reveal(rows[0], MATERIAL_PRIVATE_FIELDS)) : sanitizeMaterial({ id, ...data });
 }
-
 export async function updateMaterial(id: number, data: Partial<typeof materials.$inferInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(materials).set(protect(data as Record<string, unknown>, MATERIAL_PRIVATE_FIELDS) as Partial<typeof materials.$inferInsert>).where(eq(materials.id, id));
   const rows = await db.select().from(materials).where(eq(materials.id, id)).limit(1);
-  return rows[0] ? reveal(rows[0], MATERIAL_PRIVATE_FIELDS) : null;
+    return rows[0] ? sanitizeMaterial(reveal(rows[0], MATERIAL_PRIVATE_FIELDS)) : null;
 }
-
 export async function deleteMaterial(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

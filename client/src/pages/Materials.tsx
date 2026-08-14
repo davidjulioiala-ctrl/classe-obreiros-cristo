@@ -20,7 +20,6 @@ export default function Materials() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   // Form states
-  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Equipamento");
   const [quantity, setQuantity] = useState("1");
@@ -57,7 +56,6 @@ export default function Materials() {
 
   const openCreateDialog = () => {
     setEditingId(null);
-    setCode(`MAT-${Math.floor(1000 + Math.random() * 9000)}`);
     setName("");
     setCategory("Equipamento");
     setQuantity("1");
@@ -70,7 +68,6 @@ export default function Materials() {
 
   const openEditDialog = (item: any) => {
     setEditingId(item.id);
-    setCode(item.code);
     setName(item.name);
     setCategory(item.category);
     setQuantity(String(item.quantity));
@@ -88,8 +85,8 @@ export default function Materials() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code || !name || !custodian) {
-      toast.error("Preencha o código, nome e responsável (guardião).");
+    if (!name || !custodian) {
+      toast.error("Preencha o nome e o responsável (guardião).");
       return;
     }
 
@@ -98,7 +95,6 @@ export default function Materials() {
     if (editingId) {
       updateMutation.mutate({
         id: editingId,
-        code,
         name,
         category,
         quantity: qty,
@@ -109,7 +105,6 @@ export default function Materials() {
       });
     } else {
       createMutation.mutate({
-        code,
         name,
         category,
         quantity: qty,
@@ -124,7 +119,6 @@ export default function Materials() {
   const filteredMaterials = (materialsQuery.data || []).filter(
     (item: any) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.custodian.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -151,7 +145,7 @@ export default function Materials() {
           <div className="flex items-center gap-3">
             <Search className="w-5 h-5 text-slate-400" />
             <Input
-              placeholder="Pesquisar por código, nome, categoria ou guardião..."
+              placeholder="Pesquisar por nome, categoria ou guardião..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-none focus:ring-0 shadow-none text-base bg-transparent"
@@ -165,7 +159,6 @@ export default function Materials() {
             <TableHeader className="bg-slate-50 dark:bg-slate-700">
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Código interno</TableHead>
                 <TableHead>Nome do Item</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Qtd</TableHead>
@@ -178,13 +171,13 @@ export default function Materials() {
             <TableBody>
               {materialsQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     A carregar materiais...
                   </TableCell>
                 </TableRow>
               ) : filteredMaterials.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     Nenhum material registado ou encontrado.
                   </TableCell>
                 </TableRow>
@@ -192,7 +185,6 @@ export default function Materials() {
                 filteredMaterials.map((item: any) => (
                   <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                     <TableCell><RecordIdBadge id={item.id} /></TableCell>
-                    <TableCell className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{item.code}</TableCell>
                     <TableCell className="font-semibold text-slate-900 dark:text-white">{item.name}</TableCell>
                     <TableCell>
                       <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full text-xs font-medium">
@@ -245,10 +237,6 @@ export default function Materials() {
               <DialogTitle>{editingId ? "Editar Material" : "Registar Novo Material"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Código do Material</label>
-                <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="Ex: MAT-1001" />
-              </div>
               <div>
                 <label className="text-sm font-medium">Nome do Item</label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ex: Mesa de Som Digital" />
