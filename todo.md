@@ -6823,3 +6823,11 @@
 - [ ] Garantir que a cor textual escolhida é aplicada imediatamente à pré-visualização e persistida nos modelos.
 - [ ] Garantir que a mesma cor textual é usada na pré-visualização PDF e no PDF exportado.
 - [ ] Adicionar testes de regressão, executar typecheck e build, e publicar a correcção.
+
+## Correcção bloqueadora — login local
+- [ ] Reproduzir a quebra ao submeter o login e identificar a origem nos logs do browser e do servidor.
+- [ ] Corrigir a regressão no fluxo de autenticação, transição para a aplicação e carregamento da sessão.
+- [ ] Garantir mensagem clara para credenciais inválidas sem expor dados sensíveis.
+- [ ] Adicionar testes de regressão para login bem-sucedido, falhado, sessão autenticada e logout.
+- [ ] Executar typecheck, testes completos, build, reinício do servidor e validação visual.
+- [ ] Guardar checkpoint publicado com o login restaurado.

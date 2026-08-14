@@ -39,10 +39,16 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  const secure = isSecureRequest(req);
+
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "lax",
-    secure: isSecureRequest(req),
+    // The preview can be embedded by a different top-level site. Lax cookies
+    // are accepted after login but are then omitted from the cross-site XHR
+    // that loads the authenticated application. Keep Lax for plain HTTP local
+    // development, and use None only when Secure is available.
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }

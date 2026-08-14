@@ -45,7 +45,10 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   app.disable("x-powered-by");
-  app.set("trust proxy", false);
+  // The hosted preview is served through one trusted reverse proxy. Trusting
+  // that hop keeps req.protocol/req.secure aligned with the public HTTPS URL,
+  // which is required for the Secure local-session cookie.
+  app.set("trust proxy", 1);
   app.use(securityHeaders);
   // The application has no general-purpose upload endpoint. Keep request bodies
   // small to reduce parser exhaustion and malicious payload risk.
