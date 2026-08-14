@@ -37,6 +37,10 @@ type ExportReport = {
 const memberLabels = Object.fromEntries(MEMBER_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<MemberExportColumn, string>;
 const reportLabels = Object.fromEntries(REPORT_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<ReportExportColumn, string>;
 
+function sortById<T extends { id: number }>(rows: T[]) {
+  return [...rows].sort((first, second) => Number(first.id) - Number(second.id));
+}
+
 const memberPdfWeights: Record<MemberExportColumn, number> = {
   id: 0.55,
   name: 2.2,
@@ -127,7 +131,7 @@ export function generateCsv(headers: string[], rows: unknown[][]) {
 export function generateMembersCsv(members: ExportMember[], columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
   return generateCsv(
     columns.map((column) => memberLabels[column]),
-    members.map((member) => columns.map((column) => memberValue(member, column)))
+    sortById(members).map((member) => columns.map((column) => memberValue(member, column)))
   );
 }
 
@@ -146,7 +150,7 @@ function applyWorksheetTableFormatting(worksheet: XLSX.WorkSheet, rows: unknown[
 export function generateMembersExcel(members: ExportMember[], columns: MemberExportColumn[] = MEMBER_EXPORT_COLUMN_KEYS) {
   const rows = [
     columns.map((column) => memberLabels[column]),
-    ...members.map((member) => columns.map((column) => memberValue(member, column))),
+    ...sortById(members).map((member) => columns.map((column) => memberValue(member, column))),
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
   applyWorksheetTableFormatting(worksheet, rows, columns.length, columns.map((column) => column === "name" || column === "email" ? 30 : 18));
@@ -158,14 +162,14 @@ export function generateMembersExcel(members: ExportMember[], columns: MemberExp
 export function generateReportsCsv(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
   return generateCsv(
     columns.map((column) => reportLabels[column]),
-    reports.map((report) => columns.map((column) => reportValue(report, column)))
+    sortById(reports).map((report) => columns.map((column) => reportValue(report, column)))
   );
 }
 
 export function generateReportsExcel(reports: ExportReport[], columns: ReportExportColumn[] = REPORT_EXPORT_COLUMN_KEYS) {
   const rows = [
     columns.map((column) => reportLabels[column]),
-    ...reports.map((report) => columns.map((column) => reportValue(report, column))),
+    ...sortById(reports).map((report) => columns.map((column) => reportValue(report, column))),
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
   applyWorksheetTableFormatting(worksheet, rows, columns.length, columns.map((column) => column === "content" ? 60 : column === "type" ? 22 : 18));
@@ -199,7 +203,7 @@ export async function generateMembersPdf(members: ExportMember[], search = "", c
   document.font("Helvetica").fontSize(10).fillColor("#334155").text(search ? `Pesquisa: ${search}` : "Todos os membros activos");
   document.moveDown(0.6);
   const tableColumns: PdfTableColumn[] = columns.map((column) => ({ title: memberLabels[column], weight: memberPdfWeights[column], align: column === "id" || column === "age" || column === "groupId" ? "center" : column === "isActive" || column === "isGuest" ? "center" : "left" }));
-  drawPdfTable(document, branding, "Lista de membros", tableColumns, members.map((member) => columns.map((column) => memberValue(member, column))), { landscape, emptyLabel: "Nenhum membro encontrado." });
+  drawPdfTable(document, branding, "Lista de membros", tableColumns, sortById(members).map((member) => columns.map((column) => memberValue(member, column))), { landscape, emptyLabel: "Nenhum membro encontrado." });
   return finishPdf(document, chunks, branding);
 }
 
@@ -207,6 +211,6 @@ export async function generateReportsPdf(reports: ExportReport[], columns: Repor
   const landscape = columns.includes("content");
   const { document, chunks, branding } = await createPdf("Lista de relatórios e atas", landscape);
   const tableColumns: PdfTableColumn[] = columns.map((column) => ({ title: reportLabels[column], weight: reportPdfWeights[column], align: column === "id" || column === "activityId" ? "center" : "left" }));
-  drawPdfTable(document, branding, "Lista de relatórios e atas", tableColumns, reports.map((report) => columns.map((column) => reportValue(report, column))), { landscape, emptyLabel: "Ainda não existem relatórios." });
+  drawPdfTable(document, branding, "Lista de relatórios e atas", tableColumns, sortById(reports).map((report) => columns.map((column) => reportValue(report, column))), { landscape, emptyLabel: "Ainda não existem relatórios." });
   return finishPdf(document, chunks, branding);
 }

@@ -101,6 +101,21 @@ describe("list exports", () => {
     expect(rows[1]).toEqual(["1", "Relatório", "4"]);
   });
 
+  it("keeps one member per row and sorts the vertical list by ascending ID in CSV and XLSX", () => {
+    const members = [
+      { id: 3, name: "Carlos", sex: "M", birthDate: "1990-01-01", position: "Membro", groupId: 1, isGuest: false, isActive: true, phoneOrange: null, phoneTelecel: null, email: null },
+      { id: 1, name: "Ana", sex: "F", birthDate: "1991-01-01", position: "Membro", groupId: 1, isGuest: false, isActive: true, phoneOrange: null, phoneTelecel: null, email: null },
+      { id: 2, name: "Bruno", sex: "M", birthDate: "1992-01-01", position: "Membro", groupId: 1, isGuest: false, isActive: true, phoneOrange: null, phoneTelecel: null, email: null },
+    ];
+    const csvRows = generateMembersCsv(members, ["id", "name"]).split("\r\n").slice(1).filter(Boolean);
+    expect(csvRows.map((row) => row.split(";")[0])).toEqual(["1", "2", "3"]);
+    expect(csvRows.map((row) => row.split(";")[1])).toEqual(["Ana", "Bruno", "Carlos"]);
+
+    const workbook = XLSX.read(generateMembersExcel(members, ["id", "name"]), { type: "buffer" });
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets.Membros, { header: 1, raw: false }) as unknown[][];
+    expect(rows.slice(1)).toEqual([["1", "Ana"], ["2", "Bruno"], ["3", "Carlos"]]);
+  });
+
   it("generates table-based PDF buffers for both lists, including empty-state rows", async () => {
     const membersPdf = await generateMembersPdf([]);
     const reportsPdf = await generateReportsPdf([]);
