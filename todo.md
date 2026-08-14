@@ -6951,3 +6951,8 @@
 - [x] Auditar a rota tRPC e o formulário de criação de utilizadores para identificar a causa da falha.
 - [x] Corrigir validação de campos, encriptação de senha e tratamento de erros.
 - [x] Validar testes unitários e build de produção.
+
+## Correção da Função Eclesiástica no Cadastro de Membros
+- [x] Auditar o componente de membros e o selector de cargo/função eclesiástica.
+- [x] Corrigir eventuais chamadas undefined, condicionais de estado ou elementos Select inválidos.
+- [x] Validar testes e build de produção.
