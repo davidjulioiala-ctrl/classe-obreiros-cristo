@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -74,17 +75,44 @@ const createBlankForm = (): ActivityForm => ({
 
 const blankCommission = (): CommissionRow => ({ memberId: "", role: "", phone: "" });
 
-async function uploadActivityDocument(activityId: number, file: File, documentType: DocumentType) {
+async function uploadActivityDocument(
+  activityId: number,
+  file: File,
+  documentType: DocumentType,
+  onProgress?: (progress: number) => void,
+) {
   const body = new FormData();
   body.append("documentType", documentType);
   body.append("file", file);
-  const response = await fetch(`/api/activity-documents/${activityId}`, {
-    method: "POST",
-    body,
-    credentials: "include",
+
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", `/api/activity-documents/${activityId}`);
+    request.withCredentials = true;
+    request.timeout = 120_000;
+    const rejectWith = (message: string) => reject(new Error(message));
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    });
+    request.addEventListener("load", () => {
+      let result: { error?: string } = {};
+      try {
+        result = JSON.parse(request.responseText || "{}") as { error?: string };
+      } catch {
+        // O servidor pode responder sem JSON; nesse caso usamos o estado HTTP.
+      }
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve();
+        return;
+      }
+      rejectWith(result.error ?? `Não foi possível guardar o documento (erro ${request.status}).`);
+    });
+    request.addEventListener("error", () => rejectWith("Falha de rede ao enviar o documento. Verifique a ligação e tente novamente."));
+    request.addEventListener("timeout", () => rejectWith("O envio demorou demasiado tempo. Verifique a ligação e tente novamente."));
+    request.addEventListener("abort", () => rejectWith("O envio do documento foi cancelado."));
+    request.send(body);
   });
-  const result = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) throw new Error(result.error ?? "Não foi possível guardar o documento.");
 }
 
 function ActivityDocuments({ activityId }: { activityId: number }) {
@@ -193,6 +221,9 @@ export default function Activities() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<DocumentType>("ata");
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -273,6 +304,10 @@ export default function Activities() {
     setEditingId(null);
     setDocumentFile(null);
     setDocumentType("ata");
+    setIsUploadingDocument(false);
+    setUploadProgress(0);
+    setUploadError(null);
+    setUploadSuccess(false);
     setShowForm(false);
   };
 
@@ -283,6 +318,10 @@ export default function Activities() {
     setCommissionMemberSearch("");
     setDocumentFile(null);
     setDocumentType("ata");
+    setIsUploadingDocument(false);
+    setUploadProgress(0);
+    setUploadError(null);
+    setUploadSuccess(false);
     setShowForm(true);
   };
 
@@ -377,6 +416,11 @@ export default function Activities() {
       hasCommission: formData.hasCommission,
     };
 
+    let documentUploadStarted = false;
+    setUploadError(null);
+    setUploadSuccess(false);
+    setUploadProgress(documentFile ? 0 : 100);
+
     try {
       let activityId = editingId;
       if (editingId) {
@@ -391,8 +435,11 @@ export default function Activities() {
       }
 
       if (activityId && documentFile) {
+        documentUploadStarted = true;
         setIsUploadingDocument(true);
-        await uploadActivityDocument(activityId, documentFile, documentType);
+        setUploadProgress(0);
+        await uploadActivityDocument(activityId, documentFile, documentType, setUploadProgress);
+        setUploadSuccess(true);
         setIsUploadingDocument(false);
       }
 
@@ -401,7 +448,9 @@ export default function Activities() {
       resetForm();
     } catch (error) {
       setIsUploadingDocument(false);
-      toast.error(error instanceof Error ? error.message : "Não foi possível guardar a atividade.");
+      const message = error instanceof Error ? error.message : "Não foi possível guardar a atividade.";
+      if (documentUploadStarted) setUploadError(message);
+      toast.error(message);
     }
   };
 
@@ -620,15 +669,20 @@ export default function Activities() {
               )}
 
               <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à atividade.</p></div>
+                <div><h3 className="font-semibold">Anexar ata ou relatório</h3><p id="activity-document-help" className="text-xs text-slate-500">Pode anexar um documento PDF, DOC, DOCX, ODT ou TXT até 15 MB. O ficheiro ficará associado permanentemente à atividade.</p></div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
                   <Input
                     key={documentFile ? `${documentFile.name}-${documentFile.lastModified}` : "activity-document-empty"}
                     type="file"
                     accept="application/pdf,.pdf,.doc,.docx,.odt,.txt"
+                    disabled={isBusy}
+                    aria-describedby="activity-document-help activity-document-status"
                     onChange={(event) => {
                       const selectedFile = event.currentTarget.files?.item(0) ?? null;
                       const selection = selectActivityDocument(selectedFile);
+                      setUploadError(null);
+                      setUploadSuccess(false);
+                      setUploadProgress(0);
                       if (selection.error) {
                         setDocumentFile(null);
                         event.currentTarget.value = "";
@@ -644,6 +698,22 @@ export default function Activities() {
                   </Select>
                 </div>
                 {documentFile && <p className="break-all text-xs text-emerald-700">Documento seleccionado: {documentFile.name} ({Math.ceil(documentFile.size / 1024)} KB)</p>}
+                {(isUploadingDocument || uploadSuccess || uploadError) && (
+                  <div id="activity-document-status" className="space-y-2" aria-live="polite">
+                    {isUploadingDocument && (
+                      <>
+                        <div className="flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-300">
+                          <span>A enviar o {documentType === "ata" ? "ata" : "relatório"}…</span>
+                          <span>{uploadProgress}%</span>
+                        </div>
+                        <Progress value={uploadProgress} aria-label={`Progresso do upload: ${uploadProgress}%`} />
+                        <p className="text-xs text-slate-500">Não feche esta página até o envio terminar.</p>
+                      </>
+                    )}
+                    {uploadSuccess && !isUploadingDocument && <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Documento enviado com sucesso.</p>}
+                    {uploadError && <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">{uploadError}</p>}
+                  </div>
+                )}
                 {editingId && <ActivityDocuments activityId={editingId} />}
               </div>
 

@@ -34,6 +34,16 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain("Não foi possível carregar as actividades.");
   });
 
+  it("mostra progresso e mensagens accionáveis durante o upload do documento", () => {
+    expect(activitiesSource).toContain("XMLHttpRequest");
+    expect(activitiesSource).toContain("request.upload.addEventListener(\"progress\"");
+    expect(activitiesSource).toContain("uploadProgress");
+    expect(activitiesSource).toContain("Não feche esta página até o envio terminar.");
+    expect(activitiesSource).toContain("Falha de rede ao enviar o documento.");
+    expect(activitiesSource).toContain("O envio demorou demasiado tempo.");
+    expect(activitiesSource).toContain("Documento enviado com sucesso.");
+  });
+
   it("oferece filtros avançados por texto, intervalo de datas e estado", () => {
     expect(activitiesSource).toContain('id="activity-search"');
     expect(activitiesSource).toContain('id="activity-date-from"');

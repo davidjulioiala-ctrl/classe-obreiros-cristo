@@ -6769,3 +6769,14 @@
 - [x] Corrigido o visualizador e o fluxo de upload de atas e relatórios em Atividades.
 - [x] Validação e funcionamento de negrito, itálico e sublinhado no cabeçalho e nos PDFs.
 - [x] Executado typecheck, 115 testes unitários aprovados e build de produção concluído.
+
+## Nova Funcionalidade — Progresso e Feedback de Erros no Upload de Atividades
+- [ ] Implementar XMLHttpRequest ou hook de progresso para exibir barra de progresso durante o envio do documento.
+- [ ] Apresentar mensagens de erro detalhadas em caso de falha de validação, formato não suportado, limite de tamanho ou erro de rede.
+- [ ] Adicionar indicadores visuais de sucesso e limpeza de estado após a conclusão.
+- [ ] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
+
+## Nova Funcionalidade — Barra de Progresso e Mensagens Claras no Upload de Atividades
+- [x] Implementar XMLHttpRequest com monitorização de progresso percentual (0% a 100%) no envio de atas e relatórios.
+- [x] Adicionar mensagens específicas para tamanho excedido, formato não suportado, falha de rede e timeout.
+- [x] Criar testes unitários de regressão, validar typecheck, 116 testes Vitest, build de produção e publicação.
