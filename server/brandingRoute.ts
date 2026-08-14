@@ -36,6 +36,7 @@ export function readPreviewBody(body: unknown) {
   const source = body && typeof body === "object" ? body as Record<string, unknown> : {};
   return {
     congregationName: typeof source.congregationName === "string" ? source.congregationName.slice(0, 180) : undefined,
+    headerTitleText: typeof source.headerTitleText === "string" ? source.headerTitleText.slice(0, 250) : undefined,
     logoAlignment: source.logoAlignment === "left" || source.logoAlignment === "center" || source.logoAlignment === "right" ? source.logoAlignment : undefined,
     logoSize: source.logoSize === "small" || source.logoSize === "medium" || source.logoSize === "large" ? source.logoSize : undefined,
   };

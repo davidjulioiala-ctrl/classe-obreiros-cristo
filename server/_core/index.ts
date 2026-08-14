@@ -51,7 +51,7 @@ async function startServer() {
   // small to reduce parser exhaustion and malicious payload risk.
   app.use((req, res, next) => {
     const contentType = req.get("content-type")?.toLowerCase() ?? "";
-    if (contentType.startsWith("multipart/form-data") && req.path !== "/api/status-report" && !req.path.startsWith("/api/activity-documents/")) {
+    if (contentType.startsWith("multipart/form-data") && req.path !== "/api/status-report" && !req.path.startsWith("/api/activity-documents/") && req.path !== "/api/settings/organization/logo") {
       return res.status(415).json({ error: "Uploads de ficheiros não estão disponíveis neste endpoint." });
     }
     return next();

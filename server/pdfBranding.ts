@@ -9,6 +9,7 @@ export type LogoSizePreset = "small" | "medium" | "large";
 
 export type PdfBranding = {
   congregationName: string;
+  headerTitleText: string;
   logoBuffer: Buffer | null;
   logoMimeType: "image/png" | "image/jpeg" | null;
   logoAlignment: LogoAlignment;
@@ -47,6 +48,7 @@ function detectLogoType(buffer: Buffer): PdfBranding["logoMimeType"] {
 
 export type PdfBrandingOverrides = {
   congregationName?: unknown;
+  headerTitleText?: unknown;
   logoAlignment?: unknown;
   logoSize?: unknown;
 };
@@ -59,25 +61,28 @@ export async function loadPdfBranding(overrides: PdfBrandingOverrides = {}): Pro
     console.warn("[PdfBranding] Não foi possível ler as definições da organização:", error);
   }
   const congregationName = normalizeName(overrides.congregationName ?? settings.congregationName ?? settings.organizationName);
+  const headerTitleText = typeof overrides.headerTitleText === "string" && overrides.headerTitleText.trim()
+    ? overrides.headerTitleText.trim().slice(0, 250)
+    : congregationName;
   const logoKey = typeof settings.logoKey === "string" ? settings.logoKey.trim().slice(0, 512) : "";
   const requestedAlignment = overrides.logoAlignment ?? settings.logoAlignment;
   const requestedSize = overrides.logoSize ?? settings.logoSize;
   const logoAlignment: LogoAlignment = requestedAlignment === "left" || requestedAlignment === "right" ? requestedAlignment : "center";
   const logoSize: LogoSizePreset = requestedSize === "small" || requestedSize === "large" ? requestedSize : "medium";
 
-  if (!logoKey) return { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
+  if (!logoKey) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
 
   try {
     const signedUrl = await storageGetSignedUrl(logoKey);
     const response = await fetch(signedUrl);
-    if (!response.ok) return { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
+    if (!response.ok) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > 5 * 1024 * 1024) return { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
+    if (bytes.length === 0 || bytes.length > 5 * 1024 * 1024) return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
     const logoMimeType = detectLogoType(bytes);
-    return logoMimeType ? { congregationName, logoBuffer: bytes, logoMimeType, logoAlignment, logoSize } : { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
+    return logoMimeType ? { congregationName, headerTitleText, logoBuffer: bytes, logoMimeType, logoAlignment, logoSize } : { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
   } catch (error) {
     console.warn("[PdfBranding] Não foi possível carregar o logótipo configurado:", error);
-    return { congregationName, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
+    return { congregationName, headerTitleText, logoBuffer: null, logoMimeType: null, logoAlignment, logoSize };
   }
 }
 
@@ -103,13 +108,13 @@ export function drawPdfHeader(
       document.image(branding.logoBuffer, 42, headerTop, { fit: [logoDim, logoDim] });
       const textX = 42 + logoDim + 12;
       const textWidth = contentWidth - logoDim - 12;
-      document.fontSize(16).fillColor("#064e3b").text(branding.congregationName, textX, headerTop + 2, { width: textWidth, align: "left" });
+      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, textX, headerTop + 2, { width: textWidth, align: "left" });
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, headerTop + 22, { width: textWidth, align: "left" });
       document.fontSize(13).fillColor("#047857").text(title, textX, headerTop + 38, { width: textWidth, align: "left" });
     } else if (branding.logoAlignment === "right") {
       const textX = 42;
       const textWidth = contentWidth - logoDim - 12;
-      document.fontSize(16).fillColor("#064e3b").text(branding.congregationName, textX, headerTop + 2, { width: textWidth, align: "left" });
+      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, textX, headerTop + 2, { width: textWidth, align: "left" });
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", textX, headerTop + 22, { width: textWidth, align: "left" });
       document.fontSize(13).fillColor("#047857").text(title, textX, headerTop + 38, { width: textWidth, align: "left" });
       document.image(branding.logoBuffer, pageWidth - 42 - logoDim, headerTop, { fit: [logoDim, logoDim] });
@@ -118,7 +123,7 @@ export function drawPdfHeader(
       const currentLogoH = Math.max(logoDim, 40);
       document.image(branding.logoBuffer, (pageWidth - logoDim) / 2, headerTop, { fit: [logoDim, logoDim] });
       const textY = headerTop + currentLogoH + 6;
-      document.fontSize(16).fillColor("#064e3b").text(branding.congregationName, 42, textY, { width: contentWidth, align: "center" });
+      document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, 42, textY, { width: contentWidth, align: "center" });
       document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, textY + 20, { width: contentWidth, align: "center" });
       document.fontSize(13).fillColor("#047857").text(title, 42, textY + 36, { width: contentWidth, align: "center" });
       const dividerY = textY + 58;
@@ -128,7 +133,7 @@ export function drawPdfHeader(
     }
   } else {
     // no logo
-    document.fontSize(16).fillColor("#064e3b").text(branding.congregationName, 42, headerTop + 2, { width: contentWidth, align: "center" });
+    document.fontSize(16).fillColor("#064e3b").text(branding.headerTitleText, 42, headerTop + 2, { width: contentWidth, align: "center" });
     document.fontSize(9).fillColor("#64748b").text(options.subtitle ?? "Sistema de Gestão Eclesiástica", 42, headerTop + 22, { width: contentWidth, align: "center" });
     document.fontSize(13).fillColor("#047857").text(title, 42, headerTop + 38, { width: contentWidth, align: "center" });
   }

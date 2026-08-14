@@ -19,7 +19,7 @@ describe("branding dos PDFs", () => {
 
     const branding = await loadPdfBranding();
 
-    expect(branding).toEqual({ congregationName: "Congregação Esperança", logoBuffer: null, logoMimeType: null, logoAlignment: "center", logoSize: "medium" });
+    expect(branding).toEqual({ congregationName: "Congregação Esperança", headerTitleText: "Congregação Esperança", logoBuffer: null, logoMimeType: null, logoAlignment: "center", logoSize: "medium" });
     expect(storageGetSignedUrl).not.toHaveBeenCalled();
     expect(pdfFooterText(branding, "documento gerado pelo sistema")).toContain("Congregação Esperança");
   });

@@ -6630,3 +6630,15 @@
 - [x] Validar o comportamento de seleção e salvamento do cargo 'Membro'.
 - [x] Executar testes, build e publicação da alteração.
 
+
+## Fase 15: Cabeçalhos Flexíveis e Correções de Erros — 2026-08-13
+- [ ] Investigar e corrigir a falha de upload do logótipo e o erro no cadastro de membros.
+- [ ] Separar o nome da organização do conteúdo do cabeçalho PDF, permitindo texto livre e personalizado por tipo de atividade ou documento.
+- [ ] Adicionar modal/opção de seleção e personalização do cabeçalho antes de exportar cada documento ou relatório.
+- [ ] Validar com testes unitários, typecheck, build de produção e publicação.
+
+
+## Fase 15: Cabeçalhos Flexíveis e Correções Finais
+- [x] Corrigir o carregamento do logótipo e a validação do formulário de membros.
+- [x] Separar a identidade da organização do conteúdo do cabeçalho PDF através do campo dedicado de texto flexível.
+- [x] Validar a geração de pré-visualizações, testes unitários, build de produção e publicação.

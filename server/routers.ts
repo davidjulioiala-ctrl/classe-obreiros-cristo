@@ -140,7 +140,10 @@ const membersRouter = router({
           phoneTelecel: safeText(40, false),
           email: safeEmail().optional(),
           position: safeText(255, false),
+          leaderRole: safeText(255, false),
           louvorRole: safeText(255, false),
+          groupId: positiveId.optional(),
+          isGuest: z.boolean().optional(),
           isActive: z.boolean().optional(),
         }),
       })

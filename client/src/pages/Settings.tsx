@@ -14,6 +14,7 @@ import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPrevi
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
+  const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
   const [location, setLocation] = useState("Luanda, Angola");
@@ -58,6 +59,8 @@ export default function Settings() {
       try {
         const parsed = JSON.parse(orgQuery.data);
         if (parsed.organizationName) setOrganizationName(parsed.organizationName);
+        if (parsed.headerTitleText) setHeaderTitleText(parsed.headerTitleText);
+        else if (parsed.organizationName) setHeaderTitleText(parsed.organizationName);
         if (parsed.email) setEmail(parsed.email);
         if (parsed.phone) setPhone(parsed.phone);
         if (parsed.location) setLocation(parsed.location);
@@ -97,7 +100,7 @@ export default function Settings() {
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize }) });
   };
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +136,7 @@ export default function Settings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ congregationName: organizationName, logoAlignment, logoSize }),
+        body: JSON.stringify({ congregationName: organizationName, headerTitleText, logoAlignment, logoSize }),
       });
       if (!response.ok) {
         const result = (await response.json().catch(() => ({}))) as { error?: string };
@@ -170,7 +173,7 @@ export default function Settings() {
   };
 
   const previewLogoSize = getPdfPreviewLogoSize(logoSize);
-  const previewName = getPdfPreviewName(organizationName);
+  const previewName = getPdfPreviewName(headerTitleText || organizationName);
 
   return (
     <DashboardLayoutCustom>
@@ -196,6 +199,12 @@ export default function Settings() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nome da Organização</label>
                   <Input value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Nome" />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nome institucional geral da organização no sistema.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Texto do Cabeçalho nos PDFs</label>
+                  <Input value={headerTitleText} onChange={(e) => setHeaderTitleText(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo - Sede / Subdepartamento" />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pode personalizar por atividade ou documento conforme necessário.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email de Contacto</label>
