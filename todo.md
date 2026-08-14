@@ -6929,3 +6929,8 @@
 - [x] Garantir orientação A4 horizontal nas listas PDF de membros e relatórios.
 - [x] Manter uma linha por registo e validar a legibilidade das colunas em paisagem.
 - [x] Acrescentar testes de regressão para a orientação horizontal e a paginação.
+
+## Alinhamento com o modelo membros.xlsx
+- [x] Mapear as 12 colunas exatas da referência (ID, Nome, Sexo, Data de nascimento, Idade, Cargo, Grupo ID, Convidado, Estado, Telefone Orange, Telefone Telecel, Email).
+- [x] Garantir o preenchimento de campos vazios com travessão (`—`) exatamente como no modelo.
+- [x] Validar a ordem vertical e atualizar os testes de exportação.

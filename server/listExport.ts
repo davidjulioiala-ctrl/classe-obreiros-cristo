@@ -98,13 +98,13 @@ function memberValue(member: ExportMember, column: MemberExportColumn): string |
     case "sex": return member.sex === "M" ? "Masculino" : "Feminino";
     case "birthDate": return displayDate(member.birthDate);
     case "age": return calculateAge(member.birthDate);
-    case "position": return member.position || "Sem cargo";
-    case "groupId": return member.groupId ?? "";
+    case "position": return member.position || "—";
+    case "groupId": return member.groupId ?? "—";
     case "isGuest": return member.isGuest ? "Sim" : "Não";
     case "isActive": return member.isActive ? "Ativo" : "Inativo";
-    case "phoneOrange": return member.phoneOrange || "";
-    case "phoneTelecel": return member.phoneTelecel || "";
-    case "email": return member.email || "";
+    case "phoneOrange": return member.phoneOrange || "—";
+    case "phoneTelecel": return member.phoneTelecel || "—";
+    case "email": return member.email || "—";
   }
 }
 

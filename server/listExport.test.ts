@@ -48,7 +48,7 @@ describe("list exports", () => {
 
     expect(csv).toContain("ID;Nome;Sexo");
     expect(csv).toContain("1;Ana Lopes;Feminino");
-    expect(csv).toContain("Membro;3;Não;Ativo");
+    expect(csv).toContain("Membro;3;Não;Ativo;—");
   });
 
   it("exports selected member columns to a readable XLSX workbook", () => {
