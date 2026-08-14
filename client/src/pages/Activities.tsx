@@ -35,6 +35,13 @@ type ActivityForm = {
 
 type CommissionRow = { id?: number; memberId: string; role: string; phone: string };
 type DocumentType = "ata" | "relatorio";
+type ActivitySort = "date-desc" | "date-asc" | "status-asc" | "status-desc";
+
+const activityStatusRank: Record<string, number> = {
+  cancelada: 0,
+  planeada: 1,
+  realizada: 2,
+};
 const MAX_ACTIVITY_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ACTIVITY_DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".odt", ".txt"];
 
@@ -190,6 +197,7 @@ export default function Activities() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todos" | "planeada" | "realizada" | "cancelada">("todos");
+  const [activitySort, setActivitySort] = useState<ActivitySort>("date-desc");
 
   const activitiesQuery = trpc.activities.list.useQuery();
   const membersQuery = trpc.members.list.useQuery();
@@ -198,7 +206,7 @@ export default function Activities() {
   const filteredActivities = useMemo(() => {
     const query = activitySearch.trim().toLocaleLowerCase();
     if (hasInvalidDateRange) return [];
-    return activities.filter((activity) => {
+    const matchingActivities = activities.filter((activity) => {
       const activityDate = format(new Date(activity.date), "yyyy-MM-dd");
       const matchesQuery = !query || [activity.name, activity.location, activity.theme, activity.type, activity.speakerName]
         .filter(Boolean)
@@ -208,13 +216,27 @@ export default function Activities() {
       const matchesStatus = statusFilter === "todos" || activity.status === statusFilter;
       return matchesQuery && matchesFrom && matchesTo && matchesStatus;
     });
-  }, [activities, activitySearch, dateFrom, dateTo, hasInvalidDateRange, statusFilter]);
-  const hasActivityFilters = Boolean(activitySearch.trim() || dateFrom || dateTo || statusFilter !== "todos");
+
+    return matchingActivities.sort((first, second) => {
+      if (activitySort === "date-asc" || activitySort === "date-desc") {
+        const difference = new Date(first.date).getTime() - new Date(second.date).getTime();
+        return activitySort === "date-asc" ? difference : -difference;
+      }
+
+      const firstRank = activityStatusRank[first.status] ?? Number.MAX_SAFE_INTEGER;
+      const secondRank = activityStatusRank[second.status] ?? Number.MAX_SAFE_INTEGER;
+      const difference = firstRank - secondRank;
+      if (difference !== 0) return activitySort === "status-asc" ? difference : -difference;
+      return new Date(second.date).getTime() - new Date(first.date).getTime();
+    });
+  }, [activities, activitySearch, activitySort, dateFrom, dateTo, hasInvalidDateRange, statusFilter]);
+  const hasActivityFilters = Boolean(activitySearch.trim() || dateFrom || dateTo || statusFilter !== "todos" || activitySort !== "date-desc");
   const clearActivityFilters = () => {
     setActivitySearch("");
     setDateFrom("");
     setDateTo("");
     setStatusFilter("todos");
+    setActivitySort("date-desc");
   };
   const filteredCommissionMembers = useMemo(() => {
     const availableMembers = membersQuery.data ?? [];
@@ -445,7 +467,7 @@ export default function Activities() {
               </div>
               {hasActivityFilters && <Button type="button" variant="ghost" size="sm" onClick={clearActivityFilters}>Limpar filtros</Button>}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="sm:col-span-2 lg:col-span-1">
                 <Label htmlFor="activity-search">Pesquisar</Label>
                 <Input id="activity-search" type="search" className="mt-1" placeholder="Nome, local, tema…" value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} />
@@ -465,6 +487,15 @@ export default function Activities() {
                   <option value="planeada">Planeada</option>
                   <option value="realizada">Realizada</option>
                   <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="activity-sort">Ordenar por</Label>
+                <select id="activity-sort" value={activitySort} onChange={(event) => setActivitySort(event.target.value as ActivitySort)} className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                  <option value="date-desc">Data: mais recente</option>
+                  <option value="date-asc">Data: mais antiga</option>
+                  <option value="status-asc">Estado: A–Z</option>
+                  <option value="status-desc">Estado: Z–A</option>
                 </select>
               </div>
             </div>

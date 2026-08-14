@@ -6729,9 +6729,9 @@
 - [x] Adicionar todas as tipografias e paletas de cores do Microsoft Office 365 no sistema e nos cabeçalhos PDF.
 
 ## Nova Funcionalidade — Seletor Visual de Fontes e Cores Office 365
-- [ ] Adicionar um seletor visual acessível de fontes e cores Office 365 na interface de Definições.
-- [ ] Garantir aplicação imediata na pré-visualização e persistência no cabeçalho ativo e nos modelos.
-- [ ] Executar typecheck, testes unitários, build de produção e guardar checkpoint.
+- [x] Adicionar um seletor visual acessível de fontes e cores Office 365 na interface de Definições.
+- [x] Garantir aplicação imediata na pré-visualização e persistência no cabeçalho ativo e nos modelos.
+- [x] Executar typecheck, testes unitários, build de produção e guardar checkpoint.
 
 ## Actualização — Menus Membros e Actividades
 - [x] Tornar os estados iniciais dos formulários de Membros e Actividades independentes entre aberturas e resets.
@@ -6743,4 +6743,9 @@
 - [x] Adicionar controlos de filtro por intervalo de datas (Início e Fim) e estado (Todas, Planeada, Realizada, Cancelada).
 - [x] Filtrar dinamicamente a listagem de atividades mantendo os critérios de pesquisa por nome, local ou tema.
 - [x] Adicionar botão de limpeza de filtros e contador claro de resultados.
+- [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.
+
+## Nova Funcionalidade — Ordenação da Lista de Atividades
+- [x] Adicionar controlos de ordenação por Data (Mais recente / Mais antiga) e Estado (Ordem alfabética ou prioridade).
+- [x] Integrar a ordenação com o pipeline de filtragem existente (pesquisa, datas e estado).
 - [x] Criar testes unitários de regressão, validar typecheck, testes Vitest, build de produção e publicação.

@@ -30,4 +30,18 @@ describe("personalização de cabeçalhos", () => {
     expect(settingsSource).toContain("headerFontFamily");
     expect(settingsSource).toContain("headerTextColor");
   });
+
+  it("expõe selectors visuais Office para fontes e cores nos modelos e no cabeçalho activo", () => {
+    expect(settingsSource).toContain("function OfficeFontPicker");
+    expect(settingsSource).toContain("function OfficeColorPicker");
+    expect(settingsSource).toContain('role="radiogroup"');
+    expect(settingsSource).toContain('role="radio"');
+    expect(settingsSource).toContain("HEADER_FONT_FAMILIES");
+    expect(settingsSource).toContain("HEADER_COLOR_PALETTE");
+    expect(settingsSource).toContain("template-header-font-family");
+    expect(settingsSource).toContain("template-header-text-color");
+    expect(settingsSource).toContain("pdf-header-font-family");
+    expect(settingsSource).toContain("pdf-header-text-color");
+    expect(settingsSource).toContain("customInputLabel");
+  });
 });

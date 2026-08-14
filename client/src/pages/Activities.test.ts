@@ -39,8 +39,16 @@ describe("fluxos de actividades", () => {
     expect(activitiesSource).toContain('id="activity-date-from"');
     expect(activitiesSource).toContain('id="activity-date-to"');
     expect(activitiesSource).toContain('id="activity-status"');
+    expect(activitiesSource).toContain('id="activity-sort"');
+    expect(activitiesSource).toContain('value="date-desc"');
+    expect(activitiesSource).toContain('value="date-asc"');
+    expect(activitiesSource).toContain('value="status-asc"');
+    expect(activitiesSource).toContain('value="status-desc"');
+    expect(activitiesSource).toContain("activityStatusRank");
+    expect(activitiesSource).toContain("matchingActivities.sort");
     expect(activitiesSource).toContain("hasInvalidDateRange");
     expect(activitiesSource).toContain("filteredActivities");
+    expect(activitiesSource).toContain("setActivitySort(\"date-desc\")");
     expect(activitiesSource).toContain("Limpar filtros");
   });
 });
