@@ -43,7 +43,7 @@ export default function IncompleteMembers() {
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold">{incomplete.length} registo(s) com informação em falta</p>
-              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">Os dados não foram apagados. Abra o cadastro de membros para completar cada registo.</p>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">Os dados não foram apagados. Abra directamente o cadastro de cada registo para completar os campos em falta.</p>
             </div>
           </CardContent>
         </Card>
@@ -57,7 +57,7 @@ export default function IncompleteMembers() {
                   <div className="rounded-full bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"><UserRound className="h-5 w-5" /></div>
                   <div className="min-w-0"><RecordIdBadge id={member.id} /><p className="truncate font-semibold text-slate-900 dark:text-white">{member.name}</p><div className="mt-2 flex flex-wrap gap-1.5">{missing.map((field) => <Badge key={field} variant="outline" className="border-amber-300 text-amber-800 dark:border-amber-700 dark:text-amber-200">{field}</Badge>)}</div></div>
                 </div>
-                <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate("/members")}><ArrowRight className="mr-2 h-4 w-4" />Abrir cadastro</Button>
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/members?edit=${member.id}`)}><ArrowRight className="mr-2 h-4 w-4" />Abrir cadastro</Button>
               </div>
             ))}
           </CardContent>

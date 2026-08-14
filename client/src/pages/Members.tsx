@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, Edit2, Trash2, Eye, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -76,6 +77,7 @@ export default function Members() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [pendingExportFormat, setPendingExportFormat] = useState<"pdf" | "csv" | "xlsx">("pdf");
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS]);
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
   const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -176,6 +178,14 @@ export default function Members() {
     });
     setShowForm(true);
   };
+
+  useEffect(() => {
+    if (deepLinkHandled || !members?.length) return;
+    const requestedId = Number(new URLSearchParams(window.location.search).get("edit"));
+    const member = Number.isInteger(requestedId) && requestedId > 0 ? members.find((item) => item.id === requestedId) : undefined;
+    if (member) openEdit(member);
+    setDeepLinkHandled(true);
+  }, [deepLinkHandled, members]);
 
   const removeMember = (id: number, name: string) => {
     if (window.confirm(`Eliminar o membro ${name}?`)) deleteMemberMutation.mutate({ id });

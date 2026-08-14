@@ -6836,17 +6836,17 @@
 - [x] Reiniciar o servidor de desenvolvimento e confirmar que a pré-visualização responde.
 
 ## Pacote de melhorias aprovado
-- [ ] Indicadores de total de pessoas registadas e pessoas ativas no Dashboard.
-- [ ] Confirmação de inclusão de dados pessoais em todas as exportações do sistema.
-- [ ] Atalho no menu "Campos em falta" para abrir diretamente o formulário do membro.
+- [x] Indicadores de total de pessoas registadas e pessoas ativas no Dashboard.
+- [x] Confirmação de inclusão de dados pessoais em todas as exportações do sistema.
+- [x] Atalho no menu "Campos em falta" para abrir diretamente o formulário do membro.
 - [ ] Filtros avançados e atalhos das últimas 7 atividades no menu Presenças.
 - [ ] Listagem organizada das últimas 7 atividades por nome no menu Atividades.
 - [ ] Edição de atividades finalizadas restrita ao administrador, com motivo obrigatório e registo visível.
-- [ ] Inclusão do nome do utilizador responsável em todas as operações financeiras.
+- [x] Inclusão do nome do utilizador responsável em todas as operações financeiras.
 - [ ] Gestão de transferências com processo nomeado em lote, revisão de maiores de idade e atribuição de nova função.
 - [ ] Filtros por nome, cargo e estado no menu Histórico.
-- [ ] Listagem dos últimos 7 relatórios e atas gerados no menu Relatórios.
-- [ ] Escala de louvor vinculada diretamente a cada atividade.
+- [x] Listagem dos últimos 7 relatórios e atas gerados no menu Relatórios.
+- [x] Escala de louvor vinculada diretamente a cada atividade.
 - [ ] Notificações internas para eventos e alterações de preferências.
 - [ ] Funcionalidade de mudança de senha com segurança e validação.
 - [ ] Sistema de backup automático e prático.
