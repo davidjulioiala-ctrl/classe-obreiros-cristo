@@ -6976,3 +6976,8 @@
 - [x] Permitir que oficiais criem e editem membros (incluindo completar campos em falta).
 - [x] Impedir que oficiais eliminem membros (restringir exclusão a administradores).
 - [x] Validar testes e build de produção.
+
+## Atualização do Menu de Membros por Grupos
+- [x] Apresentar os 4 grupos principais mais o grupo de convidados com contagem total, homens e mulheres.
+- [x] Permitir filtrar e consultar os membros de cada grupo diretamente no painel.
+- [x] Validar testes e build de produção.

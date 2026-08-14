@@ -230,8 +230,8 @@ export default function Members() {
         )}
         <motion.div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Membros</h1>
-            <p className="mt-1 text-slate-600 dark:text-slate-400">Gira todos os membros da congregação.</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Membros e Grupos</h1>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">Acompanhe a distribuição por grupos, géneros e convidados da congregação.</p>
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
             <Button onClick={() => openExportDialog("pdf")} disabled={exportingFormat !== null} variant="outline" className="flex-1 sm:flex-initial">
@@ -252,6 +252,79 @@ export default function Members() {
             </Button>
           </div>
         </motion.div>
+
+        {/* SECÇÃO DE RESUMO DOS 4 GRUPOS E CONVIDADOS */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {(() => {
+            const allMembers = members ?? [];
+            const allGroups = groups ?? [];
+            const standardGroups = allGroups.filter(g => g.criteria !== "special:guest");
+            const guestGroup = allGroups.find(g => g.criteria === "special:guest" || g.name.toLowerCase().includes("convidado"));
+
+            const renderGroupCard = (group: { id: number; name: string; description?: string | null }) => {
+              const groupMembers = allMembers.filter(m => m.groupId === group.id);
+              const total = groupMembers.length;
+              const males = groupMembers.filter(m => m.sex === "M").length;
+              const females = groupMembers.filter(m => m.sex === "F").length;
+              const filterKey = `group:${group.id}`;
+              const isSelected = searchQuery === filterKey;
+
+              return (
+                <Card 
+                  key={group.id} 
+                  onClick={() => setSearchQuery(isSelected ? "" : filterKey)}
+                  className={`cursor-pointer border p-4 transition-all hover:shadow-md ${isSelected ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/25 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900 dark:text-white truncate" title={group.name}>{group.name}</h3>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                      {total}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{group.description || "Grupo oficial"}</p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-2">
+                    <span>Homens: <strong>{males}</strong></span>
+                    <span>Mulheres: <strong>{females}</strong></span>
+                  </div>
+                </Card>
+              );
+            };
+
+            const renderGuestCard = () => {
+              const guestMembers = allMembers.filter(m => m.isGuest || (guestGroup && m.groupId === guestGroup.id));
+              const total = guestMembers.length;
+              const males = guestMembers.filter(m => m.sex === "M").length;
+              const females = guestMembers.filter(m => m.sex === "F").length;
+              const isSelected = searchQuery === "guest:true";
+
+              return (
+                <Card 
+                  onClick={() => setSearchQuery(isSelected ? "" : "guest:true")}
+                  className={`cursor-pointer border p-4 transition-all hover:shadow-md ${isSelected ? 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/25 ring-2 ring-purple-500/20' : 'border-slate-200 dark:border-slate-800'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900 dark:text-white">Convidados</h3>
+                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                      {total}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Participantes e visitantes</p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800/80 pt-2">
+                    <span>Homens: <strong>{males}</strong></span>
+                    <span>Mulheres: <strong>{females}</strong></span>
+                  </div>
+                </Card>
+              );
+            };
+
+            return (
+              <>
+                {standardGroups.map(renderGroupCard)}
+                {renderGuestCard()}
+              </>
+            );
+          })()}
+        </div>
 
         {showGroupManager && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6 space-y-4">
