@@ -6664,3 +6664,13 @@
 - [x] Diagnosticar a causa raiz da falha de login nas rotas de autenticação local.
 - [x] Corrigir o manipulador de login e garantir persistência correta de sessão e cookies.
 - [x] Executar testes de login, typecheck, build de produção, checkpoint e publicação.
+
+
+## Correções solicitadas — comissão, documentos, cadastro e cabeçalhos
+- [x] Corrigir a selecção e gravação de pessoas da comissão durante a criação e edição de actividades.
+- [x] Corrigir a visualização integrada de atas e relatórios enviados manualmente.
+- [x] Corrigir a descarga protegida e a impressão directa de atas e relatórios.
+- [x] Corrigir o formulário de cadastro de membros e o contrato tRPC correspondente.
+- [x] Corrigir a criação de novos modelos de cabeçalho e permitir quebras de linha com Enter no texto personalizado.
+- [x] Restaurar os nomes originais da interface e remover palavras estranhas introduzidas nas correcções recentes.
+- [x] Criar testes de regressão para os fluxos corrigidos e validar a aplicação antes do checkpoint.

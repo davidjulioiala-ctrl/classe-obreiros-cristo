@@ -118,6 +118,56 @@ export default function Settings() {
     organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTemplates, activeTemplateId }) });
   };
 
+  const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
+    setEditingTemplateId(template.id);
+    setTemplateFormName(template.name);
+    setTemplateFormTitle(template.headerTitleText);
+    setTemplateFormAlignment(template.logoAlignment);
+    setTemplateFormSize(template.logoSize);
+  };
+
+  const handleCreateHeaderTemplate = () => {
+    const newId = `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const newTemplate = {
+      id: newId,
+      name: `Modelo ${headerTemplates.length + 1}`,
+      headerTitleText: headerTitleText || "Novo cabeçalho",
+      logoAlignment,
+      logoSize,
+      isDefault: false,
+    };
+    const nextTemplates = [...headerTemplates, newTemplate];
+    setHeaderTemplates(nextTemplates);
+    setActiveTemplateId(newId);
+    setHeaderTitleText(newTemplate.headerTitleText);
+    setLogoAlignment(newTemplate.logoAlignment);
+    setLogoSize(newTemplate.logoSize);
+    beginEditTemplate(newTemplate);
+    organizationSaveMutation.mutate({
+      keyName: "organization",
+      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTemplates: nextTemplates, activeTemplateId: newId }),
+    });
+    toast.success("Novo modelo criado. Preencha os dados e guarde as alterações.");
+  };
+
+  const handleSaveTemplateEditor = () => {
+    if (!editingTemplateId) return;
+    const name = templateFormName.trim();
+    const title = templateFormTitle.trim();
+    if (!name || !title) {
+      toast.error("Indique o nome e o texto do cabeçalho.");
+      return;
+    }
+    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize } : template);
+    setHeaderTemplates(nextTemplates);
+    setActiveTemplateId(editingTemplateId);
+    setHeaderTitleText(templateFormTitle);
+    setLogoAlignment(templateFormAlignment);
+    setLogoSize(templateFormSize);
+    setEditingTemplateId(null);
+    toast.success("Modelo de cabeçalho actualizado. Guarde as alterações para confirmar.");
+  };
+
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -189,6 +239,7 @@ export default function Settings() {
 
   const previewLogoSize = getPdfPreviewLogoSize(logoSize);
   const previewName = getPdfPreviewName(headerTitleText || organizationName);
+  const editingTemplate = editingTemplateId ? headerTemplates.find((template) => template.id === editingTemplateId) : null;
 
   return (
     <DashboardLayoutCustom>
@@ -223,13 +274,7 @@ export default function Settings() {
                       <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Modelos de Cabeçalho Guardados</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">Alterne rapidamente entre diferentes cabeçalhos institucionais ou crie novos modelos.</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      const newId = `tpl_${Date.now()}`;
-                      const newTemplate = { id: newId, name: `Modelo ${headerTemplates.length + 1}`, headerTitleText: headerTitleText || "Nova Congregação", logoAlignment, logoSize };
-                      setHeaderTemplates([...headerTemplates, newTemplate]);
-                      setActiveTemplateId(newId);
-                      toast.success("Novo modelo criado. Pode editá-lo abaixo.");
-                    }} className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">
+                    <Button type="button" variant="outline" size="sm" onClick={handleCreateHeaderTemplate} disabled={organizationSaveMutation.isPending} className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">
                       + Novo Modelo
                     </Button>
                   </div>
@@ -257,12 +302,7 @@ export default function Settings() {
                               toast.success(`Modelo "${tpl.name}" definido como padrão.`);
                             }}>Definir como Padrão</Button>
                           ) : <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Padrão</span>}
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300" onClick={() => {
-                            const nextName = window.prompt("Nome do modelo:", tpl.name);
-                            if (!nextName) return;
-                            setHeaderTemplates(headerTemplates.map(item => item.id === tpl.id ? { ...item, name: nextName.trim() } : item));
-                            toast.success("Nome atualizado.");
-                          }}>Editar</Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300" onClick={() => beginEditTemplate(tpl)}>Editar</Button>
                           {headerTemplates.length > 1 && !tpl.isDefault ? (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-rose-600 hover:text-rose-700" onClick={() => {
                               const remaining = headerTemplates.filter(item => item.id !== tpl.id);
@@ -282,14 +322,52 @@ export default function Settings() {
                   </div>
                 </div>
 
+                {editingTemplate ? (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Editar modelo de cabeçalho</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Pode escrever o texto em várias linhas usando Enter.</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setEditingTemplateId(null)}>Fechar</Button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Nome do modelo</label>
+                        <Input value={templateFormName} onChange={(event) => setTemplateFormName(event.target.value)} />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Alinhamento do logótipo</label>
+                        <select value={templateFormAlignment} onChange={(event) => setTemplateFormAlignment(event.target.value as "left" | "center" | "right")} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                          <option value="left">À esquerda</option><option value="center">Centrado</option><option value="right">À direita</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho do logótipo</label>
+                        <select value={templateFormSize} onChange={(event) => setTemplateFormSize(event.target.value as "small" | "medium" | "large")} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                          <option value="small">Pequeno</option><option value="medium">Médio</option><option value="large">Grande</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Texto do cabeçalho</label>
+                        <textarea rows={4} value={templateFormTitle} onChange={(event) => setTemplateFormTitle(event.target.value)} className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Escreva o texto que deve aparecer no cabeçalho" />
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setEditingTemplateId(null)}>Cancelar</Button>
+                      <Button type="button" onClick={handleSaveTemplateEditor} className="bg-emerald-600 text-white hover:bg-emerald-700">Guardar modelo</Button>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Texto do Cabeçalho Ativo no PDF</label>
-                  <Input value={headerTitleText} onChange={(e) => {
+                  <textarea rows={4} value={headerTitleText} onChange={(e) => {
                     const val = e.target.value;
                     setHeaderTitleText(val);
-                    setHeaderTemplates(headerTemplates.map(t => t.id === activeTemplateId ? { ...t, headerTitleText: val, logoAlignment, logoSize } : t));
-                  }} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1" />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pode personalizar por atividade ou documento conforme necessário.</p>
+                    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: val, logoAlignment, logoSize } : template));
+                  }} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pressione Enter para iniciar uma nova linha.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email de Contacto</label>
@@ -364,7 +442,7 @@ export default function Settings() {
                                     <ImageIcon className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <p className="mt-3 max-w-full truncate text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                <p className="mt-3 max-w-full whitespace-pre-line break-words text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
                                 <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                               </div>
@@ -378,7 +456,7 @@ export default function Settings() {
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
+                                  <p className="whitespace-pre-line break-words text-base font-bold text-emerald-900 dark:text-emerald-200">{previewName}</p>
                                   <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                   <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                                 </div>

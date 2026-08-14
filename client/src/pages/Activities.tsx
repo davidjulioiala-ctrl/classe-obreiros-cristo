@@ -1,5 +1,4 @@
-import { useRef, useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Calendar, Check, Download, Edit2, Eye, FileText, Loader2, MapPin, Plus, Printer, Trash2, Users, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -12,6 +11,7 @@ import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { printPdfFrame } from "@/lib/pdfPrint";
+import { downloadProtectedFile } from "@/lib/fileDownload";
 import { toast } from "sonner";
 
 type ActivityForm = {
@@ -32,7 +32,7 @@ type ActivityForm = {
   hasCommission: boolean;
 };
 
-type CommissionRow = { memberId: string; role: string; phone: string };
+type CommissionRow = { id?: number; memberId: string; role: string; phone: string };
 type DocumentType = "ata" | "relatorio";
 
 const blankForm: ActivityForm = {
@@ -71,6 +71,7 @@ async function uploadActivityDocument(activityId: number, file: File, documentTy
 function ActivityDocuments({ activityId }: { activityId: number }) {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState<number | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
   const documentsQuery = trpc.activities.documentsList.useQuery({ activityId });
   const documents = documentsQuery.data ?? [];
@@ -92,6 +93,17 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
           setPreviewDocumentId(isPreviewing ? null : document.id);
           setPreviewReady(false);
         };
+        const downloadDocument = async () => {
+          setDownloadingDocumentId(document.id);
+          try {
+            await downloadProtectedFile(`/api/activity-documents/${document.id}/download`, document.originalName);
+            toast.success("Documento descarregado.");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Não foi possível descarregar o documento.");
+          } finally {
+            setDownloadingDocumentId(null);
+          }
+        };
         const printPreview = () => {
           if (!printPdfFrame(previewFrameRef.current)) {
             toast.error("A pré-visualização ainda não está pronta para impressão.");
@@ -106,7 +118,7 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
                 <span className="shrink-0 text-xs uppercase text-slate-500">{document.type}</span>
               </span>
               <span className="flex shrink-0 flex-wrap gap-2">
-                {isPdf && (
+                {isPdf ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -118,21 +130,19 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
                     <Eye className="mr-2 h-4 w-4" />
                     {isPreviewing ? "Fechar pré-visualização" : "Pré-visualizar"}
                   </Button>
+                ) : (
+                  <span className="self-center text-xs text-slate-500">Pré-visualização disponível para PDF</span>
                 )}
-                <a
-                  href={`/api/activity-documents/${document.id}/download`}
-                  className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm font-medium transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:hover:border-emerald-700"
-                  download
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => void downloadDocument()} disabled={downloadingDocumentId === document.id}>
                   <Download className="mr-2 h-4 w-4 text-slate-500" />
-                  Descarregar
-                </a>
+                  {downloadingDocumentId === document.id ? "A descarregar…" : "Descarregar"}
+                </Button>
               </span>
             </div>
             {isPreviewing && (
               <div id={`activity-document-preview-${document.id}`} className="border-t border-slate-200 p-3 dark:border-slate-700">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500">Pré-visualização PDF autenticada</p>
+                  <p className="text-xs text-slate-500">Pré-visualização PDF autenticada. Depois de carregado, pode imprimir directamente.</p>
                   <Button type="button" variant="outline" size="sm" onClick={printPreview} disabled={!previewReady} title={previewReady ? "Imprimir sem descarregar o PDF" : "A aguardar o carregamento do PDF"}>
                     <Printer className="mr-2 h-4 w-4" />
                     Imprimir documento
@@ -166,6 +176,10 @@ export default function Activities() {
 
   const activitiesQuery = trpc.activities.list.useQuery();
   const membersQuery = trpc.members.list.useQuery();
+  const commissionQuery = trpc.activities.commissionList.useQuery(
+    { activityId: editingId ?? 1 },
+    { enabled: editingId !== null },
+  );
   const createActivity = trpc.activities.create.useMutation();
   const updateActivity = trpc.activities.update.useMutation();
   const deleteActivity = trpc.activities.delete.useMutation();
@@ -177,6 +191,13 @@ export default function Activities() {
     onError: (error) => toast.error(error.message),
   });
   const addCommission = trpc.activities.commissionAdd.useMutation();
+  const deleteCommission = trpc.activities.commissionDelete.useMutation();
+
+  useEffect(() => {
+    if (editingId === null) return;
+    const rows = commissionQuery.data ?? [];
+    setCommissionRows(rows.length > 0 ? rows.map((row) => ({ id: row.id, memberId: String(row.memberId), role: row.role ?? "", phone: row.phone ?? "" })) : [blankCommission()]);
+  }, [commissionQuery.data, editingId]);
 
   const resetForm = () => {
     setFormData(blankForm);
@@ -221,6 +242,32 @@ export default function Activities() {
     setDocumentFile(null);
     setDocumentType("ata");
     setShowForm(true);
+  };
+
+  const saveCommission = async (activityId: number) => {
+    const existingRows = commissionQuery.data ?? [];
+    if (existingRows.length > 0) {
+      await Promise.all(existingRows.map((row) => deleteCommission.mutateAsync({ id: row.id })));
+    }
+    if (!formData.hasCommission) return;
+    const enteredRows = commissionRows.filter((row) => row.memberId || row.role.trim() || row.phone.trim());
+    if (enteredRows.some((row) => !row.memberId || !row.role.trim())) {
+      throw new Error("Seleccione uma pessoa e indique o cargo de cada membro da comissão.");
+    }
+    const validRows = enteredRows;
+    if (validRows.length === 0) {
+      throw new Error("Adicione pelo menos uma pessoa à comissão ou desactive a opção de comissão.");
+    }
+    await Promise.all(
+      validRows.map((row) =>
+        addCommission.mutateAsync({
+          activityId,
+          memberId: Number(row.memberId),
+          role: row.role.trim(),
+          phone: row.phone.trim() || undefined,
+        }),
+      ),
+    );
   };
 
   const saveActivity = async (event: FormEvent) => {
@@ -269,18 +316,8 @@ export default function Activities() {
         activityId = Number((created as { insertId?: number }).insertId);
       }
 
-      if (!editingId && formData.hasCommission && activityId) {
-        const validRows = commissionRows.filter((row) => row.memberId && row.role.trim());
-        await Promise.all(
-          validRows.map((row) =>
-            addCommission.mutateAsync({
-              activityId,
-              memberId: Number(row.memberId),
-              role: row.role.trim(),
-              phone: row.phone.trim() || undefined,
-            }),
-          ),
-        );
+      if (activityId) {
+        await saveCommission(activityId);
       }
 
       if (activityId && documentFile) {
@@ -325,7 +362,7 @@ export default function Activities() {
     }));
   };
 
-  const isBusy = createActivity.isPending || updateActivity.isPending || addCommission.isPending || isUploadingDocument;
+  const isBusy = createActivity.isPending || updateActivity.isPending || addCommission.isPending || deleteCommission.isPending || isUploadingDocument;
 
   return (
     <DashboardLayoutCustom>
@@ -414,8 +451,8 @@ export default function Activities() {
                   <Input className="mt-1" value={formData.theme} onChange={(event) => setFormData({ ...formData, theme: event.target.value })} />
                 </div>
                 <div>
-                  <Label>Pregador / Prelector</Label>
-                  <Input className="mt-1" value={formData.speakerName} onChange={(event) => setFormData({ ...formData, speakerName: event.target.value })} placeholder="Nome do pregador ou prelector" />
+                  <Label>Pregador / Preletor</Label>
+                  <Input className="mt-1" value={formData.speakerName} onChange={(event) => setFormData({ ...formData, speakerName: event.target.value })} placeholder="Nome do pregador ou preletor" />
                 </div>
                 {formData.isReligious && formData.type !== "social" && (
                   <div>
@@ -441,8 +478,8 @@ export default function Activities() {
                     <Button type="button" variant="outline" onClick={() => setCommissionRows((rows) => [...rows, blankCommission()])}><Plus className="mr-2 h-4 w-4" />Adicionar pessoa</Button>
                   </div>
                   {commissionRows.map((row, index) => (
-                    <div key={`${index}-${row.memberId}`} className="grid gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800 md:grid-cols-[1.4fr_1fr_1fr_auto]">
-                      <div><Label className="text-xs">Nome</Label><Select value={row.memberId || "sem-membro"} onValueChange={(value) => updateCommissionRow(index, { memberId: value === "sem-membro" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar membro" /></SelectTrigger><SelectContent><SelectItem value="sem-membro">Seleccionar membro</SelectItem>{(membersQuery.data ?? []).map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div key={`${row.id ?? "novo"}-${index}`} className="grid gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-800">
+                      <div><Label className="text-xs">Nome</Label><Select value={row.memberId || "sem-membro"} onValueChange={(value) => updateCommissionRow(index, { memberId: value === "sem-membro" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar membro" /></SelectTrigger><SelectContent><SelectItem value="sem-membro">Seleccionar membro</SelectItem>{membersQuery.isLoading && <SelectItem value="a-carregar" disabled>A carregar membros…</SelectItem>}{!membersQuery.isLoading && !(membersQuery.data ?? []).length && <SelectItem value="sem-resultados" disabled>Não existem membros disponíveis</SelectItem>}{(membersQuery.data ?? []).map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name}</SelectItem>)}</SelectContent></Select>{membersQuery.isError && <p className="mt-1 text-xs text-red-600">Não foi possível carregar os membros.</p>}</div>
                       <div><Label className="text-xs">Cargo na comissão</Label><Input className="mt-1" value={row.role} onChange={(event) => updateCommissionRow(index, { role: event.target.value })} placeholder="Coordenador" /></div>
                       <div><Label className="text-xs">Número (opcional)</Label><Input className="mt-1" value={row.phone} onChange={(event) => updateCommissionRow(index, { phone: event.target.value })} placeholder="Contacto" /></div>
                       <Button type="button" variant="ghost" className="self-end text-red-600" disabled={commissionRows.length === 1} onClick={() => setCommissionRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} aria-label="Remover pessoa"><Trash2 className="h-4 w-4" /></Button>
@@ -484,7 +521,7 @@ export default function Activities() {
                   <div className="flex flex-wrap items-center gap-2"><RecordIdBadge id={activity.id} /><h3 className="font-semibold">{activity.name}</h3>{activity.type && <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">{activity.type}</span>}<span className={`rounded-full px-2 py-1 text-xs font-semibold ${activity.status === "realizada" ? "bg-blue-100 text-blue-800" : activity.status === "cancelada" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{activity.status === "realizada" ? "Concluída" : activity.status === "cancelada" ? "Cancelada" : "Planeada"}</span></div>
                   <div className="mt-2 grid gap-2 text-sm text-slate-500 sm:grid-cols-3"><span className="flex items-center gap-2"><Calendar className="h-4 w-4" />{format(new Date(activity.date), "dd/MM/yyyy", { locale: pt })}</span>{activity.location && <span className="flex items-center gap-2"><MapPin className="h-4 w-4" />{activity.location}</span>}<span className="flex items-center gap-2"><Users className="h-4 w-4" />{activity.hasCommission ? "Com comissão" : "Sem comissão"}</span></div>
                   {activity.theme && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Tema: {activity.theme}</p>}
-                  {activity.speakerName && <p className="text-sm text-slate-600 dark:text-slate-300">Pregador/Prelector: {activity.speakerName}</p>}
+                  {activity.speakerName && <p className="text-sm text-slate-600 dark:text-slate-300">Pregador/Preletor: {activity.speakerName}</p>}
                   {activity.type === "reunião" && activity.meetingAgenda && <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300"><strong>Ordem do dia:</strong> {activity.meetingAgenda}</p>}
                   {activity.type === "reunião" && activity.meetingReason && <p className="text-sm text-slate-600 dark:text-slate-300"><strong>Motivo:</strong> {activity.meetingReason}</p>}
                   {activity.isReligious && activity.type !== "social" && activity.biblicalReference && <p className="text-sm text-slate-600 dark:text-slate-300">Referência bíblica: {activity.biblicalReference}</p>}

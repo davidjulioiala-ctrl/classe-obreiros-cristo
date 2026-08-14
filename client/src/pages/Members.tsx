@@ -25,7 +25,7 @@ const emptyForm = {
   phoneOrange: "",
   phoneTelecel: "",
   email: "",
-  position: "",
+  position: "Membro",
   leaderRole: "",
   louvorRole: "",
   isGuest: false,
@@ -33,6 +33,8 @@ const emptyForm = {
 };
 
 type MemberForm = typeof emptyForm;
+
+const optionalText = (value: string) => value.trim() || undefined;
 
 function calculateAge(birthDate?: string | Date | null) {
   if (!birthDate) return null;
@@ -114,10 +116,21 @@ export default function Members() {
       return;
     }
     const normalized = {
-      ...formData,
       name: formData.name.trim(),
+      sex: formData.sex,
       birthDate: formData.birthDate || undefined,
-      email: formData.email.trim() || undefined,
+      father: optionalText(formData.father),
+      mother: optionalText(formData.mother),
+      nationality: optionalText(formData.nationality),
+      region: optionalText(formData.region),
+      residence: optionalText(formData.residence),
+      phoneOrange: optionalText(formData.phoneOrange),
+      phoneTelecel: optionalText(formData.phoneTelecel),
+      email: optionalText(formData.email),
+      position: optionalText(formData.position),
+      leaderRole: optionalText(formData.leaderRole),
+      louvorRole: optionalText(formData.louvorRole),
+      isGuest: formData.isGuest,
       groupId: formData.groupId ? Number(formData.groupId) : undefined,
     };
     if (editingId) updateMemberMutation.mutate({ id: editingId, data: normalized });
@@ -126,8 +139,8 @@ export default function Members() {
 
   const openEdit = (member: NonNullable<typeof members>[number]) => {
     setEditingId(member.id);
-    setFormData({
-      name: member.name,
+      setFormData({
+        name: member.name,
       sex: member.sex,
       birthDate: member.birthDate ? new Date(member.birthDate).toISOString().slice(0, 10) : "",
       father: member.father ?? "",
@@ -138,7 +151,7 @@ export default function Members() {
       phoneOrange: member.phoneOrange ?? "",
       phoneTelecel: member.phoneTelecel ?? "",
       email: member.email ?? "",
-      position: member.position ?? "",
+      position: member.position ?? "Membro",
       leaderRole: member.leaderRole ?? "",
       louvorRole: member.louvorRole ?? "",
       isGuest: member.isGuest ?? false,
