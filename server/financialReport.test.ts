@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as XLSX from "xlsx";
 import { generateFinancialExcel, summarizeFinancialReport } from "./financialReport";
 
 describe("financial reports", () => {
@@ -29,5 +30,16 @@ describe("financial reports", () => {
     const output = generateFinancialExcel(payload);
     expect(Buffer.isBuffer(output)).toBe(true);
     expect(output.subarray(0, 2).toString("hex")).toBe("504b");
+  });
+
+  it("omits the responsible column when personal data is disabled", () => {
+    const output = generateFinancialExcel({
+      ...payload,
+      includePersonalData: false,
+      otherIncome: [{ ...payload.otherIncome[0], responsible: "Pessoa confidencial" }],
+    });
+    const workbook = XLSX.read(output, { type: "buffer" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Outras receitas"]);
+    expect(rows[0]).not.toHaveProperty("Responsável");
   });
 });

@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers, listReports } from "./db";
-import { generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf } from "./listExport";
+import { generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsPdf, sanitizeMemberExportColumns } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
 import { MEMBER_EXPORT_COLUMN_KEYS, REPORT_EXPORT_COLUMN_KEYS, type MemberExportColumn, type ReportExportColumn } from "../shared/exportColumns";
 
@@ -11,6 +11,10 @@ function canExportReports(user: { role: string; churchRole: string } | null) {
 
 function safeSearch(value: unknown) {
   return String(value ?? "").trim().slice(0, 100);
+}
+
+function parseIncludePersonalData(value: unknown) {
+  return String(Array.isArray(value) ? value[0] : value ?? "false").toLowerCase() === "true";
 }
 
 function parseColumns<T extends string>(value: unknown, allowed: readonly T[]): T[] | null {
@@ -31,8 +35,10 @@ export function registerListExportRoutes(app: Express) {
       const format = req.params.format;
       if (format !== "pdf" && format !== "csv" && format !== "xlsx") return res.status(400).json({ error: "Formato inválido" });
       const search = safeSearch(req.query.search).toLocaleLowerCase("pt-PT");
-      const columns = parseColumns(req.query.columns, MEMBER_EXPORT_COLUMN_KEYS);
-      if (!columns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
+      const requestedColumns = parseColumns(req.query.columns, MEMBER_EXPORT_COLUMN_KEYS);
+      if (!requestedColumns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
+      const columns = sanitizeMemberExportColumns(requestedColumns, parseIncludePersonalData(req.query.includePersonalData));
+      if (columns.length === 0) return res.status(400).json({ error: "Seleccione pelo menos uma coluna não pessoal para exportar." });
       const members = (await getAllMembers()).filter((member) => !search || member.name.toLocaleLowerCase("pt-PT").includes(search));
       const suffix = search ? "-pesquisa" : "";
       if (format === "pdf") {

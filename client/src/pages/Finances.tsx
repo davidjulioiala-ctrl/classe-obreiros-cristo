@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
+import { ExportColumnDialog } from "@/components/ExportColumnDialog";
 
 const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 type Tab = "quotas" | "income" | "expenses";
@@ -40,6 +41,9 @@ export default function Finances() {
   const [quotaAmount, setQuotaAmount] = useState("100");
   const [reportStart, setReportStart] = useState(`${new Date().getFullYear()}-01-01`);
   const [reportEnd, setReportEnd] = useState(today());
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [pendingReportFormat, setPendingReportFormat] = useState<"pdf" | "xlsx">("pdf");
+  const [reportColumns, setReportColumns] = useState<string[]>(["lancamentos"]);
 
   const membersQuery = trpc.members.list.useQuery();
   const quotasQuery = trpc.quotas.list.useQuery();
@@ -141,12 +145,18 @@ export default function Finances() {
     setExpenseForm({ designation: item.designation, quantity: String(item.quantity), unitPrice: String(item.unitPrice), date: dateOnly(item.date), responsibleName: item.responsibleName ?? "" });
   }
 
-  function downloadReport(format: "pdf" | "xlsx") {
+  function requestReport(format: "pdf" | "xlsx") {
     if (!reportStart || !reportEnd || reportStart > reportEnd) return toast.error("Escolha um intervalo de datas válido.");
+    setPendingReportFormat(format);
+    setReportDialogOpen(true);
+  }
+
+  function downloadReport(format: "pdf" | "xlsx", includePersonalData: boolean) {
     const link = document.createElement("a");
-    link.href = `/api/finances/report/${format}?startDate=${encodeURIComponent(reportStart)}&endDate=${encodeURIComponent(reportEnd)}`;
+    link.href = `/api/finances/report/${format}?startDate=${encodeURIComponent(reportStart)}&endDate=${encodeURIComponent(reportEnd)}&includePersonalData=${includePersonalData ? "true" : "false"}`;
     link.download = `relatorio-financeiro-${reportStart}-${reportEnd}.${format === "pdf" ? "pdf" : "xlsx"}`;
     document.body.appendChild(link); link.click(); link.remove();
+    setReportDialogOpen(false);
   }
 
   return (
@@ -174,7 +184,7 @@ export default function Finances() {
 
         <Card className="border-slate-200 p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="font-semibold text-slate-900 dark:text-white">Gerar relatório financeiro</h2><p className="text-sm text-slate-500">Escolha o intervalo e exporte o resumo completo com os lançamentos.</p></div><div className="grid gap-2 sm:grid-cols-2"><label className="text-xs font-medium text-slate-500">Data inicial<Input className="mt-1" type="date" value={reportStart} onChange={(event) => setReportStart(event.target.value)} /></label><label className="text-xs font-medium text-slate-500">Data final<Input className="mt-1" type="date" value={reportEnd} onChange={(event) => setReportEnd(event.target.value)} /></label></div></div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => downloadReport("pdf")}><FileDown className="mr-2 h-4 w-4" />Exportar PDF</Button><Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => downloadReport("xlsx")}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar Excel</Button></div>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => requestReport("pdf")}><FileDown className="mr-2 h-4 w-4" />Exportar PDF</Button><Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => requestReport("xlsx")}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar Excel</Button></div>
         </Card>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{(["quotas", "income", "expenses"] as const).map((value) => <Button key={value} variant={tab === value ? "default" : "outline"} onClick={() => setTab(value)} className={tab === value ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>{value === "quotas" ? "Quotas" : value === "income" ? "Outras receitas" : "Despesas"}</Button>)}</div>
@@ -185,6 +195,7 @@ export default function Finances() {
 
         {tab === "expenses" && <ExpenseSection busy={busy} form={expenseForm} setForm={setExpenseForm} items={filteredExpenses} allItemsCount={expensesQuery.data?.length ?? 0} loading={expensesQuery.isLoading} search={expenseSearch} setSearch={setExpenseSearch} editingId={editingExpense} onSubmit={submitExpense} onEdit={startExpenseEdit} onCancel={() => { setEditingExpense(null); setExpenseForm({ designation: "", quantity: "1", unitPrice: "", date: today(), responsibleName: "" }); }} onDelete={(id) => { if (confirm("Eliminar esta despesa?")) deleteExpense.mutate({ id }); }} />}
       </div>
+      <ExportColumnDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen} title={`Exportar relatório financeiro em ${pendingReportFormat === "pdf" ? "PDF" : "Excel"}`} description="Confirme os dados que devem aparecer no ficheiro financeiro." columns={[{ key: "lancamentos", label: "Lançamentos financeiros" }]} selected={reportColumns} onConfirm={(_, includePersonalData) => { setReportColumns(["lancamentos"]); downloadReport(pendingReportFormat, includePersonalData); }} confirmLabel={`Exportar ${pendingReportFormat === "pdf" ? "PDF" : "Excel"}`} askPersonalData defaultIncludePersonalData={false} />
     </DashboardLayoutCustom>
   );
 }

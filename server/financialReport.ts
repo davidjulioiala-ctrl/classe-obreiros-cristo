@@ -5,9 +5,10 @@ import { drawPdfHeader, loadPdfBranding, pdfFooterText } from "./pdfBranding";
 export type FinancialReportPayload = {
   startDate: string;
   endDate: string;
-  quotas: Array<{ memberId: number; month: number; year: number; amount: string | number; isPaid: boolean }>;
-  otherIncome: Array<{ description: string; amount: string | number; date: Date | string }>;
-  expenses: Array<{ designation: string; quantity: number; unitPrice: string | number; totalPrice: string | number; date: Date | string }>;
+  includePersonalData?: boolean;
+  quotas: Array<{ memberId: number; month: number; year: number; amount: string | number; isPaid: boolean; responsible?: string | null }>;
+  otherIncome: Array<{ description: string; amount: string | number; date: Date | string; responsible?: string | null }>;
+  expenses: Array<{ designation: string; quantity: number; unitPrice: string | number; totalPrice: string | number; date: Date | string; responsible?: string | null }>;
 };
 
 function money(value: number) {
@@ -46,14 +47,24 @@ export async function generateFinancialPdf(payload: FinancialReportPayload) {
   }
   let y = 235;
   const line = (text: string, color = "#0f172a") => { doc.fillColor(color).fontSize(9).text(text, 36, y, { width: 760 }); y += 15; };
+  const showPersonal = payload.includePersonalData !== false;
   line("COTAS PAGAS", "#047857");
-  for (const quota of payload.quotas.filter((item) => item.isPaid)) line(`Membro #${quota.memberId} · ${String(quota.month).padStart(2, "0")}/${quota.year} · ${money(Number(quota.amount))}`);
+  for (const quota of payload.quotas.filter((item) => item.isPaid)) {
+    const resp = showPersonal && quota.responsible ? ` · Resp: ${quota.responsible}` : "";
+    line(`Membro #${quota.memberId} · ${String(quota.month).padStart(2, "0")}/${quota.year} · ${money(Number(quota.amount))}${resp}`);
+  }
   y += 6;
   line("OUTRAS RECEITAS", "#047857");
-  for (const income of payload.otherIncome) line(`${String(income.date).slice(0, 10)} · ${income.description} · ${money(Number(income.amount))}`);
+  for (const income of payload.otherIncome) {
+    const resp = showPersonal && income.responsible ? ` · Resp: ${income.responsible}` : "";
+    line(`${String(income.date).slice(0, 10)} · ${income.description} · ${money(Number(income.amount))}${resp}`);
+  }
   y += 6;
   line("DESPESAS", "#b91c1c");
-  for (const expense of payload.expenses) line(`${String(expense.date).slice(0, 10)} · ${expense.designation} · ${expense.quantity} × ${money(Number(expense.unitPrice))} = ${money(Number(expense.totalPrice))}`);
+  for (const expense of payload.expenses) {
+    const resp = showPersonal && expense.responsible ? ` · Resp: ${expense.responsible}` : "";
+    line(`${String(expense.date).slice(0, 10)} · ${expense.designation} · ${expense.quantity} × ${money(Number(expense.unitPrice))} = ${money(Number(expense.totalPrice))}${resp}`);
+  }
   doc.fontSize(8).fillColor("#64748b").text(pdfFooterText(branding, "documento gerado pelo sistema"), 36, 560, { width: 760, align: "center" });
   doc.end();
   return new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
@@ -71,8 +82,9 @@ export function generateFinancialExcel(payload: FinancialReportPayload) {
     { Indicador: "Saldo", Valor: totals.balance },
   ];
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summaryRows), "Resumo");
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.quotas.filter((quota) => quota.isPaid).map((quota) => ({ Membro: quota.memberId, Mes: quota.month, Ano: quota.year, Valor: Number(quota.amount), Estado: "Pago" }))), "Cotas");
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.otherIncome.map((income) => ({ Data: String(income.date).slice(0, 10), Descrição: income.description, Valor: Number(income.amount) }))), "Outras receitas");
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.expenses.map((expense) => ({ Data: String(expense.date).slice(0, 10), Designação: expense.designation, Quantidade: expense.quantity, Preço_unitário: Number(expense.unitPrice), Total: Number(expense.totalPrice) }))), "Despesas");
+  const showPersonal = payload.includePersonalData !== false;
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.quotas.filter((quota) => quota.isPaid).map((quota) => ({ Membro: quota.memberId, Mes: quota.month, Ano: quota.year, Valor: Number(quota.amount), Estado: "Pago", ...(showPersonal ? { Responsável: quota.responsible || "" } : {}) }))), "Cotas");
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.otherIncome.map((income) => ({ Data: String(income.date).slice(0, 10), Descrição: income.description, Valor: Number(income.amount), ...(showPersonal ? { Responsável: income.responsible || "" } : {}) }))), "Outras receitas");
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(payload.expenses.map((expense) => ({ Data: String(expense.date).slice(0, 10), Designação: expense.designation, Quantidade: expense.quantity, Preço_unitário: Number(expense.unitPrice), Total: Number(expense.totalPrice), ...(showPersonal ? { Responsável: expense.responsible || "" } : {}) }))), "Despesas");
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }

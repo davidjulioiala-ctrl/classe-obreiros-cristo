@@ -8,6 +8,7 @@ import {
   REPORT_EXPORT_COLUMNS,
   type MemberExportColumn,
   type ReportExportColumn,
+  PERSONAL_MEMBER_EXPORT_COLUMNS,
 } from "../shared/exportColumns";
 
 type ExportMember = {
@@ -34,6 +35,11 @@ type ExportReport = {
 
 const memberLabels = Object.fromEntries(MEMBER_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<MemberExportColumn, string>;
 const reportLabels = Object.fromEntries(REPORT_EXPORT_COLUMNS.map((column) => [column.key, column.label])) as Record<ReportExportColumn, string>;
+
+export function sanitizeMemberExportColumns(columns: MemberExportColumn[], includePersonalData: boolean) {
+  if (includePersonalData) return columns;
+  return columns.filter((column) => !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]));
+}
 
 function displayDate(value: Date | string | null | undefined) {
   if (!value) return "—";

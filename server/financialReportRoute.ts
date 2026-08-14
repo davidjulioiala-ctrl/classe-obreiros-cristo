@@ -24,19 +24,20 @@ export function registerFinancialReportRoutes(app: Express) {
       if (!user || !canManageFinance(user)) return res.status(403).json({ error: "Sem permissão para exportar relatórios financeiros." });
       const range = parseRange(req);
       if (!range) return res.status(400).json({ error: "Indique um intervalo válido com startDate e endDate." });
+      const includePersonalData = String(req.query.includePersonalData ?? "false").toLowerCase() === "true";
       const raw = await getFinancialReportData(range.start, range.end);
-      const payload = { startDate: range.startDate, endDate: range.endDate, ...raw };
+      const payload = { startDate: range.startDate, endDate: range.endDate, includePersonalData, ...raw };
       if (format === "pdf") {
         const buffer = await generateFinancialPdf(payload);
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename=relatorio-financeiro-${range.startDate}-${range.endDate}.pdf`);
-        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate } });
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate, includePersonalData } });
         return res.send(buffer);
       }
       const buffer = generateFinancialExcel(payload);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=relatorio-financeiro-${range.startDate}-${range.endDate}.xlsx`);
-      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate } });
+      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação financeira concluída", actorId: user.id, resource: `relatorio-financeiro:${format}`, metadata: { formato: format, inicio: range.startDate, fim: range.endDate, includePersonalData } });
       return res.send(buffer);
     } catch (error) {
       console.error("[FinancialReport]", error);

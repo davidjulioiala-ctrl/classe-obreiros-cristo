@@ -186,7 +186,7 @@ export default function Members() {
     setExportDialogOpen(true);
   };
 
-  const exportMembers = async (columns = selectedExportColumns) => {
+  const exportMembers = async (columns = selectedExportColumns, includePersonalData = false) => {
     if (columns.length === 0) return toast.error("Seleccione pelo menos uma coluna.");
     const format = pendingExportFormat;
     setExportingFormat(format);
@@ -194,6 +194,7 @@ export default function Members() {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
       params.set("columns", columns.join(","));
+      params.set("includePersonalData", includePersonalData ? "true" : "false");
       await downloadProtectedFile(`/api/members/export/${format}?${params.toString()}`, `membros${searchQuery.trim() ? "-pesquisa" : ""}.${format}`);
       toast.success(`Lista de membros exportada em ${format.toUpperCase()}.`);
       setExportDialogOpen(false);
@@ -373,7 +374,7 @@ export default function Members() {
           <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{searchQuery.trim() ? `${filteredMembers?.length ?? 0} resultado(s) para “${searchQuery.trim()}”.` : `${members?.length ?? 0} membro(s) registado(s).`}</p>
         </div>
 
-        <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} onConfirm={(columns) => { setSelectedExportColumns(columns); void exportMembers(columns); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />
+        <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} askPersonalData defaultIncludePersonalData={false} onConfirm={(columns, includePersonalData) => { setSelectedExportColumns(columns); void exportMembers(columns, includePersonalData); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />
 
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (

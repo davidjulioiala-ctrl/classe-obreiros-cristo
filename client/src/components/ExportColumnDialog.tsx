@@ -15,15 +15,21 @@ type ExportColumnDialogProps = {
   confirmLabel: string;
   isSubmitting?: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (keys: string[]) => void;
+  onConfirm: (keys: string[], includePersonalData: boolean) => void;
+  askPersonalData?: boolean;
+  defaultIncludePersonalData?: boolean;
 };
 
-export function ExportColumnDialog({ open, title, description, columns, selected, confirmLabel, isSubmitting = false, onOpenChange, onConfirm }: ExportColumnDialogProps) {
+export function ExportColumnDialog({ open, title, description, columns, selected, confirmLabel, isSubmitting = false, onOpenChange, onConfirm, askPersonalData = false, defaultIncludePersonalData = false }: ExportColumnDialogProps) {
   const [draft, setDraft] = useState<string[]>(selected);
+  const [includePersonalData, setIncludePersonalData] = useState(defaultIncludePersonalData);
 
   useEffect(() => {
-    if (open) setDraft(selected);
-  }, [open, selected]);
+    if (open) {
+      setDraft(selected);
+      setIncludePersonalData(defaultIncludePersonalData);
+    }
+  }, [defaultIncludePersonalData, open, selected]);
 
   const toggle = (key: string, checked: boolean) => {
     const next = checked ? Array.from(new Set([...draft, key])) : draft.filter((item) => item !== key);
@@ -58,10 +64,18 @@ export function ExportColumnDialog({ open, title, description, columns, selected
             </label>
           ))}
         </div>
+        {askPersonalData && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/60 dark:bg-amber-950/20">
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-amber-950 dark:text-amber-100">
+              <Checkbox checked={includePersonalData} onCheckedChange={(checked) => setIncludePersonalData(checked === true)} />
+              <span><strong>Mostrar dados pessoais?</strong><span className="mt-1 block text-xs text-amber-800 dark:text-amber-200">Quando desactivado, telefone e email ficam fora do ficheiro exportado.</span></span>
+            </label>
+          </div>
+        )}
         <p className="text-xs text-slate-500">Seleccione pelo menos uma coluna. A selecção será aplicada ao formato escolhido quando iniciar a exportação.</p>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button type="button" disabled={draft.length === 0 || isSubmitting} onClick={() => onConfirm(draft)} className="bg-emerald-600 text-white hover:bg-emerald-700">{isSubmitting ? "A preparar…" : confirmLabel}</Button>
+          <Button type="button" disabled={draft.length === 0 || isSubmitting} onClick={() => onConfirm(draft, includePersonalData)} className="bg-emerald-600 text-white hover:bg-emerald-700">{isSubmitting ? "A preparar…" : confirmLabel}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

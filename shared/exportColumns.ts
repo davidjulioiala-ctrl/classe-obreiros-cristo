@@ -21,6 +21,9 @@ export const REPORT_EXPORT_COLUMNS = [
   { key: "content", label: "Conteúdo" },
 ] as const;
 
+export const PERSONAL_MEMBER_EXPORT_COLUMNS = ["phoneOrange", "phoneTelecel", "email"] as const;
+export type PersonalMemberExportColumn = (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number];
+
 export type MemberExportColumn = (typeof MEMBER_EXPORT_COLUMNS)[number]["key"];
 export type ReportExportColumn = (typeof REPORT_EXPORT_COLUMNS)[number]["key"];
 

@@ -83,8 +83,9 @@ export default function Dashboard() {
     { enabled: !dateRangeInvalid },
   );
 
-  const totalMembers = members?.length || 0;
-  const totalActivities = activities?.length || 0;
+  const registeredPeopleCount = members?.length ?? 0;
+  const activePeopleCount = members?.filter((member) => member.isActive).length ?? 0;
+  const totalActivities = activities?.length ?? 0;
   const chartMembers = useMemo(() => {
     if (dateRangeInvalid) return [];
     return (members ?? []).filter((member) => {
@@ -148,11 +149,12 @@ export default function Dashboard() {
         </Card>
 
         {/* Stats Grid */}
-        <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard icon={<Users className="w-6 h-6" />} label="Total de Membros" value={totalMembers} trendValue="Registo ativo" />
-          <StatCard icon={<Calendar className="w-6 h-6" />} label="Atividades Registadas" value={totalActivities} trendValue="Calendário ativo" />
-          <StatCard icon={<DollarSign className="w-6 h-6" />} label="Cotas Registadas" value={quotas?.length || 0} trendValue="Módulo financeiro" />
-          <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Grupos Operacionais" value={groups?.length || 5} trendValue="5 grupos base" />
+        <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas registadas" value={registeredPeopleCount} trendValue="Total no sistema" />
+          <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas activas" value={activePeopleCount} trendValue="Estado activo" />
+          <StatCard icon={<Calendar className="w-6 h-6" />} label="Actividades registadas" value={totalActivities} trendValue="Calendário activo" />
+          <StatCard icon={<DollarSign className="w-6 h-6" />} label="Cotas registadas" value={quotas?.length ?? 0} trendValue="Módulo financeiro" />
+          <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Grupos operacionais" value={groups?.length ?? 0} trendValue="Dados reais" />
         </motion.div>
 
         {/* Charts Grid */}
