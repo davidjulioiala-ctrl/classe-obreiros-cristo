@@ -6946,3 +6946,8 @@
 - [x] Dividir a exportação em 12 folhas/páginas (Janeiro a Dezembro) em orientação horizontal (paisagem).
 - [x] Ordenar verticalmente por ID do membro/registo e respeitar a privacidade do responsável.
 - [x] Validar testes unitários e build de produção.
+
+## Correção da Criação de Utilizadores
+- [x] Auditar a rota tRPC e o formulário de criação de utilizadores para identificar a causa da falha.
+- [x] Corrigir validação de campos, encriptação de senha e tratamento de erros.
+- [x] Validar testes unitários e build de produção.

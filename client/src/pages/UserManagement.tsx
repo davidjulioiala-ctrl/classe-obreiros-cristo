@@ -195,11 +195,15 @@ export default function UserManagement() {
       toast.error("Preencha nome, email e utilizador.");
       return;
     }
-    if (!editingUser && formData.password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (!editingUser && formData.password.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
     if (editingUser) {
+      if (formData.password && formData.password.length < 8) {
+        toast.error("A senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
       updateUser.mutate({
         userId: editingUser.id,
         username,
