@@ -45,6 +45,8 @@ export function readPreviewBody(body: unknown) {
     headerTitleText: typeof source.headerTitleText === "string" ? source.headerTitleText.slice(0, 250) : undefined,
     logoAlignment: source.logoAlignment === "left" || source.logoAlignment === "center" || source.logoAlignment === "right" ? source.logoAlignment : undefined,
     logoSize: source.logoSize === "small" || source.logoSize === "medium" || source.logoSize === "large" ? source.logoSize : undefined,
+    headerTextAlignment: source.headerTextAlignment === "left" || source.headerTextAlignment === "center" || source.headerTextAlignment === "right" ? source.headerTextAlignment : undefined,
+    headerFontSize: source.headerFontSize === "small" || source.headerFontSize === "medium" || source.headerFontSize === "large" ? source.headerFontSize : undefined,
     templateId: typeof source.templateId === "string" ? source.templateId.slice(0, 64) : undefined,
   };
 }
@@ -77,7 +79,7 @@ export function registerBrandingRoute(app: Express) {
         });
         drawPdfHeader(document, branding, "PRÉ-VISUALIZAÇÃO DO CABEÇALHO", { subtitle: "Documento de teste — as alterações ainda não guardadas são apenas visuais" });
         document.fontSize(10).fillColor("#334155").text("Este ficheiro serve para confirmar a aparência do cabeçalho antes de guardar as definições.", 42, document.y + 12, { width: 511, align: "left" });
-        document.moveDown(1.2).fontSize(9).fillColor("#64748b").text(`Alinhamento: ${branding.logoAlignment} · Tamanho: ${branding.logoSize}`, { width: 511, align: "left" });
+        document.moveDown(1.2).fontSize(9).fillColor("#64748b").text(`Logótipo: ${branding.logoAlignment} · ${branding.logoSize} | Texto: ${branding.headerTextAlignment} · Fonte: ${branding.headerFontSize}`, { width: 511, align: "left" });
         document.end();
       } catch (error) {
         console.error("[OrganizationBrandingPreview]", error);

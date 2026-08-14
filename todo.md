@@ -6683,3 +6683,10 @@
 - [x] Corrigir o carregamento e as acções do menu Configurações.
 - [x] Adicionar formatação básica no texto personalizado dos cabeçalhos.
 - [x] Criar testes de regressão e validar typecheck, testes, build e publicação.
+
+
+## Melhoria solicitada — alinhamento e tamanho de fonte do cabeçalho
+- [x] Adicionar alinhamento do texto do cabeçalho aos modelos e ao editor activo.
+- [x] Adicionar tamanho de fonte configurável ao texto do cabeçalho.
+- [x] Reflectir alinhamento e tamanho na pré-visualização, gravação dos modelos e PDFs exportados.
+- [x] Criar testes de regressão, executar typecheck, testes e build, e publicar a versão validada.

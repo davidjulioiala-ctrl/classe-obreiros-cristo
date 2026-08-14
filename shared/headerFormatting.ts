@@ -1,5 +1,22 @@
 export type HeaderFormatTag = "b" | "i" | "u";
 
+export type HeaderTextAlignment = "left" | "center" | "right";
+export type HeaderFontSizePreset = "small" | "medium" | "large";
+
+export const HEADER_FONT_SIZE_POINTS: Record<HeaderFontSizePreset, number> = {
+  small: 12,
+  medium: 16,
+  large: 20,
+};
+
+export function normalizeHeaderTextAlignment(value: unknown): HeaderTextAlignment {
+  return value === "left" || value === "right" ? value : "center";
+}
+
+export function normalizeHeaderFontSize(value: unknown): HeaderFontSizePreset {
+  return value === "small" || value === "large" ? value : "medium";
+}
+
 export type HeaderTextSegment = {
   text: string;
   bold: boolean;

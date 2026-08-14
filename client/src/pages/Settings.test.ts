@@ -17,5 +17,9 @@ describe("personalização de cabeçalhos", () => {
     expect(settingsSource).toContain("Pressione Enter para iniciar uma nova linha.");
     expect(settingsSource).toContain("HeaderFormattingToolbar");
     expect(settingsSource).toContain("FormattedHeaderPreview");
+    expect(settingsSource).toContain("pdf-header-text-alignment");
+    expect(settingsSource).toContain("pdf-header-font-size");
+    expect(settingsSource).toContain("templateFormTextAlignment");
+    expect(settingsSource).toContain("templateFormFontSize");
   });
 });

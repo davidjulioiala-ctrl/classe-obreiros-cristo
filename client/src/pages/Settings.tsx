@@ -10,7 +10,18 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
-import { parseHeaderText, type HeaderFormatTag } from "@shared/headerFormatting";
+import { HEADER_FONT_SIZE_POINTS, normalizeHeaderFontSize, normalizeHeaderTextAlignment, parseHeaderText, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
+
+type HeaderTemplate = {
+  id: string;
+  name: string;
+  headerTitleText: string;
+  logoAlignment: "left" | "center" | "right";
+  logoSize: "small" | "medium" | "large";
+  headerTextAlignment: HeaderTextAlignment;
+  headerFontSize: HeaderFontSizePreset;
+  isDefault?: boolean;
+};
 
 type HeaderFormattingToolbarProps = {
   onFormat: (tag: HeaderFormatTag) => void;
@@ -85,8 +96,10 @@ export default function Settings() {
   const [logoName, setLogoName] = useState("");
   const [logoAlignment, setLogoAlignment] = useState<"left" | "center" | "right">("center");
   const [logoSize, setLogoSize] = useState<"small" | "medium" | "large">("medium");
-  const [headerTemplates, setHeaderTemplates] = useState<Array<{ id: string; name: string; headerTitleText: string; logoAlignment: "left" | "center" | "right"; logoSize: "small" | "medium" | "large"; isDefault?: boolean }>>([
-    { id: "default", name: "Modelo Principal (Padrão)", headerTitleText: "Classe Obreiros de Cristo", logoAlignment: "center", logoSize: "medium", isDefault: true }
+  const [headerTextAlignment, setHeaderTextAlignment] = useState<HeaderTextAlignment>("center");
+  const [headerFontSize, setHeaderFontSize] = useState<HeaderFontSizePreset>("medium");
+  const [headerTemplates, setHeaderTemplates] = useState<HeaderTemplate[]>([
+    { id: "default", name: "Modelo Principal (Padrão)", headerTitleText: "Classe Obreiros de Cristo", logoAlignment: "center", logoSize: "medium", headerTextAlignment: "center", headerFontSize: "medium", isDefault: true }
   ]);
   const [activeTemplateId, setActiveTemplateId] = useState("default");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -96,6 +109,8 @@ export default function Settings() {
   const [templateFormTitle, setTemplateFormTitle] = useState("");
   const [templateFormAlignment, setTemplateFormAlignment] = useState<"left" | "center" | "right">("center");
   const [templateFormSize, setTemplateFormSize] = useState<"small" | "medium" | "large">("medium");
+  const [templateFormTextAlignment, setTemplateFormTextAlignment] = useState<HeaderTextAlignment>("center");
+  const [templateFormFontSize, setTemplateFormFontSize] = useState<HeaderFontSizePreset>("medium");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDownloadingPreview, setIsDownloadingPreview] = useState(false);
   const [showOrganizationSaved, setShowOrganizationSaved] = useState(false);
@@ -144,8 +159,19 @@ export default function Settings() {
         if (parsed.logoName) setLogoName(parsed.logoName);
         if (parsed.logoAlignment === "left" || parsed.logoAlignment === "center" || parsed.logoAlignment === "right") setLogoAlignment(parsed.logoAlignment);
         if (parsed.logoSize === "small" || parsed.logoSize === "medium" || parsed.logoSize === "large") setLogoSize(parsed.logoSize);
+        if (parsed.headerTextAlignment) setHeaderTextAlignment(normalizeHeaderTextAlignment(parsed.headerTextAlignment));
+        if (parsed.headerFontSize) setHeaderFontSize(normalizeHeaderFontSize(parsed.headerFontSize));
         if (Array.isArray(parsed.headerTemplates) && parsed.headerTemplates.length > 0) {
-          setHeaderTemplates(parsed.headerTemplates);
+          setHeaderTemplates(parsed.headerTemplates.map((template: Partial<HeaderTemplate>, index: number) => ({
+            id: typeof template.id === "string" && template.id ? template.id : `tpl_${index + 1}`,
+            name: typeof template.name === "string" && template.name ? template.name : `Modelo ${index + 1}`,
+            headerTitleText: typeof template.headerTitleText === "string" ? template.headerTitleText : "",
+            logoAlignment: template.logoAlignment === "left" || template.logoAlignment === "right" ? template.logoAlignment : "center",
+            logoSize: template.logoSize === "small" || template.logoSize === "large" ? template.logoSize : "medium",
+            headerTextAlignment: normalizeHeaderTextAlignment(template.headerTextAlignment),
+            headerFontSize: normalizeHeaderFontSize(template.headerFontSize),
+            isDefault: Boolean(template.isDefault),
+          })));
         }
         if (typeof parsed.activeTemplateId === "string") {
           setActiveTemplateId(parsed.activeTemplateId);
@@ -181,12 +207,12 @@ export default function Settings() {
 
   const updateActiveHeaderText = (value: string) => {
     setHeaderTitleText(value);
-    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize } : template));
+    setHeaderTemplates((templates) => templates.map((template) => template.id === activeTemplateId ? { ...template, headerTitleText: value, logoAlignment, logoSize, headerTextAlignment, headerFontSize } : template));
   };
 
   const handleSaveOrganization = () => {
     setShowOrganizationSaved(false);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTemplates, activeTemplateId }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -195,6 +221,8 @@ export default function Settings() {
     setTemplateFormTitle(template.headerTitleText);
     setTemplateFormAlignment(template.logoAlignment);
     setTemplateFormSize(template.logoSize);
+    setTemplateFormTextAlignment(template.headerTextAlignment ?? "center");
+    setTemplateFormFontSize(template.headerFontSize ?? "medium");
   };
 
   const handleCreateHeaderTemplate = () => {
@@ -205,6 +233,8 @@ export default function Settings() {
       headerTitleText: headerTitleText || "Novo cabeçalho",
       logoAlignment,
       logoSize,
+      headerTextAlignment,
+      headerFontSize,
       isDefault: false,
     };
     const nextTemplates = [...headerTemplates, newTemplate];
@@ -213,10 +243,12 @@ export default function Settings() {
     setHeaderTitleText(newTemplate.headerTitleText);
     setLogoAlignment(newTemplate.logoAlignment);
     setLogoSize(newTemplate.logoSize);
+    setHeaderTextAlignment(newTemplate.headerTextAlignment);
+    setHeaderFontSize(newTemplate.headerFontSize);
     beginEditTemplate(newTemplate);
     organizationSaveMutation.mutate({
       keyName: "organization",
-      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTemplates: nextTemplates, activeTemplateId: newId }),
+      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTextAlignment: newTemplate.headerTextAlignment, headerFontSize: newTemplate.headerFontSize, headerTemplates: nextTemplates, activeTemplateId: newId }),
     });
     toast.success("Novo modelo criado. Preencha os dados e guarde as alterações.");
   };
@@ -229,12 +261,14 @@ export default function Settings() {
       toast.error("Indique o nome e o texto do cabeçalho.");
       return;
     }
-    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize } : template);
+    const nextTemplates = headerTemplates.map((template) => template.id === editingTemplateId ? { ...template, name, headerTitleText: templateFormTitle, logoAlignment: templateFormAlignment, logoSize: templateFormSize, headerTextAlignment: templateFormTextAlignment, headerFontSize: templateFormFontSize } : template);
     setHeaderTemplates(nextTemplates);
     setActiveTemplateId(editingTemplateId);
     setHeaderTitleText(templateFormTitle);
     setLogoAlignment(templateFormAlignment);
     setLogoSize(templateFormSize);
+    setHeaderTextAlignment(templateFormTextAlignment);
+    setHeaderFontSize(templateFormFontSize);
     setEditingTemplateId(null);
     toast.success("Modelo de cabeçalho actualizado. Guarde as alterações para confirmar.");
   };
@@ -272,7 +306,7 @@ export default function Settings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ congregationName: organizationName, headerTitleText, logoAlignment, logoSize }),
+        body: JSON.stringify({ congregationName: organizationName, headerTitleText, logoAlignment, logoSize, headerTextAlignment, headerFontSize }),
       });
       if (!response.ok) {
         const result = (await response.json().catch(() => ({}))) as { error?: string };
@@ -309,6 +343,7 @@ export default function Settings() {
   };
 
   const previewLogoSize = getPdfPreviewLogoSize(logoSize);
+  const previewHeaderFontSize = HEADER_FONT_SIZE_POINTS[headerFontSize];
   const previewName = getPdfPreviewName(headerTitleText || organizationName);
   const editingTemplate = editingTemplateId ? headerTemplates.find((template) => template.id === editingTemplateId) : null;
 
@@ -366,6 +401,8 @@ export default function Settings() {
                           setHeaderTitleText(tpl.headerTitleText);
                           if (tpl.logoAlignment) setLogoAlignment(tpl.logoAlignment);
                           if (tpl.logoSize) setLogoSize(tpl.logoSize);
+                          setHeaderTextAlignment(tpl.headerTextAlignment ?? "center");
+                          setHeaderFontSize(tpl.headerFontSize ?? "medium");
                           toast.success(`Modelo "${tpl.name}" selecionado.`);
                         }} className="min-w-0 flex-1 text-left">
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{tpl.name} {activeTemplateId === tpl.id ? "(Ativo)" : ""}</p>
@@ -379,6 +416,8 @@ export default function Settings() {
                               setHeaderTitleText(tpl.headerTitleText);
                               setLogoAlignment(tpl.logoAlignment);
                               setLogoSize(tpl.logoSize);
+                              setHeaderTextAlignment(tpl.headerTextAlignment ?? "center");
+                              setHeaderFontSize(tpl.headerFontSize ?? "medium");
                               toast.success(`Modelo "${tpl.name}" definido como padrão.`);
                             }}>Definir como Padrão</Button>
                           ) : <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Padrão</span>}
@@ -392,6 +431,8 @@ export default function Settings() {
                                 setHeaderTitleText(remaining[0].headerTitleText);
                                 setLogoAlignment(remaining[0].logoAlignment);
                                 setLogoSize(remaining[0].logoSize);
+                                setHeaderTextAlignment(remaining[0].headerTextAlignment ?? "center");
+                                setHeaderFontSize(remaining[0].headerFontSize ?? "medium");
                               }
                               toast.success("Modelo removido.");
                             }}>Apagar</Button>
@@ -428,6 +469,18 @@ export default function Settings() {
                           <option value="small">Pequeno</option><option value="medium">Médio</option><option value="large">Grande</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Alinhamento do texto</label>
+                        <select value={templateFormTextAlignment} onChange={(event) => setTemplateFormTextAlignment(event.target.value as HeaderTextAlignment)} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                          <option value="left">À esquerda</option><option value="center">Centrado</option><option value="right">À direita</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho da fonte</label>
+                        <select value={templateFormFontSize} onChange={(event) => setTemplateFormFontSize(event.target.value as HeaderFontSizePreset)} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                          <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
+                        </select>
+                      </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Texto do cabeçalho</label>
                         <textarea ref={templateTitleRef} rows={4} value={templateFormTitle} onChange={(event) => setTemplateFormTitle(event.target.value)} className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" placeholder="Escreva o texto que deve aparecer no cabeçalho" />
@@ -445,6 +498,20 @@ export default function Settings() {
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Texto do Cabeçalho Ativo no PDF</label>
                   <textarea ref={activeHeaderTitleRef} rows={4} value={headerTitleText} onChange={(e) => updateActiveHeaderText(e.target.value)} placeholder="Ex: Classe Obreiros de Cristo" className="mt-1 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white" />
                   <HeaderFormattingToolbar onFormat={(tag) => applyHeaderFormat(activeHeaderTitleRef, headerTitleText, updateActiveHeaderText, tag)} onClear={() => clearHeaderFormat(headerTitleText, updateActiveHeaderText)} />
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="pdf-header-text-alignment" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Alinhamento do texto</label>
+                      <select id="pdf-header-text-alignment" value={headerTextAlignment} onChange={(event) => setHeaderTextAlignment(event.target.value as HeaderTextAlignment)} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                        <option value="left">À esquerda</option><option value="center">Centrado</option><option value="right">À direita</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="pdf-header-font-size" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Tamanho da fonte</label>
+                      <select id="pdf-header-font-size" value={headerFontSize} onChange={(event) => setHeaderFontSize(event.target.value as HeaderFontSizePreset)} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                        <option value="small">Pequena</option><option value="medium">Média</option><option value="large">Grande</option>
+                      </select>
+                    </div>
+                  </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Texto flexível apresentado no topo dos relatórios, atas e documentos exportados. Pressione Enter para iniciar uma nova linha.</p>
                 </div>
                 <div>
@@ -512,7 +579,7 @@ export default function Settings() {
                         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
                           <div className="min-h-[190px] p-5 sm:p-7">
                             {logoAlignment === "center" ? (
-                              <div className="flex flex-col items-center text-center">
+                              <div className="flex flex-col items-center" style={{ textAlign: headerTextAlignment }}>
                                 {logoUrl ? (
                                   <img src={logoUrl} alt="Pré-visualização do logótipo no cabeçalho" className="shrink-0 object-contain" style={{ width: previewLogoSize, height: previewLogoSize }} />
                                 ) : (
@@ -520,12 +587,12 @@ export default function Settings() {
                                     <ImageIcon className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <p className="mt-3 max-w-full break-words text-base text-emerald-900 dark:text-emerald-200"><FormattedHeaderPreview value={previewName} /></p>
+                                <p className="mt-3 max-w-full break-words text-emerald-900 dark:text-emerald-200" style={{ fontSize: `${previewHeaderFontSize}px`, textAlign: headerTextAlignment }}><FormattedHeaderPreview value={previewName} /></p>
                                 <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                               </div>
                             ) : (
-                              <div className={`flex items-center gap-4 ${logoAlignment === "right" ? "flex-row-reverse text-right" : "text-left"}`}>
+                              <div className={`flex items-center gap-4 ${logoAlignment === "right" ? "flex-row-reverse" : ""}`}>
                                 {logoUrl ? (
                                   <img src={logoUrl} alt="Pré-visualização do logótipo no cabeçalho" className="shrink-0 object-contain" style={{ width: previewLogoSize, height: previewLogoSize }} />
                                 ) : (
@@ -533,8 +600,8 @@ export default function Settings() {
                                     <ImageIcon className="h-7 w-7" aria-hidden="true" />
                                   </div>
                                 )}
-                                <div className="min-w-0 flex-1">
-                                  <p className="break-words text-base text-emerald-900 dark:text-emerald-200"><FormattedHeaderPreview value={previewName} /></p>
+                                <div className="min-w-0 flex-1" style={{ textAlign: headerTextAlignment }}>
+                                  <p className="break-words text-emerald-900 dark:text-emerald-200" style={{ fontSize: `${previewHeaderFontSize}px` }}><FormattedHeaderPreview value={previewName} /></p>
                                   <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Sistema de Gestão Eclesiástica</p>
                                   <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Relatório de exemplo</p>
                                 </div>
