@@ -6897,3 +6897,11 @@
 - [x] Adicionar filtros por mês específico e ano inteiro.
 - [x] Extrair nomes de pessoas que pararam de pagar e de pessoas com quota em falta.
 - [x] Validar permissões, dados históricos, exportação e testes sem alterar lançamentos existentes.
+
+## Quotas — pagamento por valor com distribuição automática
+- [x] Auditar o modelo actual de quotas, último mês pago e regras de períodos.
+- [x] Criar cálculo seguro para distribuir o valor recebido pelos meses em falta a partir do último mês pago.
+- [x] Permitir pagamentos parciais, saldo residual e confirmação de simulação antes de guardar.
+- [x] Integrar pesquisa da pessoa, valor recebido e pré-visualização dos meses que serão preenchidos.
+- [x] Guardar os lançamentos automaticamente, impedir duplicação e registar a operação no log.
+- [x] Cobrir o fluxo com testes e validar que o valor oficial continua a vir de Definições.

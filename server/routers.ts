@@ -401,47 +401,21 @@ const quotasRouter = router({
       return await db.getQuotasByMember(input.memberId);
     }),
 
+  previewPayment: liderProcedure
+    .input(z.object({ memberId: positiveId, incomingAmount: z.string().regex(/^\d+(?:[.,]\d{1,2})?$/, "Introduza um valor recebido válido.") }))
+    .query(async ({ input }) => db.buildQuotaPaymentPlan(input.memberId, input.incomingAmount)),
+
   recordPayment: liderProcedure
-    .input(
-      z.object({
-        memberId: positiveId,
-        month: z.number().int().min(1).max(12),
-        year: z.number().int().min(2000).max(2100),
-        responsibleName: safeText(255),
-      })
-    )
+    .input(z.object({ memberId: positiveId, incomingAmount: z.string().regex(/^\d+(?:[.,]\d{1,2})?$/, "Introduza um valor recebido válido."), responsibleName: safeText(255) }))
     .mutation(async ({ input, ctx }) => {
-      const quota = await db.getQuotasByMonthYear(input.month, input.year);
-      const existing = quota.find((q) => q.memberId === input.memberId);
-      const organizationSetting = await db.getAppSetting("organization");
-      let configuredAmount = "100";
-      try {
-        const parsed = JSON.parse(organizationSetting ?? "{}") as { defaultQuotaAmount?: unknown };
-        const candidate = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
-        if (/^\d+(?:\.\d{1,2})?$/.test(candidate)) configuredAmount = candidate;
-      } catch {
-        // Mantém o valor de compatibilidade se as definições antigas não tiverem quota.
-      }
-
-      if (existing) {
-        return await db.updateQuota(existing.id, {
-          isPaid: true,
-          paidAt: new Date(),
-          paidBy: ctx.user.id,
-          responsibleName: input.responsibleName,
-        });
-      }
-
-      return await db.createQuota({
-        memberId: input.memberId,
-        month: input.month,
-        year: input.year,
-        amount: configuredAmount,
-        isPaid: true,
-        paidAt: new Date(),
-        paidBy: ctx.user.id,
-        responsibleName: input.responsibleName,
+      const plan = await db.applyQuotaPayment(input.memberId, input.incomingAmount, ctx.user.id, input.responsibleName.trim());
+      await writeAudit(ctx, "criar", "quota_payment_batch", input.memberId, {
+        incomingAmount: plan.incomingAmount,
+        allocatedAmount: plan.allocatedAmount,
+        remainingAmount: plan.remainingAmount,
+        allocations: plan.allocations.map((allocation) => ({ month: allocation.month, year: allocation.year, amount: allocation.amount, resultingPaid: allocation.resultingPaid })),
       });
+      return plan;
     }),
 
   getByMonthYear: protectedProcedure

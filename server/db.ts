@@ -535,6 +535,123 @@ export async function getQuotasByMonthYear(month: number, year: number) {
   return rows.map((row) => reveal(row, QUOTA_PRIVATE_FIELDS));
 }
 
+export type QuotaPaymentAllocation = {
+  month: number;
+  year: number;
+  amount: string;
+  previousAmount: string;
+  resultingPaid: boolean;
+  action: "novo" | "completado" | "parcial";
+};
+
+export type QuotaPaymentPlan = {
+  memberId: number;
+  incomingAmount: string;
+  configuredAmount: string;
+  allocatedAmount: string;
+  remainingAmount: string;
+  lastPaidPeriod: { month: number; year: number } | null;
+  startPeriod: { month: number; year: number };
+  allocations: QuotaPaymentAllocation[];
+};
+
+function parseConfiguredQuotaAmount(raw: string | null) {
+  try {
+    const parsed = JSON.parse(raw ?? "{}") as { defaultQuotaAmount?: unknown };
+    const candidate = String(parsed.defaultQuotaAmount ?? "").trim().replace(",", ".");
+    const amount = Number(candidate);
+    return /^\d+(?:\.\d{1,2})?$/.test(candidate) && Number.isFinite(amount) && amount > 0 ? amount : 100;
+  } catch {
+    return 100;
+  }
+}
+
+export async function getConfiguredQuotaAmount() {
+  return parseConfiguredQuotaAmount(await getAppSetting("organization"));
+}
+
+function nextQuotaPeriod(period: { month: number; year: number }) {
+  return period.month === 12 ? { month: 1, year: period.year + 1 } : { month: period.month + 1, year: period.year };
+}
+
+function compareQuotaPeriod(a: { month: number; year: number }, b: { month: number; year: number }) {
+  return a.year - b.year || a.month - b.month;
+}
+
+type QuotaPaymentRow = { month: number; year: number; amount: string | number | null; isPaid: boolean };
+
+export function calculateQuotaPaymentPlan(memberId: number, incomingAmount: string | number, configuredAmount: number, rows: QuotaPaymentRow[], currentPeriod = { month: new Date().getMonth() + 1, year: new Date().getFullYear() }): QuotaPaymentPlan {
+  const amount = Number(String(incomingAmount).replace(",", "."));
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("O valor recebido deve ser maior do que zero.");
+  if (!Number.isFinite(configuredAmount) || configuredAmount <= 0) throw new Error("O valor oficial da quota deve ser maior do que zero.");
+  const paidRows = rows.filter((row) => row.isPaid).sort((a, b) => compareQuotaPeriod(b, a));
+  const lastPaid = paidRows[0] ? { month: paidRows[0].month, year: paidRows[0].year } : null;
+  const startPeriod = lastPaid ? nextQuotaPeriod(lastPaid) : currentPeriod;
+  const existingByPeriod = new Map(rows.map((row) => [`${row.year}-${row.month}`, row]));
+  const allocations: QuotaPaymentAllocation[] = [];
+  let remaining = amount;
+  let cursor = { ...startPeriod };
+  let guard = 0;
+
+  while (remaining > 0.005 && guard < 240) {
+    const existing = existingByPeriod.get(`${cursor.year}-${cursor.month}`);
+    if (existing?.isPaid) {
+      cursor = nextQuotaPeriod(cursor);
+      guard++;
+      continue;
+    }
+    const previousAmount = Number(existing?.amount ?? 0);
+    const amountNeeded = Math.max(configuredAmount - previousAmount, 0);
+    if (amountNeeded <= 0.005) {
+      cursor = nextQuotaPeriod(cursor);
+      guard++;
+      continue;
+    }
+    const allocation = Math.min(remaining, amountNeeded);
+    const resultingPaid = previousAmount + allocation >= configuredAmount - 0.005;
+    allocations.push({
+      month: cursor.month,
+      year: cursor.year,
+      amount: allocation.toFixed(2),
+      previousAmount: previousAmount.toFixed(2),
+      resultingPaid,
+      action: existing ? (resultingPaid ? "completado" : "parcial") : (resultingPaid ? "novo" : "parcial"),
+    });
+    remaining -= allocation;
+    cursor = nextQuotaPeriod(cursor);
+    guard++;
+  }
+
+  const allocatedAmount = allocations.reduce((sum, allocation) => sum + Number(allocation.amount), 0);
+  return { memberId, incomingAmount: amount.toFixed(2), configuredAmount: configuredAmount.toFixed(2), allocatedAmount: allocatedAmount.toFixed(2), remainingAmount: Math.max(0, amount - allocatedAmount).toFixed(2), lastPaidPeriod: lastPaid, startPeriod, allocations };
+}
+
+export async function buildQuotaPaymentPlan(memberId: number, incomingAmount: string | number): Promise<QuotaPaymentPlan> {
+  const member = await getMemberById(memberId);
+  if (!member) throw new Error("Membro não encontrado.");
+  const configuredAmount = await getConfiguredQuotaAmount();
+  const rows = await getQuotasByMember(memberId);
+  return calculateQuotaPaymentPlan(memberId, incomingAmount, configuredAmount, rows);
+}
+
+export async function applyQuotaPayment(memberId: number, incomingAmount: string | number, paidBy: number, responsibleName: string) {
+  const plan = await buildQuotaPaymentPlan(memberId, incomingAmount);
+  if (!plan.allocations.length) throw new Error("Não foi possível encontrar um mês de quota disponível para este pagamento.");
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const allocation of plan.allocations) {
+      const existing = (await tx.select().from(quotas).where(and(eq(quotas.memberId, memberId), eq(quotas.month, allocation.month), eq(quotas.year, allocation.year))).limit(1))[0];
+      const finalAmount = (Number(existing?.amount ?? 0) + Number(allocation.amount)).toFixed(2);
+      const values = protect({ amount: finalAmount, isPaid: allocation.resultingPaid, paidAt: now, paidBy, responsibleName }, QUOTA_PRIVATE_FIELDS);
+      if (existing) await tx.update(quotas).set(values as Partial<typeof quotas.$inferInsert>).where(eq(quotas.id, existing.id));
+      else await tx.insert(quotas).values(protect({ memberId, month: allocation.month, year: allocation.year, amount: finalAmount, isPaid: allocation.resultingPaid, paidAt: now, paidBy, responsibleName }, QUOTA_PRIVATE_FIELDS) as typeof quotas.$inferInsert);
+    }
+  });
+  return plan;
+}
+
 export type QuotaCompliancePeriod = { month?: number; year: number };
 
 export async function getQuotaCompliance(period: QuotaCompliancePeriod) {

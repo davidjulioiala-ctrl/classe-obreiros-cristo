@@ -27,6 +27,7 @@ const yearOf = (value: Date | string | null | undefined) => {
 type QuotaStatus = "paid" | "unpaid" | "stopped";
 type QuotaStatusRow = { id: number; name: string; isActive: boolean; status: QuotaStatus; amount: string | number | null; paidAt: Date | string | null; lastPaidAt: Date | string | null };
 type QuotaCompliance = { period: { month?: number; year: number }; totalActiveMembers: number; paid: QuotaStatusRow[]; unpaid: QuotaStatusRow[]; stopped: QuotaStatusRow[] };
+type QuotaPaymentPlan = { memberId: number; incomingAmount: string; configuredAmount: string; allocatedAmount: string; remainingAmount: string; lastPaidPeriod: { month: number; year: number } | null; startPeriod: { month: number; year: number }; allocations: Array<{ month: number; year: number; amount: string; previousAmount: string; resultingPaid: boolean; action: "novo" | "completado" | "parcial" }> };
 
 const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
@@ -63,8 +64,9 @@ export default function Finances() {
   const [editingIncome, setEditingIncome] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<number | null>(null);
   const [quotaMember, setQuotaMember] = useState("");
-  const [quotaMonth, setQuotaMonth] = useState(String(new Date().getMonth() + 1));
-  const [quotaYear, setQuotaYear] = useState(String(new Date().getFullYear()));
+  const [quotaIncomingAmount, setQuotaIncomingAmount] = useState("");
+  const [quotaPaymentPlan, setQuotaPaymentPlan] = useState<QuotaPaymentPlan | null>(null);
+  const [quotaPreviewRequest, setQuotaPreviewRequest] = useState<{ memberId: number; incomingAmount: string } | null>(null);
   const [quotaAmount, setQuotaAmount] = useState("100");
   const [quotaReportMonth, setQuotaReportMonth] = useState("all");
   const [quotaReportYear, setQuotaReportYear] = useState(String(new Date().getFullYear()));
@@ -80,6 +82,8 @@ export default function Finances() {
   const quotasQuery = trpc.quotas.list.useQuery();
   const quotaComplianceInput = useMemo(() => ({ year: Number(quotaReportYear) || new Date().getFullYear(), ...(quotaReportMonth === "all" ? {} : { month: Number(quotaReportMonth) }) }), [quotaReportMonth, quotaReportYear]);
   const quotaComplianceQuery = trpc.quotas.compliance.useQuery(quotaComplianceInput);
+  const quotaPreviewInput = useMemo(() => quotaPreviewRequest ?? { memberId: 0, incomingAmount: "0" }, [quotaPreviewRequest]);
+  const quotaPreviewQuery = trpc.quotas.previewPayment.useQuery(quotaPreviewInput, { enabled: Boolean(quotaPreviewRequest) });
   const incomeQuery = trpc.otherIncome.list.useQuery();
   const expensesQuery = trpc.expenses.list.useQuery();
 
@@ -99,7 +103,7 @@ export default function Finances() {
   };
 
   const recordQuota = trpc.quotas.recordPayment.useMutation({
-    onSuccess: async () => { await refreshFinance(); setQuotaResponsible(""); toast.success("Quota registada."); },
+    onSuccess: async () => { await refreshFinance(); await utils.quotas.compliance.invalidate(); setQuotaResponsible(""); setQuotaIncomingAmount(""); setQuotaPaymentPlan(null); setQuotaPreviewRequest(null); toast.success("Pagamento distribuído pelas quotas com sucesso."); },
     onError: (error) => toast.error(error.message),
   });
   const updateQuota = trpc.quotas.update.useMutation({
@@ -233,7 +237,7 @@ export default function Finances() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{(["quotas", "income", "expenses"] as const).map((value) => <Button key={value} variant={tab === value ? "default" : "outline"} onClick={() => setTab(value)} className={tab === value ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}>{value === "quotas" ? "Quotas" : value === "income" ? "Outras receitas" : "Despesas"}</Button>)}</div>
 
-        {tab === "quotas" && <QuotaSection busy={busy} quotaMember={quotaMember} setQuotaMember={setQuotaMember} quotaMonth={quotaMonth} setQuotaMonth={setQuotaMonth} quotaYear={quotaYear} setQuotaYear={setQuotaYear} quotaAmount={quotaAmount} quotaResponsible={quotaResponsible} setQuotaResponsible={setQuotaResponsible} members={membersQuery.data ?? []} quotas={filteredQuotas} allQuotasCount={quotasQuery.data?.length ?? 0} loading={quotasQuery.isLoading} search={quotaSearch} setSearch={setQuotaSearch} onRecord={() => recordQuota.mutate({ memberId: Number(quotaMember), month: Number(quotaMonth), year: Number(quotaYear), responsibleName: quotaResponsible.trim() })} onToggle={(id, isPaid) => updateQuota.mutate({ id, isPaid: !isPaid })} onDelete={(id) => { if (confirm("Eliminar esta quota?")) deleteQuota.mutate({ id }); }} compliance={quotaComplianceQuery.data} complianceLoading={quotaComplianceQuery.isLoading} statusMonth={quotaReportMonth} setStatusMonth={setQuotaReportMonth} statusYear={quotaReportYear} setStatusYear={setQuotaReportYear} statusSearch={quotaStatusSearch} setStatusSearch={setQuotaStatusSearch} onExportStatus={downloadQuotaStatusCsv} />}
+        {tab === "quotas" && <QuotaSection busy={busy} quotaMember={quotaMember} setQuotaMember={setQuotaMember} quotaIncomingAmount={quotaIncomingAmount} setQuotaIncomingAmount={(value) => { setQuotaIncomingAmount(value); setQuotaPaymentPlan(null); setQuotaPreviewRequest(null); }} quotaAmount={quotaAmount} quotaResponsible={quotaResponsible} setQuotaResponsible={setQuotaResponsible} members={membersQuery.data ?? []} paymentPlan={quotaPreviewQuery.data ?? quotaPaymentPlan} previewLoading={quotaPreviewQuery.isFetching} onPreview={() => { const memberId = Number(quotaMember); const incomingAmount = quotaIncomingAmount.trim().replace(",", "."); if (!memberId || !Number.isFinite(Number(incomingAmount)) || Number(incomingAmount) <= 0) { toast.error("Seleccione a pessoa e introduza um valor recebido válido."); return; } setQuotaPaymentPlan(null); setQuotaPreviewRequest({ memberId, incomingAmount }); }} quotas={filteredQuotas} allQuotasCount={quotasQuery.data?.length ?? 0} loading={quotasQuery.isLoading} search={quotaSearch} setSearch={setQuotaSearch} onRecord={() => { const incomingAmount = quotaIncomingAmount.trim().replace(",", "."); if (!quotaPreviewQuery.data && !quotaPaymentPlan) { toast.error("Simule a distribuição antes de confirmar o pagamento."); return; } recordQuota.mutate({ memberId: Number(quotaMember), incomingAmount, responsibleName: quotaResponsible.trim() }); }} onToggle={(id, isPaid) => updateQuota.mutate({ id, isPaid: !isPaid })} onDelete={(id) => { if (confirm("Eliminar esta quota?")) deleteQuota.mutate({ id }); }} compliance={quotaComplianceQuery.data} complianceLoading={quotaComplianceQuery.isLoading} statusMonth={quotaReportMonth} setStatusMonth={setQuotaReportMonth} statusYear={quotaReportYear} setStatusYear={setQuotaReportYear} statusSearch={quotaStatusSearch} setStatusSearch={setQuotaStatusSearch} onExportStatus={downloadQuotaStatusCsv} />}
 
         {tab === "income" && <IncomeSection busy={busy} form={incomeForm} setForm={setIncomeForm} items={filteredIncome} allItemsCount={incomeQuery.data?.length ?? 0} loading={incomeQuery.isLoading} search={incomeSearch} setSearch={setIncomeSearch} editingId={editingIncome} onSubmit={submitIncome} onEdit={startIncomeEdit} onCancel={() => { setEditingIncome(null); setIncomeForm({ description: "", amount: "", date: today(), responsibleName: "" }); }} onDelete={(id) => { if (confirm("Eliminar esta receita?")) deleteIncome.mutate({ id }); }} />}
 
@@ -264,11 +268,13 @@ type ExpenseRecord = { id: number; sequence: number; designation: string; quanti
 type QuotaSectionProps = {
   busy: boolean;
   quotaMember: string; setQuotaMember: (value: string) => void;
-  quotaMonth: string; setQuotaMonth: (value: string) => void;
-  quotaYear: string; setQuotaYear: (value: string) => void;
+  quotaIncomingAmount: string; setQuotaIncomingAmount: (value: string) => void;
   quotaAmount: string;
   quotaResponsible: string; setQuotaResponsible: (value: string) => void;
   members: MemberRecord[];
+  paymentPlan: QuotaPaymentPlan | null;
+  previewLoading: boolean;
+  onPreview: () => void;
   quotas: QuotaRecord[];
   allQuotasCount: number; loading: boolean; search: string; setSearch: (value: string) => void;
   onRecord: () => void; onToggle: (id: number, isPaid: boolean) => void; onDelete: (id: number) => void;
@@ -278,7 +284,7 @@ type QuotaSectionProps = {
 };
 
 function QuotaSection(props: QuotaSectionProps) {
-  const { busy, quotaMember, setQuotaMember, quotaMonth, setQuotaMonth, quotaYear, setQuotaYear, quotaAmount, quotaResponsible, setQuotaResponsible, members, quotas, allQuotasCount, loading, search, setSearch, onRecord, onToggle, onDelete, compliance, complianceLoading, statusMonth, setStatusMonth, statusYear, setStatusYear, statusSearch, setStatusSearch, onExportStatus } = props;
+  const { busy, quotaMember, setQuotaMember, quotaIncomingAmount, setQuotaIncomingAmount, quotaAmount, quotaResponsible, setQuotaResponsible, members, paymentPlan, previewLoading, onPreview, quotas, allQuotasCount, loading, search, setSearch, onRecord, onToggle, onDelete, compliance, complianceLoading, statusMonth, setStatusMonth, statusYear, setStatusYear, statusSearch, setStatusSearch, onExportStatus } = props;
   const visibleStatusRows = (rows: QuotaStatusRow[]) => {
     const query = text(statusSearch.trim());
     return rows.filter((row) => !query || [row.id, row.name, row.status, row.amount, dateOnly(row.paidAt), dateOnly(row.lastPaidAt)].some((value) => text(value).includes(query)));
@@ -289,7 +295,8 @@ function QuotaSection(props: QuotaSectionProps) {
     { status: "stopped", title: "Pararam de pagar", tone: "text-red-600", rows: visibleStatusRows(compliance?.stopped ?? []) },
   ];
   return <div className="space-y-4">
-    <Card className="p-4 dark:bg-slate-800"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><FormLabel label="Membro"><Select value={quotaMember} onValueChange={setQuotaMember}><SelectTrigger><SelectValue placeholder="Selecionar membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name} · ID {member.id}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Mês"><Select value={quotaMonth} onValueChange={setQuotaMonth}><SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger><SelectContent>{monthNames.map((month, index) => <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Ano"><Input type="number" value={quotaYear} onChange={(event) => setQuotaYear(event.target.value)} placeholder="Ano" /></FormLabel><FormLabel label="Valor definido em Definições"><Input value={`${quotaAmount} XOF`} readOnly disabled aria-describedby="quota-config-hint" /><span id="quota-config-hint" className="mt-1 block text-[11px] text-slate-500">Altere este valor apenas em Definições.</span></FormLabel><FormLabel label="Responsável"><Input value={quotaResponsible} onChange={(event) => setQuotaResponsible(event.target.value)} placeholder="Nome do responsável" /></FormLabel><div className="flex items-end"><Button disabled={busy || !quotaMember || !quotaResponsible.trim()} onClick={onRecord} className="w-full bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" />Registar</Button></div></div></Card>
+    <Card className="p-4 dark:bg-slate-800"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"><FormLabel label="Membro"><Select value={quotaMember} onValueChange={(value) => { setQuotaMember(value); }}><SelectTrigger><SelectValue placeholder="Pesquisar e selecionar membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={String(member.id)}>{member.name} · ID {member.id}</SelectItem>)}</SelectContent></Select></FormLabel><FormLabel label="Valor recebido"><Input type="number" min="0.01" step="0.01" value={quotaIncomingAmount} onChange={(event) => setQuotaIncomingAmount(event.target.value)} placeholder="Montante pago" /></FormLabel><FormLabel label="Quota mensal definida"><Input value={`${quotaAmount} XOF`} readOnly disabled aria-describedby="quota-config-hint" /><span id="quota-config-hint" className="mt-1 block text-[11px] text-slate-500">Este valor só pode ser alterado em Definições.</span></FormLabel><FormLabel label="Responsável"><Input value={quotaResponsible} onChange={(event) => setQuotaResponsible(event.target.value)} placeholder="Nome do responsável" /></FormLabel><div className="flex items-end"><Button disabled={busy || previewLoading || !quotaMember || !quotaIncomingAmount || !quotaResponsible.trim()} onClick={onPreview} className="w-full bg-emerald-600 text-white hover:bg-emerald-700">{previewLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}Simular pagamento</Button></div></div></Card>
+    {paymentPlan && <Card className="border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/20"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="font-semibold text-slate-900 dark:text-white">Simulação da distribuição</h3><p className="text-xs text-slate-600 dark:text-slate-300">O pagamento começa em {monthNames[paymentPlan.startPeriod.month - 1]} de {paymentPlan.startPeriod.year} e percorre os meses seguintes até o valor terminar.</p></div><Button disabled={busy || !paymentPlan.allocations.length || !quotaResponsible.trim()} onClick={onRecord} className="bg-emerald-600 text-white hover:bg-emerald-700"><Plus className="mr-2 h-4 w-4" />Confirmar distribuição</Button></div><div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4"><div><span className="block text-xs text-slate-500">Recebido</span><strong>{paymentPlan.incomingAmount} XOF</strong></div><div><span className="block text-xs text-slate-500">Distribuído</span><strong>{paymentPlan.allocatedAmount} XOF</strong></div><div><span className="block text-xs text-slate-500">Quota mensal</span><strong>{paymentPlan.configuredAmount} XOF</strong></div><div><span className="block text-xs text-slate-500">Saldo residual</span><strong>{paymentPlan.remainingAmount} XOF</strong></div></div><div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-emerald-200 bg-white/70 text-sm dark:border-emerald-900 dark:bg-slate-900/40">{paymentPlan.allocations.map((allocation) => <div key={`${allocation.year}-${allocation.month}`} className="flex items-center justify-between gap-3 border-b border-emerald-100 px-3 py-2 last:border-0 dark:border-emerald-900/50"><span>{monthNames[allocation.month - 1]} {allocation.year}</span><span className="font-medium">{allocation.amount} XOF · {allocation.resultingPaid ? "Pago" : "Parcial"}</span></div>)}</div></Card>}
     <Card className="border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div><h3 className="font-semibold text-slate-900 dark:text-white">Consulta de pagamentos de quotas</h3><p className="text-xs text-slate-500">Consulte quem pagou, quem não pagou e quem interrompeu os pagamentos.</p></div>
