@@ -6875,3 +6875,17 @@
 - [x] Preservar IDs históricos e relações existentes durante a migração, sem reiniciar contadores com dados já guardados.
 - [x] Aplicar a apresentação consistente de ID nos menus e validar pesquisa por ID.
 - [x] Acrescentar testes de integridade para criação, relações e exportações.
+
+## Migração de IDs existentes — remapeamento relacional
+- [ ] Mapear todos os IDs existentes e as referências entre tabelas antes da migração.
+- [ ] Criar um remapeamento sequencial por tabela, começando em 1, sem perder registos.
+- [ ] Actualizar todas as chaves estrangeiras e referências históricas de acordo com o remapeamento.
+- [ ] Garantir que os IDs permanecem int auto-incrementais após a migração.
+- [ ] Validar contagens, relações, pesquisas, exportações e integridade após a alteração.
+
+## Migração de IDs físicos existentes — concluída
+- [x] Mapear IDs existentes e dependências relacionais em todas as tabelas.
+- [x] Planear migração relacional segura sem perda de dados históricos ou quebra de chaves estrangeiras.
+- [x] Aplicar o remapeamento sequencial iniciado em 1 por tabela via script SQL transacional.
+- [x] Ajustar os contadores AUTO_INCREMENT de todas as tabelas para o próximo ID livre.
+- [x] Validar a integridade relacional, typecheck e build de produção com sucesso.
