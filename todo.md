@@ -7001,3 +7001,10 @@
 - [x] Adicionar estatística mensal de presenças por membro no servidor e base de dados.
 - [x] Incluir o distintivo visual com a percentagem no cartão do perfil de cada membro.
 - [x] Validar testes unitários e build de produção.
+
+## Funcionalidades Avançadas de Grupos e Presenças
+- [ ] Implementar detalhe completo e pesquisa por grupo de membros.
+- [ ] Adicionar exportação PDF de grupo por intervalo de datas (bloqueada para oficiais).
+- [ ] Adicionar campo de nota justificativa de falta no registo de presenças.
+- [ ] Implementar exportação de relatórios de presença por data específica ou por membro.
+- [ ] Validar testes unitários, typecheck e build de produção.

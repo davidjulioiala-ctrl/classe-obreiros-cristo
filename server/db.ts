@@ -407,7 +407,7 @@ export async function recordAttendance(data: typeof attendance.$inferInsert) {
   if (existing.length > 0) {
     return await db
       .update(attendance)
-      .set({ isPresent: data.isPresent, recordedBy: data.recordedBy })
+      .set({ isPresent: data.isPresent, justification: data.justification, recordedBy: data.recordedBy })
       .where(eq(attendance.id, existing[0].id));
   }
 

@@ -359,6 +359,7 @@ const activitiesRouter = router({
         activityId: positiveId,
         memberId: positiveId,
         isPresent: z.boolean(),
+        justification: safeText(1000, false),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -376,10 +377,10 @@ const activitiesRouter = router({
     }),
 
   updateAttendance: oficialProcedure
-    .input(z.object({ id: positiveId, isPresent: z.boolean() }))
+    .input(z.object({ id: positiveId, isPresent: z.boolean(), justification: safeText(1000, false) }))
     .mutation(async ({ input, ctx }) => {
-      const result = await db.updateAttendance(input.id, { isPresent: input.isPresent });
-      await writeAudit(ctx, "editar", "attendance", input.id, { isPresent: input.isPresent });
+      const result = await db.updateAttendance(input.id, { isPresent: input.isPresent, justification: input.justification ?? null });
+      await writeAudit(ctx, "editar", "attendance", input.id, { isPresent: input.isPresent, justification: input.justification });
       return result;
     }),
 

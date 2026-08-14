@@ -159,6 +159,7 @@ export const attendance = mysqlTable("attendance", {
   activityId: int("activityId").notNull(),
   memberId: int("memberId").notNull(),
   isPresent: boolean("isPresent").default(true).notNull(),
+  justification: text("justification"), // Reason/note when member is absent or excused
   recordedBy: int("recordedBy"), // User who recorded the attendance
   recordedAt: timestamp("recordedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
