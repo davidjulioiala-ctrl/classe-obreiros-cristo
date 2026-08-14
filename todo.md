@@ -6809,3 +6809,11 @@
 - [ ] Permitir eliminar um ficheiro já carregado com confirmação e autorização no servidor.
 - [ ] Permitir vários ficheiros por actividade, preservando visualização, download e impressão por ficheiro.
 - [ ] Adicionar testes Vitest, typecheck, build e validação visual dos novos fluxos.
+
+## Revisão — paletas de cores e estabilidade dos menus
+- [ ] Diagnosticar por que motivo as paletas de cores e o modo claro/escuro não são aplicados ou persistidos.
+- [ ] Corrigir a aplicação das paletas em CSS, ThemeContext e Definições, preservando contraste e responsividade.
+- [ ] Verificar todas as rotas e itens do menu e corrigir páginas que não carregam, dão 404 ou quebram ao executar acções.
+- [ ] Validar operações de criação, edição, eliminação, pesquisa, filtros, uploads, exportações e notificações nos menus existentes.
+- [ ] Adicionar/actualizar testes de regressão, executar typecheck, testes completos, build e validação visual.
+- [ ] Guardar checkpoint publicado com a revisão concluída.

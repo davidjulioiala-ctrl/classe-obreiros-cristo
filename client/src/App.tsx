@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
@@ -21,13 +22,30 @@ import SystemStatus from "@/pages/SystemStatus";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import MaintenanceGate from "./components/MaintenanceGate";
 import { Route, Switch, useLocation } from "wouter";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { isAccentColor, ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { trpc } from "@/lib/trpc";
 import { LocalAuthProvider, useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { Loader2 } from "lucide-react";
 
 function Router() {
   const [location] = useLocation();
   const { user, loading, logout } = useLocalAuth();
+  const { setTheme, setAccentColor } = useTheme();
+  const appearanceQuery = trpc.settings.get.useQuery({ keyName: "appearance" }, {
+    enabled: Boolean(user),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!appearanceQuery.data) return;
+    try {
+      const parsed = JSON.parse(appearanceQuery.data);
+      if (parsed.theme === "light" || parsed.theme === "dark") setTheme(parsed.theme);
+      if (isAccentColor(parsed.accent)) setAccentColor(parsed.accent);
+    } catch {
+      // Preferir a preferência local se a configuração remota estiver corrompida.
+    }
+  }, [appearanceQuery.data, setAccentColor, setTheme]);
 
   // O estado deve continuar acessível sem sessão e durante manutenção.
   if (location === "/status") {
@@ -36,10 +54,10 @@ function Router() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-slate-600">A carregar...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">A carregar...</p>
         </div>
       </div>
     );

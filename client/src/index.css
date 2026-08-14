@@ -175,3 +175,85 @@
     }
   }
 }
+
+/* Compatibilidade de tema: os ecrãs legados usam classes esmeralda para acções de marca.
+   A paleta escolhida em Definições deve actualizar esses elementos sem exigir uma
+   migração perigosa de todos os formulários em simultâneo. */
+[data-accent] [class~="bg-emerald-600"] {
+  background-color: var(--primary) !important;
+}
+
+[data-accent] [class~="hover:bg-emerald-700"]:hover {
+  background-color: color-mix(in srgb, var(--primary) 88%, black) !important;
+}
+
+[data-accent] [class~="text-emerald-600"],
+[data-accent] [class~="text-emerald-500"] {
+  color: var(--primary) !important;
+}
+
+[data-accent] [class~="border-emerald-500"] {
+  border-color: var(--primary) !important;
+}
+
+[data-accent] [class~="focus:border-emerald-500"]:focus {
+  border-color: var(--primary) !important;
+}
+
+[data-accent] [class~="focus:ring-emerald-500"]:focus {
+  --tw-ring-color: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+}
+
+/* Variantes legadas adicionais: estados de cartões, badges, foco e modo escuro. */
+[data-accent] [class~="bg-emerald-50"],
+[data-accent] [class~="bg-emerald-100"] {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+}
+
+[data-accent] [class~="bg-emerald-500"],
+[data-accent] [class~="file:bg-emerald-500"] {
+  background-color: var(--primary) !important;
+}
+
+[data-accent] [class~="text-emerald-300"],
+[data-accent] [class~="text-emerald-400"],
+[data-accent] [class~="text-emerald-700"],
+[data-accent] [class~="text-emerald-800"] {
+  color: var(--primary) !important;
+}
+
+[data-accent] [class~="border-emerald-100"],
+[data-accent] [class~="border-emerald-300"],
+[data-accent] [class~="border-emerald-400"] {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+}
+
+[data-accent] [class~="ring-emerald-500"] {
+  --tw-ring-color: var(--ring) !important;
+}
+
+[data-accent] [class~="hover:text-emerald-600"]:hover,
+[data-accent] [class~="hover:text-emerald-700"]:hover,
+[data-accent] [class~="hover:text-emerald-900"]:hover {
+  color: var(--primary) !important;
+}
+
+[data-accent] [class~="dark:bg-emerald-900\/30"],
+[data-accent] [class~="dark:bg-emerald-950\/30"] {
+  background-color: color-mix(in srgb, var(--primary) 18%, transparent) !important;
+}
+
+[data-accent] [class~="dark:text-emerald-200"],
+[data-accent] [class~="dark:text-emerald-300"],
+[data-accent] [class~="dark:text-emerald-400"] {
+  color: color-mix(in srgb, var(--primary) 75%, white) !important;
+}
+
+[data-accent] [class~="from-emerald-500"] {
+  --tw-gradient-from: var(--primary) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: color-mix(in srgb, var(--primary) 0%, transparent) var(--tw-gradient-to-position) !important;
+}
+
+[data-accent] [class~="to-emerald-600"] {
+  --tw-gradient-to: color-mix(in srgb, var(--primary) 80%, black) var(--tw-gradient-to-position) !important;
+}

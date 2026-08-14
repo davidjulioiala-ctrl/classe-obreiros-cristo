@@ -38,7 +38,7 @@ export type MenuItem = {
 
 export type NavigationUser = { role?: string | null; churchRole?: string | null } | null | undefined;
 
-const menuItems: MenuItem[] = [
+export const menuItems: MenuItem[] = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Users, label: "Membros", href: "/members" },
   { icon: AlertTriangle, label: "Campos em falta", href: "/members/incomplete", nested: true },
@@ -56,14 +56,14 @@ const menuItems: MenuItem[] = [
 ];
 
 export function getVisibleMenuItems(user: NavigationUser) {
+  const isAdmin = user?.role === "admin";
+  const churchRole = user?.churchRole ?? "membro";
+
   return menuItems.filter((item) => {
-    if (item.href === "/audit-backup" && user?.role !== "admin") return false;
-    if (user?.churchRole === "oficial") {
-      return !["Finanças", "Transferências", "Utilizadores"].includes(item.label);
-    }
-    if (user?.churchRole === "louvor") {
-      return ["Dashboard", "Membros", "Louvor"].includes(item.label);
-    }
+    if (isAdmin) return true;
+    if (["/users", "/audit-backup"].includes(item.href)) return false;
+    if (churchRole === "louvor") return ["Dashboard", "Membros", "Louvor"].includes(item.label);
+    if (churchRole === "oficial") return !["Finanças", "Transferências", "Utilizadores"].includes(item.label);
     return true;
   });
 }
@@ -89,10 +89,15 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
     navigate("/");
   };
 
-  const isActive = (href: string) => location === href || (href === "/dashboard" && location === "/") || (href === "/members" && location.startsWith("/members/"));
+  const isActive = (href: string) => {
+    const pathname = location.split("?")[0];
+    if (href === "/dashboard") return pathname === "/" || pathname === "/dashboard";
+    if (href === "/members") return pathname === "/members" || (pathname.startsWith("/members/") && pathname !== "/members/incomplete");
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-background to-muted dark:from-background dark:to-muted">
       {mobileSidebarOpen && (
         <button
           type="button"
@@ -109,7 +114,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
           {sidebarExpanded && (
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
                 <span className="text-lg font-bold text-white">C</span>
               </div>
               <div className="min-w-0">
@@ -144,8 +149,8 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                   onClick={() => goTo(item.href)}
                   className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-all active:scale-[0.98] sm:px-4 ${item.nested ? "pl-8 text-xs" : ""} ${
                     active
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400 hover:translate-x-1"
+                      ? "bg-primary/10 text-primary dark:bg-primary/20"
+                      : "text-foreground/80 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/20 hover:translate-x-1"
                   }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -179,7 +184,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 type="search"
                 placeholder="Pesquisar..."
                 aria-label="Pesquisar"
-                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
             <p className="truncate text-sm font-semibold text-slate-900 sm:hidden dark:text-white">Classe Obreiros de Cristo</p>
@@ -191,7 +196,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
               aria-label="Abrir preferências de notificações"
               title="Abrir preferências de notificações"
               onClick={() => goTo("/settings?tab=notifications")}
-              className="relative rounded-lg p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="relative rounded-lg p-2 transition-colors hover:bg-primary/10 dark:hover:bg-primary/20"
             >
               <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
@@ -204,7 +209,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 onClick={() => setUserMenuOpen((value) => !value)}
                 className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-slate-100 sm:px-3 sm:py-2 dark:hover:bg-slate-800"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-bold text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-sm font-bold text-primary-foreground">
                   {user?.name?.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="hidden max-w-32 text-left sm:block">

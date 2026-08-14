@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useTheme } from "@/contexts/ThemeContext";
+import { isAccentColor, useTheme, type AccentColor } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
 import { DEFAULT_HEADER_TEXT_COLOR, HEADER_COLOR_PALETTE, HEADER_FONT_FAMILIES, HEADER_FONT_SIZE_POINTS, getHeaderFontCssFamily, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
 
@@ -156,7 +156,7 @@ function normalizeHeaderFontSizeDraft(value: string, fallback: number) {
 }
 
 export default function Settings() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, accentColor, setAccentColor } = useTheme();
   const [settingsLocation] = useLocation();
   const requestedTab = new URLSearchParams(settingsLocation.split("?")[1] ?? "").get("tab");
   const defaultTab = requestedTab === "notifications" || requestedTab === "appearance" ? requestedTab : "organization";
@@ -164,7 +164,7 @@ export default function Settings() {
   const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
-  const [location, setLocation] = useState("Luanda, Angola");
+  const [organizationLocation, setOrganizationLocation] = useState("Luanda, Angola");
   const [logoUrl, setLogoUrl] = useState("");
   const [logoKey, setLogoKey] = useState("");
   const [logoName, setLogoName] = useState("");
@@ -201,7 +201,6 @@ export default function Settings() {
   const [notifFinances, setNotifFinances] = useState(true);
   const [notifTransfers, setNotifTransfers] = useState(true);
   const [themeMode, setThemeMode] = useState(theme);
-  const [accentColor, setAccentColor] = useState("emerald");
 
   const orgQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const notifQuery = trpc.settings.get.useQuery({ keyName: "notifications" });
@@ -235,7 +234,7 @@ export default function Settings() {
         else if (parsed.organizationName) setHeaderTitleText(parsed.organizationName);
         if (parsed.email) setEmail(parsed.email);
         if (parsed.phone) setPhone(parsed.phone);
-        if (parsed.location) setLocation(parsed.location);
+        if (parsed.location) setOrganizationLocation(parsed.location);
         if (parsed.logoUrl) setLogoUrl(parsed.logoUrl);
         if (parsed.logoKey) setLogoKey(parsed.logoKey);
         if (parsed.logoName) setLogoName(parsed.logoName);
@@ -291,7 +290,9 @@ export default function Settings() {
           setThemeMode(parsed.theme);
           setTheme(parsed.theme);
         }
-        if (parsed.accent) setAccentColor(parsed.accent);
+        if (isAccentColor(parsed.accent)) {
+          setAccentColor(parsed.accent);
+        }
       } catch {}
     }
   }, [appearanceQuery.data]);
@@ -325,7 +326,7 @@ export default function Settings() {
     setHeaderFontSizePointsDraft(String(persistedHeaderFontSizePoints));
     const persistedTemplates = headerTemplates.map((template) => template.id === activeTemplateId ? { ...template, headerFontSizePoints: persistedHeaderFontSizePoints } : template);
     setHeaderTemplates(persistedTemplates);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -373,7 +374,7 @@ export default function Settings() {
     beginEditTemplate(newTemplate);
     organizationSaveMutation.mutate({
       keyName: "organization",
-      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTextAlignment: newTemplate.headerTextAlignment, headerFontSize: newTemplate.headerFontSize, headerFontSizePoints: newTemplate.headerFontSizePoints, headerFontFamily: newTemplate.headerFontFamily, headerTextColor: newTemplate.headerTextColor, headerTemplates: nextTemplates, activeTemplateId: newId }),
+      keyValue: JSON.stringify({ organizationName, headerTitleText: newTemplate.headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment: newTemplate.logoAlignment, logoSize: newTemplate.logoSize, headerTextAlignment: newTemplate.headerTextAlignment, headerFontSize: newTemplate.headerFontSize, headerFontSizePoints: newTemplate.headerFontSizePoints, headerFontFamily: newTemplate.headerFontFamily, headerTextColor: newTemplate.headerTextColor, headerTemplates: nextTemplates, activeTemplateId: newId }),
     });
     toast.success("Novo modelo criado. Preencha os dados e guarde as alterações.");
   };
@@ -702,7 +703,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Localização</label>
-                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Localização" />
+                  <Input value={organizationLocation} onChange={(e) => setOrganizationLocation(e.target.value)} placeholder="Localização" />
                 </div>
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                   <div className="flex items-start gap-3">
@@ -870,8 +871,8 @@ export default function Settings() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Cor de Destaque</label>
                   <div className="flex gap-3">
-                    {[{ name: "Esmeralda", color: "bg-emerald-500", val: "emerald" }, { name: "Azul", color: "bg-blue-500", val: "blue" }, { name: "Roxo", color: "bg-purple-500", val: "purple" }, { name: "Rosa", color: "bg-pink-500", val: "pink" }].map((a) => (
-                      <button key={a.val} type="button" onClick={() => setAccentColor(a.val)} className={`w-10 h-10 rounded-full ${a.color} ${accentColor === a.val ? "ring-4 ring-slate-400" : ""} transition-all`} title={a.name} />
+                    {([{ name: "Esmeralda", color: "#10b981", val: "emerald" }, { name: "Azul", color: "#3b82f6", val: "blue" }, { name: "Roxo", color: "#8b5cf6", val: "purple" }, { name: "Rosa", color: "#ec4899", val: "pink" }] satisfies Array<{ name: string; color: string; val: AccentColor }>).map((a) => (
+                      <button key={a.val} type="button" onClick={() => setAccentColor(a.val)} className={`h-10 w-10 rounded-full transition-all ${accentColor === a.val ? "ring-4 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800" : ""}`} style={{ backgroundColor: a.color }} title={a.name} aria-label={`Escolher paleta ${a.name}`} />
                     ))}
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getVisibleMenuItems } from "./DashboardLayoutCustom";
+import { getVisibleMenuItems, menuItems } from "./DashboardLayoutCustom";
 
 describe("navegação principal", () => {
   it("mantém Configurações visível para um oficial autorizado", () => {
@@ -14,5 +14,21 @@ describe("navegação principal", () => {
     const labels = getVisibleMenuItems({ role: "admin", churchRole: "lider" }).map((item) => item.label);
     expect(labels).toContain("Configurações");
     expect(labels).toContain("Auditoria e backup");
+  });
+
+  it("mantém destinos únicos e válidos para todos os módulos do menu", () => {
+    const hrefs = menuItems.map((item) => item.href);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    expect(hrefs).toEqual(expect.arrayContaining([
+      "/dashboard", "/members", "/members/incomplete", "/attendance", "/activities",
+      "/finances", "/transfers", "/history", "/reports", "/materials", "/louvor",
+      "/settings", "/users", "/audit-backup",
+    ]));
+    expect(hrefs.every((href) => href.startsWith("/"))).toBe(true);
+  });
+
+  it("mantém o módulo de Louvor limitado ao seu conjunto autorizado", () => {
+    const labels = getVisibleMenuItems({ role: "user", churchRole: "louvor" }).map((item) => item.label);
+    expect(labels).toEqual(["Dashboard", "Membros", "Louvor"]);
   });
 });
