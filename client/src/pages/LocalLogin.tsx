@@ -17,7 +17,7 @@ export default function LocalLogin() {
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorSetupModal, setTwoFactorSetupModal] = useState(false);
-  const [setupData, setSetupData] = useState<{ secret?: string; qrCodeUrl?: string; recoveryCodes?: string[] } | null>(null);
+  const [setupData, setSetupData] = useState<{ secret?: string; qrCodeUrl?: string; otpauthUri?: string; recoveryCodes?: string[] } | null>(null);
   const [setupConfirmCode, setSetupConfirmCode] = useState("");
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [showBootstrap, setShowBootstrap] = useState(false);
@@ -311,7 +311,15 @@ export default function LocalLogin() {
                   </button>
                   {setupData && (
                     <div className="space-y-3 rounded-lg bg-slate-800 p-3 text-xs">
-                      {setupData.qrCodeUrl && <div className="flex justify-center bg-white p-2 rounded"><img src={setupData.qrCodeUrl} alt="QR Code 2FA" className="h-32 w-32" /></div>}
+                      {setupData.otpauthUri && (
+                        <div className="flex justify-center bg-white p-2 rounded">
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(setupData.otpauthUri)}`} 
+                            alt="QR Code 2FA" 
+                            className="h-32 w-32" 
+                          />
+                        </div>
+                      )}
                       <p className="font-mono text-emerald-300 break-all text-center">Chave: {setupData.secret}</p>
                       <p className="text-slate-300 text-center">Insira o código de 6 dígitos gerado pela sua app:</p>
                       <Input value={setupConfirmCode} onChange={(e) => setSetupConfirmCode(e.target.value)} placeholder="000000" className="bg-slate-900 border-slate-700 text-center font-mono text-lg tracking-widest text-white" maxLength={6} />
@@ -321,7 +329,7 @@ export default function LocalLogin() {
                             method: "POST",
                             credentials: "include",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ code: setupConfirmCode, secret: setupData.secret, recoveryCodes: setupData.recoveryCodes })
+                            body: JSON.stringify({ code: setupConfirmCode })
                           });
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error || "Código inválido");
