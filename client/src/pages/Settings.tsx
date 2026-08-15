@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { isAccentColor, useTheme, type AccentColor } from "@/contexts/ThemeContext";
+import { useTheme, type AccentColor } from "@/contexts/ThemeContext";
 import { getPdfPreviewLogoSize, getPdfPreviewName } from "@/lib/pdfBrandingPreview";
+import { parseAppearanceSettings, serializeAppearanceSettings } from "@/lib/appearanceSettings";
 import { DEFAULT_HEADER_TEXT_COLOR, HEADER_COLOR_PALETTE, HEADER_FONT_FAMILIES, HEADER_FONT_SIZE_POINTS, getHeaderFontCssFamily, normalizeHeaderFontFamily, normalizeHeaderFontSize, normalizeHeaderFontSizePoints, normalizeHeaderTextAlignment, normalizeHeaderTextColor, parseHeaderText, type HeaderFontFamily, type HeaderFontSizePreset, type HeaderFormatTag, type HeaderTextAlignment } from "@shared/headerFormatting";
 
 type HeaderTemplate = {
@@ -220,6 +221,13 @@ export default function Settings() {
     onSuccess: () => toast.success("Configurações guardadas e aplicadas com sucesso!"),
     onError: (err: any) => toast.error(err.message),
   });
+  const appearanceSaveMutation = trpc.settings.set.useMutation({
+    onSuccess: async () => {
+      await trpcUtils.settings.get.invalidate({ keyName: "appearance" });
+      toast.success("A aparência foi guardada e aplicada imediatamente.");
+    },
+    onError: (err: any) => toast.error(err.message || "Não foi possível guardar a aparência."),
+  });
   const organizationSaveMutation = trpc.settings.set.useMutation({
     onSuccess: async () => {
       await trpcUtils.settings.getPublicOrganization.invalidate();
@@ -299,18 +307,11 @@ export default function Settings() {
   }, [notifQuery.data]);
 
   useEffect(() => {
-    if (appearanceQuery.data) {
-      try {
-        const parsed = JSON.parse(appearanceQuery.data);
-        if (parsed.theme === "light" || parsed.theme === "dark") {
-          setThemeMode(parsed.theme);
-          setTheme(parsed.theme);
-        }
-        if (isAccentColor(parsed.accent)) {
-          setAccentColor(parsed.accent);
-        }
-      } catch {}
-    }
+    if (!appearanceQuery.data) return;
+    const parsed = parseAppearanceSettings(appearanceQuery.data, { theme, accent: accentColor });
+    setThemeMode(parsed.theme);
+    setTheme(parsed.theme);
+    setAccentColor(parsed.accent);
   }, [appearanceQuery.data]);
 
   const commitActiveHeaderFontSizePoints = (draft: string, fallback = HEADER_FONT_SIZE_POINTS[headerFontSize]) => {
@@ -516,10 +517,16 @@ export default function Settings() {
   const handleThemeChange = (nextTheme: "light" | "dark") => {
     setThemeMode(nextTheme);
     setTheme(nextTheme);
+    appearanceSaveMutation.mutate({ keyName: "appearance", keyValue: serializeAppearanceSettings({ theme: nextTheme, accent: accentColor }) });
+  };
+
+  const handleAccentChange = (nextAccent: AccentColor) => {
+    setAccentColor(nextAccent);
+    appearanceSaveMutation.mutate({ keyName: "appearance", keyValue: serializeAppearanceSettings({ theme: themeMode, accent: nextAccent }) });
   };
 
   const handleSaveAppearance = () => {
-    setSettingsMutation.mutate({ keyName: "appearance", keyValue: JSON.stringify({ theme: themeMode, accent: accentColor }) });
+    appearanceSaveMutation.mutate({ keyName: "appearance", keyValue: serializeAppearanceSettings({ theme: themeMode, accent: accentColor }) });
   };
 
   const previewLogoSize = getPdfPreviewLogoSize(logoSize);
@@ -949,11 +956,11 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Cor de Destaque</label>
                   <div className="flex gap-3">
                     {([{ name: "Esmeralda", color: "#10b981", val: "emerald" }, { name: "Azul", color: "#3b82f6", val: "blue" }, { name: "Roxo", color: "#8b5cf6", val: "purple" }, { name: "Rosa", color: "#ec4899", val: "pink" }] satisfies Array<{ name: string; color: string; val: AccentColor }>).map((a) => (
-                      <button key={a.val} type="button" onClick={() => setAccentColor(a.val)} className={`h-10 w-10 rounded-full transition-all ${accentColor === a.val ? "ring-4 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800" : ""}`} style={{ backgroundColor: a.color }} title={a.name} aria-label={`Escolher paleta ${a.name}`} />
+                      <button key={a.val} type="button" onClick={() => handleAccentChange(a.val)} className={`h-10 w-10 rounded-full transition-all ${accentColor === a.val ? "ring-4 ring-slate-400 ring-offset-2 dark:ring-offset-slate-800" : ""}`} style={{ backgroundColor: a.color }} title={a.name} aria-label={`Escolher paleta ${a.name}`} />
                     ))}
                   </div>
                 </div>
-                <Button onClick={handleSaveAppearance} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button onClick={handleSaveAppearance} disabled={appearanceSaveMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Save className="w-4 h-4 mr-2" /> Guardar Preferências
                 </Button>
               </div>

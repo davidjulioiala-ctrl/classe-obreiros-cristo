@@ -15,6 +15,8 @@ import {
   ArrowRightLeft,
   Music,
   Bell,
+  Sun,
+  Moon,
   Search,
   ChevronDown,
   ShieldCheck,
@@ -25,6 +27,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface DashboardLayoutCustomProps {
   children: ReactNode;
@@ -74,6 +77,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, logout } = useLocalAuth();
+  const { theme, toggleTheme } = useTheme();
   const [location, navigate] = useLocation();
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
   const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
@@ -199,6 +203,17 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <button
+              type="button"
+              aria-label={theme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
+              title={theme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
+              aria-pressed={theme === "dark"}
+              onClick={toggleTheme}
+              className="rounded-lg p-2 transition-colors hover:bg-primary/10 dark:hover:bg-primary/20"
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5 text-amber-300" /> : <Moon className="h-5 w-5 text-slate-600 dark:text-slate-400" />}
+            </button>
+
             <button
               type="button"
               aria-label="Abrir preferências de notificações"

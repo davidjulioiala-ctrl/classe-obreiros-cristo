@@ -7086,3 +7086,15 @@
 - [x] Adicionar âmbito de exportação por pessoa, grupo ou todos os resultados filtrados.
 - [x] Garantir que CSV, PDF e Excel respeitam os filtros, a seleção de colunas e a orientação horizontal.
 - [x] Adicionar testes Vitest para filtros, âmbitos de exportação e casos sem resultados.
+
+## Nova Tarefa — Erro de Tema e Menus
+- [ ] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
+- [ ] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
+- [ ] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
+- [ ] Validar desktop, telemóvel, typecheck, testes, build e publicação.
+
+## Nova Tarefa — Erro de Tema e Menus
+- [ ] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
+- [ ] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
+- [ ] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
+- [ ] Validar desktop, telemóvel, typecheck, testes, build e publicação.

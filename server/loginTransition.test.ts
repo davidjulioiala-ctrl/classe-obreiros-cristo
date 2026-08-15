@@ -63,6 +63,22 @@ describe("login transition regression guards", () => {
     expect(layoutSource).not.toContain("useAuth()");
   });
 
+  it("keeps a global light/dark toggle in the authenticated header", () => {
+    const layoutSource = readProjectFile("client/src/components/DashboardLayoutCustom.tsx");
+
+    expect(layoutSource).toContain("const { theme, toggleTheme } = useTheme();");
+    expect(layoutSource).toContain("onClick={toggleTheme}");
+    expect(layoutSource).toContain("Mudar para modo escuro");
+  });
+
+  it("stabilizes theme callbacks so remote hydration does not revert a local selection", () => {
+    const themeSource = readProjectFile("client/src/contexts/ThemeContext.tsx");
+
+    expect(themeSource).toContain("useCallback");
+    expect(themeSource).toContain("const setTheme = useCallback");
+    expect(themeSource).toContain("const toggleTheme = useCallback");
+  });
+
   it("does not register legacy OAuth routes in the server startup", () => {
     const serverSource = readProjectFile("server/_core/index.ts");
 

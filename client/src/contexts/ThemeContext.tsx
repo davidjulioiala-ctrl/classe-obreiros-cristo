@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 type AccentColor = "emerald" | "blue" | "purple" | "pink";
@@ -93,16 +93,20 @@ export function ThemeProvider({
     if (switchable) window.localStorage.setItem("accentColor", accentColor);
   }, [accentColor, switchable]);
 
-  const setTheme = (nextTheme: Theme) => {
+  const setTheme = useCallback((nextTheme: Theme) => {
     if (!switchable) return;
     setThemeState(nextTheme);
-  };
+  }, [switchable]);
 
-  const toggleTheme = () => setThemeState((previous) => (previous === "light" ? "dark" : "light"));
-  const setAccentColor = (nextAccent: AccentColor) => {
+  const toggleTheme = useCallback(() => {
+    if (!switchable) return;
+    setThemeState((previous) => (previous === "light" ? "dark" : "light"));
+  }, [switchable]);
+
+  const setAccentColor = useCallback((nextAccent: AccentColor) => {
     if (!switchable) return;
     setAccentState(nextAccent);
-  };
+  }, [switchable]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, accentColor, setAccentColor, switchable }}>
