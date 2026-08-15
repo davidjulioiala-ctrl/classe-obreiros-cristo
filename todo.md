@@ -7053,8 +7053,14 @@
 - [ ] Validar a compilação, executar os testes unitários e guardar checkpoint.
 
 ## Nova Tarefa — Remoção de Quotas do Dashboard e Limiar Flexível
-- [ ] Sincronizar a pré-visualização e reiniciar o servidor de desenvolvimento (`webdev_restart_server`).
-- [ ] Remover o cartão de quotas da grelha de estatísticas da Página Inicial (reservando essa informação para Administrador e Finanças).
-- [ ] Adicionar nas Definições um campo numérico para configurar o limiar flexível de participação de ativos e inativos (por defeito 60%).
-- [ ] Atualizar o cálculo global de ativos e inativos na Página Inicial para respeitar o limiar configurável salvo nas Definições.
-- [ ] Validar a compilação, typecheck e testes unitários.
+- [x] Sincronizar a pré-visualização e reiniciar o servidor de desenvolvimento (`webdev_restart_server`).
+- [x] Remover o cartão de quotas da grelha de estatísticas da Página Inicial (reservando essa informação para Administrador e Finanças).
+- [x] Adicionar nas Definições um campo numérico para configurar o limiar flexível de participação de ativos e inativos (por defeito 60%).
+- [x] Atualizar o cálculo global de ativos e inativos na Página Inicial para respeitar o limiar configurável salvo nas Definições.
+- [x] Validar a compilação, typecheck e testes unitários.
+
+## Nova Tarefa — Configurações Gerais e Logótipo na Tela de Login
+- [x] Assegurar que existe um botão "Guardar" claro e explícito nas Definições para gravar simultaneamente o nome da organização, o valor da quota, o limiar percentual de ativos/inativos e os rótulos personalizados.
+- [x] Atualizar o ecrã de autenticação (Login) para utilizar o nome oficial da organização configurado e substituir a letra "C" estática pelo logótipo carregado nas Definições (com fallback elegante quando o logótipo não estiver definido).
+- [x] Garantir que as alterações aplicadas refletem-se instantaneamente na Página Inicial e em todo o sistema.
+- [x] Adicionar testes de regressão e validar a compilação.

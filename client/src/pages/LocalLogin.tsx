@@ -27,6 +27,7 @@ export default function LocalLogin() {
   const [, navigate] = useLocation();
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
   const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
+  const organizationLogoUrl = organizationQuery.data?.logoUrl ?? "";
 
   useEffect(() => {
     let active = true;
@@ -155,8 +156,12 @@ export default function LocalLogin() {
               transition={{ delay: 0.1 }}
               className="text-center mb-8"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <span className="text-white font-bold text-2xl">C</span>
+              <div className="w-16 h-16 overflow-hidden bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                {organizationLogoUrl ? (
+                  <img src={organizationLogoUrl} alt={`Logótipo de ${organizationName}`} className="h-full w-full object-contain bg-white p-1" />
+                ) : (
+                  <span className="text-white font-bold text-2xl" aria-hidden="true">C</span>
+                )}
               </div>
               <h1 className="text-3xl font-bold text-white mb-2 break-words">
                 {organizationName}

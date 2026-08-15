@@ -210,6 +210,7 @@ export default function Settings() {
   const [notifTransfers, setNotifTransfers] = useState(true);
   const [themeMode, setThemeMode] = useState(theme);
 
+  const trpcUtils = trpc.useUtils();
   const orgQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const notifQuery = trpc.settings.get.useQuery({ keyName: "notifications" });
   const appearanceQuery = trpc.settings.get.useQuery({ keyName: "appearance" });
@@ -220,9 +221,10 @@ export default function Settings() {
     onError: (err: any) => toast.error(err.message),
   });
   const organizationSaveMutation = trpc.settings.set.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await trpcUtils.settings.getPublicOrganization.invalidate();
       setShowOrganizationSaved(true);
-      toast.success("Cabeçalho e logótipo guardados com sucesso.");
+      toast.success("Configurações da organização guardadas e aplicadas com sucesso.");
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -882,8 +884,8 @@ export default function Settings() {
                     </div>
                   </div>
                 ) : null}
-                <Button onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={organizationSaveMutation.isPending}>
-                  <Save className="w-4 h-4 mr-2" /> Guardar Alterações
+                <Button type="button" onClick={handleSaveOrganization} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={organizationSaveMutation.isPending} aria-label="Guardar configurações da organização">
+                  <Save className="w-4 h-4 mr-2" /> {organizationSaveMutation.isPending ? "A guardar..." : "Guardar configurações da organização"}
                 </Button>
               </div>
             </Card>

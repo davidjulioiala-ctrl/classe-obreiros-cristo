@@ -77,6 +77,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
   const [location, navigate] = useLocation();
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
   const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
+  const organizationLogoUrl = organizationQuery.data?.logoUrl ?? "";
 
   const filteredMenuItems = getVisibleMenuItems(user);
 
@@ -117,8 +118,12 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
           {sidebarExpanded && (
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
-                <span className="text-lg font-bold text-white">C</span>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary/80">
+                {organizationLogoUrl ? (
+                  <img src={organizationLogoUrl} alt={`Logótipo de ${organizationName}`} className="h-full w-full bg-white object-contain p-1" />
+                ) : (
+                  <span className="text-lg font-bold text-white" aria-hidden="true">C</span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="max-w-[180px] truncate text-sm font-bold text-slate-900 dark:text-white">{organizationName}</p>

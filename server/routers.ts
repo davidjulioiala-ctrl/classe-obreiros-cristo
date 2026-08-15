@@ -12,6 +12,7 @@ import * as db from "./db";
 import { positiveId, safeEmail, safeText } from "./_core/security";
 import { buildIncidentDiagnosis } from "./_core/incidentDiagnostics";
 import { applyActivityTypeRules } from "../shared/activityRules";
+import { parsePublicOrganizationBranding } from "../shared/organizationBranding";
 
 // ============ MIDDLEWARE ============
 
@@ -568,17 +569,7 @@ const auditRouter = router({
 });
 
 const settingsRouter = router({
-  getPublicOrganization: publicProcedure.query(async () => {
-    const fallback = "Classe Obreiros de Cristo";
-    const raw = await db.getAppSetting("organization");
-    if (!raw) return { organizationName: fallback };
-    try {
-      const parsed = JSON.parse(raw) as { organizationName?: unknown };
-      return { organizationName: typeof parsed.organizationName === "string" && parsed.organizationName.trim() ? parsed.organizationName.trim() : fallback };
-    } catch {
-      return { organizationName: fallback };
-    }
-  }),
+  getPublicOrganization: publicProcedure.query(async () => parsePublicOrganizationBranding(await db.getAppSetting("organization"))),
   get: protectedProcedure.input(z.object({ keyName: safeText(120) })).query(async ({ input }) => {
     return await db.getAppSetting(input.keyName);
   }),
