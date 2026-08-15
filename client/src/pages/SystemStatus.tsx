@@ -19,6 +19,8 @@ import { trpc } from "@/lib/trpc";
 export type PublicMaintenanceState = {
   enabled: boolean;
   reason?: string | null;
+  customMessage?: string | null;
+  estimatedCompletionAt?: string | null;
   incidentId?: number | null;
 };
 
@@ -30,6 +32,13 @@ type StatusView = {
   title: string;
   description: string;
 };
+
+export function formatEstimatedCompletion(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("pt-PT", { dateStyle: "long", timeStyle: "short" });
+}
 
 export function getSystemStatusView(
   state: PublicMaintenanceState | null,
@@ -113,6 +122,8 @@ export default function SystemStatus() {
       setState({
         enabled: Boolean(nextState.enabled),
         reason: nextState.reason ?? null,
+        customMessage: nextState.customMessage ?? null,
+        estimatedCompletionAt: nextState.estimatedCompletionAt ?? null,
         incidentId: nextState.incidentId ?? null,
       });
       setHasError(false);
@@ -198,6 +209,7 @@ export default function SystemStatus() {
   const organizationName = organizationQuery.data?.organizationName ?? "Sistema de Gestão Eclesiástica";
   const view = getSystemStatusView(state, hasError, checking);
   const styles = toneStyles[view.tone];
+  const estimatedCompletion = formatEstimatedCompletion(state?.estimatedCompletionAt);
   const Icon =
     view.tone === "operational"
       ? CheckCircle2
@@ -229,10 +241,12 @@ export default function SystemStatus() {
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950/55 p-5 text-center sm:p-6">
           <h2 className="text-xl font-semibold text-white sm:text-2xl">{view.title}</h2>
           <p className="mx-auto mt-3 max-w-xl leading-7 text-slate-300">{view.description}</p>
-          {state?.enabled && state.reason ? (
-            <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-left">
+          {state?.enabled && (state.reason || state.customMessage || estimatedCompletion) ? (
+            <div className="mt-5 space-y-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-left">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">Informação da manutenção</p>
-              <p className="mt-2 text-sm leading-6 text-amber-50">{state.reason}</p>
+              {state.reason ? <p className="text-sm leading-6 text-amber-50">{state.reason}</p> : null}
+              {state.customMessage ? <p className="whitespace-pre-wrap text-sm leading-6 text-amber-50">{state.customMessage}</p> : null}
+              {estimatedCompletion ? <p className="flex items-center gap-2 text-sm font-semibold text-amber-100"><Clock3 aria-hidden="true" className="h-4 w-4" />Conclusão estimada: {estimatedCompletion}</p> : null}
             </div>
           ) : null}
           {state?.enabled && state.incidentId ? (

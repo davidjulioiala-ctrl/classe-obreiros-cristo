@@ -7,6 +7,14 @@ import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 
+function toDateTimeLocal(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 export default function AuditAndBackup() {
   const [destination, setDestination] = useState<"local" | "drive">("local");
   const [cloudEmail, setCloudEmail] = useState("");
@@ -24,6 +32,8 @@ export default function AuditAndBackup() {
   const [incidentDescription, setIncidentDescription] = useState("");
   const [incidentSource, setIncidentSource] = useState("");
   const [maintenanceReason, setMaintenanceReason] = useState("");
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [maintenanceEstimatedCompletion, setMaintenanceEstimatedCompletion] = useState("");
 
   const utils = trpc.useUtils();
   const auditQuery = trpc.audit.list.useQuery({ limit: 250 });
@@ -54,6 +64,14 @@ export default function AuditAndBackup() {
     setBackupMinute(String(schedule.minute).padStart(2, "0"));
     setBackupEnabled(schedule.enabled);
   }, [scheduleQuery.data]);
+
+  useEffect(() => {
+    const maintenance = incidentStateQuery.data?.maintenance;
+    if (!maintenance) return;
+    setMaintenanceReason(maintenance.reason ?? "");
+    setMaintenanceMessage(maintenance.customMessage ?? "");
+    setMaintenanceEstimatedCompletion(toDateTimeLocal(maintenance.estimatedCompletionAt));
+  }, [incidentStateQuery.data?.maintenance]);
 
   const refreshBackups = async () => {
     await Promise.all([versionsQuery.refetch(), auditQuery.refetch(), scheduleQuery.refetch()]);
@@ -89,8 +107,20 @@ export default function AuditAndBackup() {
 
   const handleMaintenance = async (enabled: boolean) => {
     if (enabled && !window.confirm("Activar o modo de manutenção? As operações normais serão bloqueadas para todos os utilizadores.")) return;
+    const estimatedCompletionAt = maintenanceEstimatedCompletion
+      ? new Date(maintenanceEstimatedCompletion).toISOString()
+      : null;
+    if (maintenanceEstimatedCompletion && Number.isNaN(new Date(maintenanceEstimatedCompletion).getTime())) {
+      toast.error("Indique uma data e hora válidas para a conclusão estimada.");
+      return;
+    }
     try {
-      await setMaintenance.mutateAsync({ enabled, reason: maintenanceReason.trim() || undefined });
+      await setMaintenance.mutateAsync({
+        enabled,
+        reason: maintenanceReason.trim() || undefined,
+        customMessage: maintenanceMessage.trim() || undefined,
+        estimatedCompletionAt,
+      });
       toast.success(enabled ? "Modo de manutenção activado." : "Modo de manutenção desactivado.");
       await refreshIncidentData();
     } catch (error) {
@@ -219,6 +249,8 @@ export default function AuditAndBackup() {
             <CardContent className="space-y-4">
               <p className="text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">Bloqueie operações de escrita enquanto investiga um incidente. O login, a consola administrativa de emergência e a recuperação de backups permanecem disponíveis.</p>
               <div><label className="mb-2 block text-sm font-medium text-amber-950 dark:text-amber-100">Motivo apresentado aos utilizadores</label><Input value={maintenanceReason} onChange={(event) => setMaintenanceReason(event.target.value)} maxLength={500} placeholder="Actualização de segurança em curso" /></div>
+              <div><label className="mb-2 block text-sm font-medium text-amber-950 dark:text-amber-100">Mensagem personalizada</label><textarea value={maintenanceMessage} onChange={(event) => setMaintenanceMessage(event.target.value)} maxLength={1000} rows={3} placeholder="Estamos a actualizar o sistema. Obrigado pela compreensão." className="w-full resize-y rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-amber-900 dark:bg-slate-950 dark:text-slate-100" /><p className="mt-1 text-xs text-amber-950/60 dark:text-amber-100/60">Será exibida na página pública de estado. Evite incluir dados internos.</p></div>
+              <div><label className="mb-2 block text-sm font-medium text-amber-950 dark:text-amber-100">Conclusão estimada</label><Input type="datetime-local" value={maintenanceEstimatedCompletion} onChange={(event) => setMaintenanceEstimatedCompletion(event.target.value)} /><p className="mt-1 text-xs text-amber-950/60 dark:text-amber-100/60">Opcional; os utilizadores verão a data e hora no seu fuso horário.</p></div>
               <div className="flex flex-wrap gap-2"><Button type="button" className="bg-amber-600 text-white hover:bg-amber-700" disabled={setMaintenance.isPending || incidentStateQuery.data?.maintenance.enabled} onClick={() => void handleMaintenance(true)}><LockKeyhole className="mr-2 h-4 w-4" />Activar manutenção</Button><Button type="button" variant="outline" disabled={setMaintenance.isPending || !incidentStateQuery.data?.maintenance.enabled} onClick={() => void handleMaintenance(false)}><UnlockKeyhole className="mr-2 h-4 w-4" />Desactivar</Button></div>
               {incidentStateQuery.data?.maintenance.enabled && <p className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200"><AlertTriangle className="h-4 w-4" />Manutenção activa: {incidentStateQuery.data.maintenance.reason || "sem motivo indicado"}</p>}
               <Button type="button" variant="outline" className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30" disabled={revokeAllSessions.isPending} onClick={() => void handleRevokeSessions()}><ShieldAlert className="mr-2 h-4 w-4" />Revogar todas as sessões</Button>

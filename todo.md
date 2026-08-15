@@ -7155,3 +7155,10 @@
 - [x] Criar indicador visual de banner de emergência e consola limitada para o administrador.
 - [x] Restringir operações de escrita críticas (como novas transações financeiras) mantendo backup e diagnóstico disponíveis.
 - [x] Validar testes unitários, typecheck, build e publicação da nova funcionalidade.
+
+
+## Mensagem personalizada e tempo estimado de manutenção — ciclo actual
+- [ ] Atualizar o esquema e os helpers de base de dados para guardar customMessage e estimatedCompletion.
+- [ ] Adicionar campos correspondentes no ecrã de Definições/Segurança e no router tRPC de manutenção.
+- [ ] Apresentar a mensagem personalizada e o tempo estimado na página de estado e no banner de emergência.
+- [ ] Validar testes unitários, typecheck, build e publicação.

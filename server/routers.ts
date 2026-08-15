@@ -640,11 +640,19 @@ const incidentRouter = router({
     }),
 
   setMaintenance: adminProcedure
-    .input(z.object({ enabled: z.boolean(), reason: safeText(500, false), incidentId: positiveId.optional() }))
+    .input(z.object({
+      enabled: z.boolean(),
+      reason: safeText(500, false),
+      customMessage: safeText(1000, false),
+      estimatedCompletionAt: z.string().datetime({ offset: true }).nullable().optional(),
+      incidentId: positiveId.optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
       const state = await db.setSystemMaintenanceState({
         enabled: input.enabled,
         reason: input.reason ?? (input.enabled ? "Manutenção de emergência activada pelo administrador." : ""),
+        customMessage: input.customMessage ?? "",
+        estimatedCompletionAt: input.estimatedCompletionAt ?? null,
         incidentId: input.incidentId ?? null,
         startedAt: input.enabled ? new Date().toISOString() : null,
         updatedBy: ctx.user.id,

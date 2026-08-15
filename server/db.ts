@@ -1408,6 +1408,8 @@ export async function setAppSetting(keyName: string, keyValue: string) {
 export type SystemMaintenanceState = {
   enabled: boolean;
   reason: string;
+  customMessage: string;
+  estimatedCompletionAt: string | null;
   incidentId: number | null;
   startedAt: string | null;
   updatedBy: number | null;
@@ -1416,6 +1418,8 @@ export type SystemMaintenanceState = {
 const DEFAULT_MAINTENANCE_STATE: SystemMaintenanceState = {
   enabled: false,
   reason: "",
+  customMessage: "",
+  estimatedCompletionAt: null,
   incidentId: null,
   startedAt: null,
   updatedBy: null,
@@ -1428,6 +1432,8 @@ function parseMaintenanceState(value: string | null): SystemMaintenanceState {
     return {
       enabled: parsed.enabled === true,
       reason: typeof parsed.reason === "string" ? parsed.reason : "",
+      customMessage: typeof parsed.customMessage === "string" ? parsed.customMessage : "",
+      estimatedCompletionAt: typeof parsed.estimatedCompletionAt === "string" ? parsed.estimatedCompletionAt : null,
       incidentId: Number.isInteger(parsed.incidentId) ? (parsed.incidentId ?? null) : null,
       startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : null,
       updatedBy: Number.isInteger(parsed.updatedBy) ? (parsed.updatedBy ?? null) : null,

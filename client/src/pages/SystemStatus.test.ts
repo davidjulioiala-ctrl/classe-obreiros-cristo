@@ -31,3 +31,19 @@ describe("estado público do sistema", () => {
     expect(view.description).toContain("Tente novamente");
   });
 });
+
+
+  it("formata uma conclusão estimada válida para o locale português", async () => {
+    const { formatEstimatedCompletion } = await import("./SystemStatus");
+    const formatted = formatEstimatedCompletion("2026-08-15T18:30:00.000Z");
+
+    expect(formatted).toBeTruthy();
+    expect(formatted).toContain("2026");
+  });
+
+  it("ignora uma conclusão estimada inválida sem quebrar a página", async () => {
+    const { formatEstimatedCompletion } = await import("./SystemStatus");
+
+    expect(formatEstimatedCompletion("data-inválida")).toBeNull();
+    expect(formatEstimatedCompletion(null)).toBeNull();
+  });

@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Clock3, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type MaintenanceState = {
   enabled: boolean;
-  reason?: string;
+  reason?: string | null;
+  customMessage?: string | null;
+  estimatedCompletionAt?: string | null;
   incidentId?: number | null;
 };
+
+function formatEstimatedCompletion(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("pt-PT", { dateStyle: "long", timeStyle: "short" });
+}
 
 type MaintenanceGateProps = {
   user: { role?: string } | null;
@@ -40,6 +49,8 @@ export default function MaintenanceGate({ user, children }: MaintenanceGateProps
     };
   }, []);
 
+  const estimatedCompletion = formatEstimatedCompletion(state.estimatedCompletionAt);
+
   if (checking || !state.enabled || user?.role === "admin") {
     return (
       <>
@@ -62,6 +73,8 @@ export default function MaintenanceGate({ user, children }: MaintenanceGateProps
         <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Sistema em manutenção</h1>
         <p className="mt-4 leading-7 text-slate-300">As operações foram interrompidas para proteger os dados e permitir a investigação ou actualização do sistema.</p>
         {state.reason && <p className="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-200">Motivo: {state.reason}</p>}
+        {state.customMessage && <p className="mt-4 whitespace-pre-wrap rounded-lg border border-amber-400/20 bg-amber-400/10 p-3 text-left text-sm leading-6 text-amber-50">{state.customMessage}</p>}
+        {estimatedCompletion && <p className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-amber-200"><Clock3 className="h-4 w-4" />Conclusão estimada: {estimatedCompletion}</p>}
         {state.incidentId && <p className="mt-3 text-xs text-slate-500">Incidente #{state.incidentId}</p>}
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap"><Button type="button" variant="outline" className="border-slate-600 text-slate-100 hover:bg-slate-800" onClick={() => void checkState()}><RefreshCw className="mr-2 h-4 w-4" />Verificar novamente</Button><a className="inline-flex h-10 items-center justify-center rounded-md border border-slate-600 px-4 text-sm font-medium text-slate-100 hover:bg-slate-800" href="/status">Ver estado do sistema</a><a className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700" href="/login"><ShieldCheck className="mr-2 h-4 w-4" />Voltar ao login</a></div>
       </section>

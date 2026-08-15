@@ -74,7 +74,13 @@ async function startServer() {
   app.get("/api/maintenance", async (_req, res) => {
     try {
       const state = await getSystemMaintenanceState();
-      return res.json({ enabled: state.enabled, reason: state.reason, incidentId: state.incidentId });
+      return res.json({
+        enabled: state.enabled,
+        reason: state.reason,
+        customMessage: state.customMessage,
+        estimatedCompletionAt: state.estimatedCompletionAt,
+        incidentId: state.incidentId,
+      });
     } catch {
       return res.status(503).json({ enabled: false });
     }
