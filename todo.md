@@ -1,7 +1,7 @@
 # Classe Obreiros de Cristo - TODO
 
 ## Correção Crítica pendente
-- [ ] Corrigir e validar a confirmação do código 2FA no login e configuração
+- [x] Corrigir e validar a confirmação do código 2FA no login e configuração
 
 ## Funcionalidades Novas
 - [ ] Implementar importação de membros por CSV com pré-visualização e validação

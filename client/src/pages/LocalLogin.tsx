@@ -26,7 +26,7 @@ export default function LocalLogin() {
   const [bootstrapEmail, setBootstrapEmail] = useState("");
   const [bootstrapUsername, setBootstrapUsername] = useState("");
   const [bootstrapPassword, setBootstrapPassword] = useState("");
-  const { login, verifyTwoFactor } = useLocalAuth();
+  const { login, verifyTwoFactor, refresh } = useLocalAuth();
   const [, navigate] = useLocation();
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
   const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
@@ -335,6 +335,7 @@ export default function LocalLogin() {
                           if (!res.ok) throw new Error(data.error || "Código inválido");
                           toast.success("2FA ativado com sucesso! Bem-vindo.");
                           setTwoFactorSetupModal(false);
+                          await refresh();
                           navigate("/dashboard");
                         } catch (err: any) {
                           toast.error(err.message || "Erro ao confirmar código");
