@@ -31,7 +31,8 @@ function isSystemRole(value: string): value is SystemRole {
 }
 
 function isChurchRole(value: string): value is ChurchRole {
-  return churchRoles.some((role) => role.value === value);
+  const normalized = value.trim().toLowerCase();
+  return churchRoles.some((role) => role.value === normalized);
 }
 
 type UserItem = {

@@ -7314,3 +7314,9 @@
 - [x] Assistente passo a passo integrado no ecrã de login para guiar contas obrigadas a configurar o 2FA.
 - [x] Opção de redefinição / desativação administrativa de 2FA por utilizador em `UserManagement.tsx`.
 - [x] Validação de testes, typecheck e build sem erros.
+
+
+## Correção de Formulário de Utilizador e 2FA
+- [x] Corrigir seletores Select e SelectItem em UserManagement.tsx para evitar valores vazios ou incompatíveis ao escolher Papel e Função eclesiástica.
+- [x] Assegurar que o endpoint e componente 2FA funcionam sem interrupções para todos os utilizadores autenticados.
+- [x] Validar testes unitários, typecheck, build e verificação visual.
