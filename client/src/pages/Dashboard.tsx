@@ -293,6 +293,19 @@ export default function Dashboard() {
           <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Grupos operacionais" value={groups?.length ?? 0} trendValue="Dados reais" />
         </motion.div>
 
+        <Card className="border-blue-200/80 bg-white p-5 shadow-[0_0_0_1px_rgba(147,197,253,0.18)] dark:border-blue-900/50 dark:bg-slate-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Exportar membros por participação</h2>
+              <p className="mt-1 max-w-2xl text-xs text-slate-500 dark:text-slate-400">Escolha uma lista de membros activos ou inactivos para abrir a exportação filtrada. No passo seguinte poderá seleccionar o período, as colunas e o formato PDF, CSV ou Excel.</p>
+            </div>
+            <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-auto">
+              <button type="button" onClick={() => setParticipationGroup("active")} className="inline-flex min-h-10 items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">Exportar membros activos</button>
+              <button type="button" onClick={() => setParticipationGroup("inactive")} className="inline-flex min-h-10 items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">Exportar membros inactivos</button>
+            </div>
+          </div>
+        </Card>
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCard title="Distribuição de Membros por Grupo">
@@ -435,8 +448,8 @@ export default function Dashboard() {
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Colunas da exportação</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A exportação respeita os filtros desta janela e inclui apenas as colunas seleccionadas.</p>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Exportar lista de {participationGroup === "active" ? "membros activos" : "membros inactivos"}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A exportação respeita o período, a pesquisa, os filtros desta janela e inclui apenas as colunas seleccionadas.</p>
                 </div>
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200">
                   <input type="checkbox" checked={participationIncludePersonalData} onChange={(event) => { const enabled = event.target.checked; setParticipationIncludePersonalData(enabled); if (!enabled) setParticipationExportColumns((current) => current.filter((column) => !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]))); }} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />

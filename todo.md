@@ -7128,3 +7128,5 @@
 - [ ] Rever e atualizar os testes unitários, typecheck, build e verificação responsiva desta continuação.
 
 > Nota desta continuação: a classificação considera apenas atividades existentes no período escolhido; uma data inicial igual à data final representa esse dia específico. A exportação mantém os filtros e colunas selecionados e não introduz dados fictícios.
+
+- [ ] Adicionar botão e secção explícita de exportação de membros ativos e inativos na Página Inicial com suporte a PDF, CSV e Excel

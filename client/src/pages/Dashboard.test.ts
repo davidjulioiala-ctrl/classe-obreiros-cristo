@@ -43,5 +43,8 @@ describe("filtro temporal do Dashboard", () => {
     expect(dashboardSource).toContain("Exportar PDF");
     expect(dashboardSource).toContain("Exportar CSV");
     expect(dashboardSource).toContain("Exportar Excel");
+    expect(dashboardSource).toContain("Exportar membros activos");
+    expect(dashboardSource).toContain("Exportar membros inactivos");
+    expect(dashboardSource).toContain("Exportar lista de {participationGroup === \"active\" ? \"membros activos\" : \"membros inactivos\"}");
   });
 });
