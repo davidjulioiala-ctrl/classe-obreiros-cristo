@@ -9,6 +9,7 @@ import {
   updateUser,
   getUserById,
   getAllUsers,
+  UserCreationError,
   deleteUser,
 } from "../auth";
 import { createAuditLog } from "../db";
@@ -74,19 +75,29 @@ export const authRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const user = await createUser(
-        input.username,
-        input.password,
-        input.name,
-        input.email ?? "",
-        input.churchRole,
-        input.role,
-      );
-      if (!user) {
-        throw new TRPCError({ code: "CONFLICT", message: "Não foi possível criar o utilizador. Verifique se o nome de utilizador já existe." });
+      try {
+        const user = await createUser(
+          input.username,
+          input.password,
+          input.name,
+          input.email ?? "",
+          input.churchRole,
+          input.role,
+        );
+        if (!user) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o utilizador. Tente novamente." });
+        }
+        await createAuditLog({ userId: ctx.user.id, action: "criar", entityType: "user", entityId: user.id, details: JSON.stringify({ username: user.username, churchRole: user.churchRole, role: user.role }) });
+        return { success: true, user: safeUser(user) };
+      } catch (error) {
+        if (error instanceof UserCreationError) {
+          throw new TRPCError({
+            code: error.reason === "database" ? "INTERNAL_SERVER_ERROR" : "CONFLICT",
+            message: error.message,
+          });
+        }
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o utilizador. Tente novamente." });
       }
-      await createAuditLog({ userId: ctx.user.id, action: "criar", entityType: "user", entityId: user.id, details: JSON.stringify({ username: user.username, churchRole: user.churchRole, role: user.role }) });
-      return { success: true, user: safeUser(user) };
     }),
 
   updateUser: adminProcedure

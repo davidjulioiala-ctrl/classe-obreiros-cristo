@@ -7196,3 +7196,9 @@
 ## Regresso ao login durante a manutenção
 - [x] Adicionar um botão claro para voltar à tela de login na página de manutenção do utilizador.
 - [x] Validar a navegação, responsividade e testes do novo botão.
+
+## Criação de utilizador e login após 2FA
+- [x] Diagnosticar a falha de criação de utilizadores e o estado devolvido ao formulário.
+- [x] Corrigir o fluxo de login administrativo com segunda etapa 2FA e mensagens de erro claras.
+- [x] Adicionar regressões para criação, credenciais, sessão e verificação 2FA.
+- [x] Validar testes, typecheck, build e publicação.

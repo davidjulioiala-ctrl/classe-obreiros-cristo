@@ -17,6 +17,19 @@ const PASSWORD_SCHEME = "scrypt:v1";
 const SCRYPT_KEY_LENGTH = 64;
 const SCRYPT_OPTIONS = { N: 16_384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 } as const;
 
+export type UserCreationFailure = "duplicate_username" | "duplicate_email" | "database";
+
+export class UserCreationError extends Error {
+  constructor(public readonly reason: UserCreationFailure) {
+    super(reason === "duplicate_username"
+      ? "O nome de utilizador já existe."
+      : reason === "duplicate_email"
+        ? "O email já está associado a outro utilizador."
+        : "Não foi possível guardar o utilizador na base de dados.");
+    this.name = "UserCreationError";
+  }
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const derivedKey = await derivePasswordKey(password, salt, SCRYPT_KEY_LENGTH);
@@ -57,10 +70,11 @@ export async function authenticateUser(
   }
 
   try {
+    const normalizedUsername = username.trim().toLowerCase();
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.username, username))
+      .where(eq(users.username, normalizedUsername))
       .limit(1);
 
     if (user.length === 0) {
@@ -118,30 +132,39 @@ export async function createUser(
   }
 
   try {
-    const hashedPassword = await hashPassword(password);
+    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase() || null;
+    const existingUsername = await db.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
+    if (existingUsername.length > 0) throw new UserCreationError("duplicate_username");
+    if (normalizedEmail) {
+      const existingEmail = await db.select({ id: users.id }).from(users).where(eq(users.email, normalizedEmail)).limit(1);
+      if (existingEmail.length > 0) throw new UserCreationError("duplicate_email");
+    }
 
+    const hashedPassword = await hashPassword(password);
     await db.insert(users).values({
-      username: username.trim().toLowerCase(),
+      username: normalizedUsername,
       password: hashedPassword,
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       loginMethod: "local",
       role,
       churchRole,
       isActive: true,
     });
 
-    // Fetch and return the created user
     const createdUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username.trim().toLowerCase()))
+      .where(eq(users.username, normalizedUsername))
       .limit(1);
 
-    return createdUser.length > 0 ? createdUser[0] : null;
+    if (createdUser.length === 0) throw new UserCreationError("database");
+    return createdUser[0];
   } catch (error) {
+    if (error instanceof UserCreationError) throw error;
     console.error("[Auth] User creation failed:", error);
-    return null;
+    throw new UserCreationError("database");
   }
 }
 

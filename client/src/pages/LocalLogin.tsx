@@ -51,6 +51,7 @@ export default function LocalLogin() {
     try {
       const result = await login(username, password);
       if (result.twoFactorRequired) {
+        setTwoFactorCode("");
         setRequiresTwoFactor(true);
         return;
       }
@@ -183,15 +184,18 @@ export default function LocalLogin() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-lg font-semibold text-white">Verificação em dois passos</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">Introduza o código de 6 dígitos da sua aplicação autenticadora. Também pode usar um código de recuperação de uso único.</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">Introduza o código de 6 dígitos da sua aplicação autenticadora. Também pode usar um código de recuperação de uso único. Se a mensagem indicar que o desafio expirou, volte ao login e tente novamente.</p>
                   </div>
                   <Input
                     type="text"
-                    inputMode="numeric"
+                    inputMode="text"
                     autoComplete="one-time-code"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={twoFactorCode}
-                    onChange={(e) => setTwoFactorCode(e.target.value)}
-                    placeholder="Código 2FA"
+                    onChange={(e) => setTwoFactorCode(e.target.value.slice(0, 64))}
+                    placeholder="Código 2FA ou recuperação"
                     disabled={isLoading}
                     maxLength={16}
                     autoFocus
@@ -207,7 +211,7 @@ export default function LocalLogin() {
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {isLoading ? "A verificar..." : "Verificar código"}
                   </motion.button>
-                  <button type="button" className="w-full text-sm text-slate-400 hover:text-white" onClick={() => { setRequiresTwoFactor(false); setTwoFactorCode(""); }}>Voltar</button>
+                  <button type="button" className="w-full text-sm text-slate-400 hover:text-white" onClick={() => { setRequiresTwoFactor(false); setTwoFactorCode(""); }}>Voltar ao login</button>
                 </div>
               ) : (
                 <>
@@ -232,8 +236,9 @@ export default function LocalLogin() {
                   Senha
                 </label>
                 <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
+                                      <Input
+                      type={showPassword ? "text" : "password"}
+
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Introduza a sua senha"

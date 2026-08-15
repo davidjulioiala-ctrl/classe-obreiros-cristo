@@ -46,36 +46,41 @@ function challengeKey(req: Request, userId: number) {
 
 async function verifyAdminCode(req: Request, userId: number, code: string, allowRecoveryCode: boolean) {
   const settings = await getTwoFactorSettings(userId);
-  if (!settings?.enabled || !settings.secret) return { valid: false, recoveryCodes: null as string | null };
-  if (verifyTotpCode(settings.secret, code)) return { valid: true, recoveryCodes: null as string | null };
-  if (!allowRecoveryCode) return { valid: false, recoveryCodes: null as string | null };
+  if (!settings?.enabled || !settings.secret) return { valid: false, recoveryCodes: null as string | null, reason: "unconfigured" as const };
+  if (verifyTotpCode(settings.secret, code)) return { valid: true, recoveryCodes: null as string | null, reason: "valid" as const };
+  if (!allowRecoveryCode) return { valid: false, recoveryCodes: null as string | null, reason: "invalid" as const };
   const remaining = consumeRecoveryCode(settings.recoveryCodes, code);
-  return { valid: Boolean(remaining), recoveryCodes: remaining };
+  return { valid: Boolean(remaining), recoveryCodes: remaining, reason: remaining ? "valid" as const : "invalid" as const };
 }
 
 export function registerLocalAuthRoutes(app: Express) {
   app.post("/api/auth/login", requireSameOrigin, async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body as { username?: string; password?: string };
-      if (!username || !password) return res.status(400).json({ success: false, error: "Por favor, preencha o nome de utilizador e a senha." });
+      const normalizedUsername = typeof username === "string" ? username.trim().toLowerCase() : "";
+      if (!normalizedUsername || typeof password !== "string" || !password) return res.status(400).json({ success: false, error: "Por favor, preencha o nome de utilizador e a senha." });
 
-      const rate = checkLoginRateLimit(req, username);
+      const rate = checkLoginRateLimit(req, normalizedUsername);
       if (!rate.allowed) {
         res.setHeader("Retry-After", String(rate.retryAfterSeconds));
         return res.status(429).json({ success: false, error: "Demasiadas tentativas. Tente novamente mais tarde." });
       }
 
-      const user = await authenticateUser(username, password);
+      const user = await authenticateUser(normalizedUsername, password);
       if (!user) {
-        recordLoginFailure(req, username);
+        recordLoginFailure(req, normalizedUsername);
         void notifySecurityEvent({ kind: "login_failure", title: "Falha de login local detectada", metadata: { ip: req.ip ?? "desconhecido" } });
         return res.status(401).json({ success: false, error: "Nome de utilizador ou palavra-passe incorretos. Por favor, verifique os dados inseridos." });
       }
 
-      clearLoginFailures(req, username);
+      clearLoginFailures(req, normalizedUsername);
       if (user.role === "admin" && user.twoFactorEnabled) {
+        const settings = await getTwoFactorSettings(user.id);
+        if (!settings?.enabled || !settings.secret) {
+          return res.status(503).json({ success: false, error: "A configuração 2FA desta conta está incompleta. Contacte outro administrador para a recuperar antes de tentar entrar novamente." });
+        }
         setChallengeCookie(req, res, user);
-        return res.json({ success: true, twoFactorRequired: true, message: "Introduza o código da aplicação autenticadora." });
+        return res.json({ success: true, twoFactorRequired: true, message: "Introduza o código da aplicação autenticadora ou um código de recuperação." });
       }
 
       setSessionCookie(req, res, user);
@@ -89,9 +94,10 @@ export function registerLocalAuthRoutes(app: Express) {
   app.post("/api/auth/2fa/verify", requireSameOrigin, async (req: Request, res: Response) => {
     try {
       const { code } = req.body as { code?: string };
+      const normalizedCode = typeof code === "string" ? code.trim().slice(0, 64) : "";
       const cookies = parseCookieHeader(req.headers.cookie ?? "");
       const challenge = verifyTwoFactorChallengeToken(cookies[TWO_FACTOR_CHALLENGE_COOKIE]);
-      if (!challenge || !code) return res.status(401).json({ success: false, error: "Desafio 2FA inválido ou expirado." });
+      if (!challenge || !normalizedCode) return res.status(401).json({ success: false, error: "O desafio 2FA expirou. Volte ao login e introduza novamente as suas credenciais." });
       const user = await getUserById(challenge.userId);
       if (!user || user.role !== "admin" || !user.isActive || (user.sessionVersion ?? 1) !== challenge.sessionVersion || !user.twoFactorEnabled) {
         clearChallengeCookie(req, res);
@@ -104,7 +110,11 @@ export function registerLocalAuthRoutes(app: Express) {
         res.setHeader("Retry-After", String(rate.retryAfterSeconds));
         return res.status(429).json({ success: false, error: "Demasiadas tentativas de 2FA. Tente novamente mais tarde." });
       }
-      const verification = await verifyAdminCode(req, user.id, code, true);
+      const verification = await verifyAdminCode(req, user.id, normalizedCode, true);
+      if (verification.reason === "unconfigured") {
+        clearChallengeCookie(req, res);
+        return res.status(503).json({ success: false, error: "A configuração 2FA desta conta está incompleta. Contacte outro administrador para a recuperar." });
+      }
       if (!verification.valid) {
         recordTwoFactorFailure(key);
         void notifySecurityEvent({ kind: "two_factor_failure", title: "Falha de verificação 2FA detectada", actorId: user.id, metadata: { ip: req.ip ?? "desconhecido" } });

@@ -89,3 +89,26 @@ describe("autenticação local", () => {
     await expect(getLocalUserFromRequest(invalidRequest)).resolves.toBeNull();
   });
 });
+
+
+describe("contrato do login 2FA", () => {
+  it("normaliza o nome de utilizador antes de consultar a conta e aplicar rate limit", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const source = readFileSync(fileURLToPath(new URL("./_core/localAuth.ts", import.meta.url)), "utf8");
+    expect(source).toContain('const normalizedUsername = typeof username === "string" ? username.trim().toLowerCase() : "";');
+    expect(source).toContain("checkLoginRateLimit(req, normalizedUsername)");
+    expect(source).toContain("authenticateUser(normalizedUsername, password)");
+  });
+
+  it("mantém o desafio recuperável e aceita código autenticador ou de recuperação", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const source = readFileSync(fileURLToPath(new URL("./_core/localAuth.ts", import.meta.url)), "utf8");
+    expect(source).toContain('const normalizedCode = typeof code === "string" ? code.trim().slice(0, 64) : "";');
+    expect(source).toContain("código da aplicação autenticadora ou um código de recuperação");
+    expect(source).toContain("consumeRecoveryCode(settings.recoveryCodes, code)");
+    expect(source).toContain("O desafio 2FA expirou. Volte ao login");
+    expect(source).toContain("A configuração 2FA desta conta está incompleta");
+  });
+});
