@@ -7303,7 +7303,7 @@
 
 
 ## Correção Definitiva: 2FA Pessoal e Política Global do Administrador
-- [ ] Garantir que a página de Perfil renderiza corretamente o componente TwoFactorSettings para o administrador sem erros de API ou de rede.
-- [ ] Adicionar na página de Definições uma secção clara de Segurança com o interruptor para o administrador activar a obrigatoriedade do 2FA para todos os membros.
-- [ ] Garantir que, quando activada pelo administrador, os membros sem 2FA são bloqueados no login e forçados a configurar o 2FA.
-- [ ] Validar o fluxo com testes automatizados, typecheck, build e verificação visual.
+- [x] Garantir que a página de Perfil renderiza corretamente o componente TwoFactorSettings para o administrador sem erros de API ou de rede.
+- [x] Adicionar na página de Definições uma secção clara de Segurança com o interruptor para o administrador activar a obrigatoriedade do 2FA para todos os membros.
+- [x] Garantir que, quando activada pelo administrador, os membros sem 2FA são bloqueados no login e forçados a configurar o 2FA.
+- [x] Validar o fluxo com testes automatizados, typecheck, build e verificação visual.
