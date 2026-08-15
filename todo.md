@@ -7148,3 +7148,10 @@
 - [x] Corrigir o onClick do botão para executar efectivamente handleRevokeSessions.
 - [x] Adicionar teste estrutural para impedir que o botão volte a passar apenas a referência da função.
 - [x] Validar revogação global, typecheck, testes, build e publicação.
+
+
+## Modo de manutenção com acesso administrativo de emergência — ciclo actual
+- [x] Bloquear utilizadores comuns durante a manutenção e permitir acesso exclusivo ao administrador autenticado.
+- [x] Criar indicador visual de banner de emergência e consola limitada para o administrador.
+- [x] Restringir operações de escrita críticas (como novas transações financeiras) mantendo backup e diagnóstico disponíveis.
+- [x] Validar testes unitários, typecheck, build e publicação da nova funcionalidade.

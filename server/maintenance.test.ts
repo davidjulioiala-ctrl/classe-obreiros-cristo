@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { maintenanceGate } from "./_core/maintenance";
 
-const { getSystemMaintenanceStateMock } = vi.hoisted(() => ({
+const { getSystemMaintenanceStateMock, getLocalUserFromRequestMock } = vi.hoisted(() => ({
   getSystemMaintenanceStateMock: vi.fn(),
+  getLocalUserFromRequestMock: vi.fn(),
 }));
 
 vi.mock("./db", () => ({
   getSystemMaintenanceState: getSystemMaintenanceStateMock,
+}));
+
+vi.mock("./_core/localAuthMiddleware", () => ({
+  getLocalUserFromRequest: getLocalUserFromRequestMock,
 }));
 
 function request(originalUrl: string, method = "POST") {
@@ -20,6 +25,7 @@ function response() {
 describe("gate de manutenção de emergência", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getLocalUserFromRequestMock.mockResolvedValue(null);
     getSystemMaintenanceStateMock.mockResolvedValue({
       enabled: true,
       reason: "Investigação de segurança",
@@ -35,6 +41,24 @@ describe("gate de manutenção de emergência", () => {
     await maintenanceGate(request("/api/trpc/members.create"), res, next);
     expect(res.status).toHaveBeenCalledWith(503);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ maintenance: true, incidentId: 12 }));
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("permite que um administrador autenticado mantenha acesso à consola durante a manutenção", async () => {
+    getLocalUserFromRequestMock.mockResolvedValue({ id: 1, role: "admin" });
+    const res = response();
+    const next = vi.fn();
+    await maintenanceGate(request("/api/trpc/members.list", "GET"), res, next);
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia escritas críticas mesmo para o administrador durante a manutenção", async () => {
+    getLocalUserFromRequestMock.mockResolvedValue({ id: 1, role: "admin" });
+    const res = response();
+    const next = vi.fn();
+    await maintenanceGate(request("/api/trpc/members.create"), res, next);
+    expect(res.status).toHaveBeenCalledWith(503);
     expect(next).not.toHaveBeenCalled();
   });
 
