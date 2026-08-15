@@ -189,7 +189,17 @@ export function registerLocalAuthRoutes(app: Express) {
       const enabledUser = await getUserById(user.id);
       if (!enabledUser?.twoFactorEnabled) return res.status(503).json({ success: false, error: "O 2FA não ficou activo. Tente confirmar novamente." });
       await createAuditLog({ userId: user.id, action: "activar", entityType: "two_factor", entityId: user.id, details: JSON.stringify({ action: "enabled" }) });
-      return res.json({ success: true, twoFactorEnabled: true });
+      const refreshedSessionUser = {
+        id: enabledUser.id,
+        username: enabledUser.username,
+        name: enabledUser.name,
+        email: enabledUser.email,
+        role: enabledUser.role,
+        churchRole: enabledUser.churchRole ?? null,
+        twoFactorEnabled: Boolean(enabledUser.twoFactorEnabled),
+      };
+      setSessionCookie(req, res, { id: enabledUser.id, sessionVersion: enabledUser.sessionVersion ?? 1 });
+      return res.json({ success: true, twoFactorEnabled: true, user: refreshedSessionUser });
     } catch (error) {
       console.error("[LocalAuth] 2FA confirmation error:", error);
       return res.status(500).json({ success: false, error: "Não foi possível confirmar o 2FA." });
