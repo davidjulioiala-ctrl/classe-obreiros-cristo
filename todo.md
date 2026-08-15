@@ -7188,3 +7188,7 @@
 - [ ] Corrigir falhas na geração do QR Code, armazenamento temporário do segredo e validação do código.
 - [ ] Adicionar testes para o fluxo completo de configuração e activação do 2FA.
 - [ ] Validar com testes unitários, typecheck, build e publicação.
+
+## Bloqueio da interface após operações
+- [x] Diagnosticar e corrigir os fluxos que deixam a interface bloqueada até ao recarregamento do navegador
+- [x] Testar os fluxos afectados sem depender de actualização manual

@@ -15,4 +15,17 @@ describe("revogação global de sessões", () => {
     expect(auditSource).toContain('window.location.href = "/login"');
     expect(auditSource).toContain("Todas as sessões foram revogadas");
   });
+
+  it("executa os handlers de incidente e eliminação em lote", () => {
+    expect(auditSource).toContain("onClick={() => void handleCreateIncident()}");
+    expect(auditSource).toContain("onClick={() => void removeManyLogs()}");
+    expect(auditSource).not.toContain("onClick={() => void handleCreateIncident}");
+    expect(auditSource).not.toContain("onClick={() => void removeManyLogs}");
+  });
+
+  it("actualiza automaticamente as consultas depois de restaurar um backup", () => {
+    expect(auditSource).toContain("await utils.invalidate()");
+    expect(auditSource).toContain("Os dados visíveis foram actualizados automaticamente.");
+    expect(auditSource).not.toContain("Actualize a página para carregar os dados recuperados.");
+  });
 });

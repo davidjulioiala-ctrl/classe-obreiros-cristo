@@ -19,6 +19,7 @@ export default function Attendance() {
   const [specificMemberCheck, setSpecificMemberCheck] = useState("");
   const [memberSearchFocused, setMemberSearchFocused] = useState(false);
   const [highlightedMemberIndex, setHighlightedMemberIndex] = useState(0);
+  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   const memberSearchInputRef = useRef<HTMLInputElement>(null);
 
   const { data: activities, isLoading: activitiesLoading } =
@@ -39,15 +40,7 @@ export default function Attendance() {
     setAttendanceRecords(Object.fromEntries(attendance.map((record) => [record.memberId, record.isPresent])));
   }, [attendance, selectedActivity]);
 
-  const recordAttendanceMutation = trpc.activities.recordAttendance.useMutation({
-    onSuccess: () => {
-      toast.success("Presença registada!");
-      void refetchAttendance();
-    },
-    onError: (error) => {
-      toast.error(`Erro: ${error.message}`);
-    },
-  });
+  const recordAttendanceMutation = trpc.activities.recordAttendance.useMutation();
 
   const deleteAttendanceMutation = trpc.activities.deleteAttendance.useMutation({
     onSuccess: () => {
@@ -64,18 +57,30 @@ export default function Attendance() {
     }));
   };
 
-  const handleSaveAttendance = () => {
-    if (!selectedActivity) return;
+  const handleSaveAttendance = async () => {
+    if (!selectedActivity || isSavingAttendance) return;
+    const records = Object.entries(attendanceRecords);
+    if (!records.length) {
+      toast.info("Não existem registos de presença para guardar.");
+      return;
+    }
 
-    Object.entries(attendanceRecords).forEach(([memberId, isPresent]) => {
-      recordAttendanceMutation.mutate({
-        activityId: selectedActivity,
-        memberId: parseInt(memberId),
-        isPresent,
-      });
-    });
-
-    setAttendanceRecords({});
+    setIsSavingAttendance(true);
+    try {
+      for (const [memberId, isPresent] of records) {
+        await recordAttendanceMutation.mutateAsync({
+          activityId: selectedActivity,
+          memberId: Number(memberId),
+          isPresent,
+        });
+      }
+      await refetchAttendance();
+      toast.success(`${records.length} registo(s) de presença guardado(s).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível guardar as presenças.");
+    } finally {
+      setIsSavingAttendance(false);
+    }
   };
 
   const recentActivities = useMemo(() => {
@@ -244,11 +249,11 @@ export default function Attendance() {
                   <Download className="mr-2 h-4 w-4" />Exportar PDF
                 </Button>
                 <Button
-                  onClick={handleSaveAttendance}
-                  disabled={recordAttendanceMutation.isPending}
+                  onClick={() => void handleSaveAttendance()}
+                  disabled={isSavingAttendance || recordAttendanceMutation.isPending}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  {recordAttendanceMutation.isPending ? "A guardar..." : "Guardar"}
+                  {isSavingAttendance || recordAttendanceMutation.isPending ? "A guardar..." : "Guardar"}
                 </Button>
               </div>
             </div>

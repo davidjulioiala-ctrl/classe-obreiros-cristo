@@ -29,7 +29,14 @@ describe("attendance member autocomplete regression guards", () => {
     expect(attendanceSource).toContain("const handleMemberSuggestionSelect");
     expect(attendanceSource).toContain("setMemberSearch(member.name)");
     expect(attendanceSource).toContain("onClick={() => handleMemberSuggestionSelect(member)}");
-    expect(attendanceSource).toContain("memberId: parseInt(memberId)");
+    expect(attendanceSource).toContain("memberId: Number(memberId)");
+  });
+
+  it("waits for every save before refreshing and keeps a visible saving state", () => {
+    expect(attendanceSource).toContain("await recordAttendanceMutation.mutateAsync");
+    expect(attendanceSource).toContain("await refetchAttendance()");
+    expect(attendanceSource).toContain("const [isSavingAttendance, setIsSavingAttendance] = useState(false)");
+    expect(attendanceSource).toContain("disabled={isSavingAttendance || recordAttendanceMutation.isPending}");
   });
 });
 
