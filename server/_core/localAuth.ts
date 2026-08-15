@@ -74,17 +74,19 @@ export function registerLocalAuthRoutes(app: Express) {
       }
 
       clearLoginFailures(req, normalizedUsername);
-      if (user.twoFactorEnabled) {
-        const settings = await getTwoFactorSettings(user.id);
-        if (!settings?.enabled || !settings.secret) {
-          return res.status(503).json({ success: false, error: "A configuração 2FA desta conta está incompleta. Contacte outro administrador para a recuperar antes de tentar entrar novamente." });
-        }
+      if (!user.twoFactorEnabled) {
+        // Obrigatório para todos os utilizadores: se não tem 2FA configurado, exige configuração imediata antes de entrar
         setChallengeCookie(req, res, user);
-        return res.json({ success: true, twoFactorRequired: true, message: "Introduza o código da aplicação autenticadora ou um código de recuperação." });
+        return res.json({ success: true, twoFactorSetupRequired: true, message: "A autenticação de dois fatores (2FA) é obrigatória para todos os utilizadores. Por favor, configure o seu 2FA." });
       }
 
-      setSessionCookie(req, res, user);
-      return res.json({ success: true, user: publicUser(user) });
+      const settings = await getTwoFactorSettings(user.id);
+      if (!settings?.enabled || !settings.secret) {
+        setChallengeCookie(req, res, user);
+        return res.json({ success: true, twoFactorSetupRequired: true, message: "A configuração 2FA desta conta está incompleta. Por favor, complete a configuração." });
+      }
+      setChallengeCookie(req, res, user);
+      return res.json({ success: true, twoFactorRequired: true, message: "Introduza o código da aplicação autenticadora ou um código de recuperação." });
     } catch (error) {
       console.error("[LocalAuth] Login error:", error);
       return res.status(500).json({ success: false, error: "Internal server error" });

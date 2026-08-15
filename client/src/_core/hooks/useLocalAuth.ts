@@ -11,8 +11,8 @@ export interface LocalUser {
   twoFactorEnabled?: boolean;
 }
 
-type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; message?: string; error?: string };
-type LoginResult = { twoFactorRequired: boolean; user?: LocalUser };
+type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; twoFactorSetupRequired?: boolean; message?: string; error?: string };
+type LoginResult = { twoFactorRequired: boolean; twoFactorSetupRequired?: boolean; user?: LocalUser };
 
 export interface LocalAuthContextValue {
   user: LocalUser | null;
@@ -73,6 +73,9 @@ function useLocalAuthState(): LocalAuthContextValue {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       const data = await readResponse(response);
+      if (data.twoFactorSetupRequired) {
+        return { twoFactorRequired: false, twoFactorSetupRequired: true };
+      }
       if (data.twoFactorRequired) {
         return { twoFactorRequired: true };
       }

@@ -50,6 +50,11 @@ export default function LocalLogin() {
 
     try {
       const result = await login(username, password);
+      if (result.twoFactorSetupRequired) {
+        toast.info("A ativação do 2FA é obrigatória. Por favor, configure o seu 2FA na sua conta.");
+        navigate("/profile");
+        return;
+      }
       if (result.twoFactorRequired) {
         setTwoFactorCode("");
         setRequiresTwoFactor(true);

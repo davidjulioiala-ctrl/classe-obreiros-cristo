@@ -7273,3 +7273,10 @@
 - [x] Implementar verificação de login para detetar política global ativa sem 2FA
 - [x] Criar ecrã de setup guiado obrigatório no login
 - [x] Adicionar testes e validar build
+
+
+## Obrigação Global de 2FA e Correção de Nomenclatura (Eu IA → ID)
+- [x] Tornar o 2FA obrigatório para todos os utilizadores no login (se não configurado, forçar o fluxo de configuração inicial antes de aceder ao sistema).
+- [x] Criar um banner de aviso proeminente no Painel Inicial para utilizadores que ainda não ativaram o 2FA, com botão directo para a configuração.
+- [x] Varrer o código fonte e substituir qualquer ocorrência residual de "Eu IA" por "ID".
+- [x] Validar a experiência de login, o funcionamento do banner, testes unitários, typecheck e build de produção.

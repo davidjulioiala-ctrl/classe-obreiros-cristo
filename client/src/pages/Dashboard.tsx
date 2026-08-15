@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { filterAndSortParticipationMembers, type ParticipationMemberSort } from "@shared/memberParticipation";
 import { MEMBER_EXPORT_COLUMNS, MEMBER_EXPORT_COLUMN_KEYS, PERSONAL_MEMBER_EXPORT_COLUMNS, type MemberExportColumn } from "@shared/exportColumns";
 
@@ -113,6 +114,7 @@ const ChartCard = ({ title, children }: { title: string; children: React.ReactNo
 );
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
@@ -254,6 +256,21 @@ export default function Dashboard() {
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">Página Inicial</h1>
           <p className="text-slate-600 dark:text-slate-400">Visão geral baseada exclusivamente nos dados reais do sistema</p>
         </motion.div>
+
+        {user && !user.twoFactorEnabled && (
+          <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div>
+                <p className="font-semibold">Aviso de Segurança: Autenticação de dois fatores (2FA) pendente</p>
+                <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">A ativação do 2FA é obrigatória para todos os utilizadores para proteger o sistema contra acessos não autorizados.</p>
+              </div>
+            </div>
+            <a href="/profile" className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-amber-700 transition">
+              Configurar 2FA agora
+            </a>
+          </div>
+        )}
 
         <Card className="border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
