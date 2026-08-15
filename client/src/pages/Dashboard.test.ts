@@ -22,10 +22,11 @@ describe("filtro temporal do Dashboard", () => {
     expect(dashboardSource).toContain("endDate: dateTo || undefined");
   });
 
-  it("apresenta destaques de activos e inactivos com o limiar de 60% e acesso às últimas sete actividades", () => {
-    expect(dashboardSource).toContain("memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 })");
-    expect(dashboardSource).toContain('label={`${participationLabels.active} por participação`}');
-    expect(dashboardSource).toContain('label={`${participationLabels.inactive} por participação`}');
+  it("apresenta destaques de activos e inactivos com limiar configurável e acesso às últimas sete actividades", () => {
+    expect(dashboardSource).toContain("participationThresholdConfig");
+    expect(dashboardSource).toContain("memberParticipationHighlights.useQuery({ threshold: participationThresholdConfig, recentLimit: 7 })");
+    expect(dashboardSource).toContain("participationLabels.active");
+    expect(dashboardSource).toContain("participationLabels.inactive");
     expect(dashboardSource).toContain('activeHighlightLabel');
     expect(dashboardSource).toContain('inactiveHighlightLabel');
     expect(dashboardSource).toContain('setParticipationGroup("active")');

@@ -168,6 +168,7 @@ export default function Settings() {
   const [defaultQuotaAmount, setDefaultQuotaAmount] = useState("100");
   const [activeHighlightLabel, setActiveHighlightLabel] = useState("Membros activos");
   const [inactiveHighlightLabel, setInactiveHighlightLabel] = useState("Membros inactivos");
+  const [participationThreshold, setParticipationThreshold] = useState("60");
   const [headerTitleText, setHeaderTitleText] = useState("Classe Obreiros de Cristo");
   const [email, setEmail] = useState("admin@coc.org");
   const [phone, setPhone] = useState("+244 923 456 789");
@@ -241,6 +242,8 @@ export default function Settings() {
         if (/^\d+(?:\.\d{1,2})?$/.test(parsedQuotaAmount) && Number(parsedQuotaAmount) >= 0) setDefaultQuotaAmount(parsedQuotaAmount);
         if (typeof parsed.activeHighlightLabel === "string" && parsed.activeHighlightLabel.trim()) setActiveHighlightLabel(parsed.activeHighlightLabel.trim());
         if (typeof parsed.inactiveHighlightLabel === "string" && parsed.inactiveHighlightLabel.trim()) setInactiveHighlightLabel(parsed.inactiveHighlightLabel.trim());
+        const parsedThreshold = Number(parsed.participationThreshold);
+        if (!Number.isNaN(parsedThreshold) && parsedThreshold >= 0 && parsedThreshold <= 100) setParticipationThreshold(String(parsedThreshold));
         if (parsed.headerTitleText) setHeaderTitleText(parsed.headerTitleText);
         else if (parsed.organizationName) setHeaderTitleText(parsed.organizationName);
         if (parsed.email) setEmail(parsed.email);
@@ -363,9 +366,12 @@ export default function Settings() {
     setDefaultQuotaAmount(normalizedQuotaAmount);
     const normalizedActiveHighlightLabel = activeHighlightLabel.trim() || "Membros activos";
     const normalizedInactiveHighlightLabel = inactiveHighlightLabel.trim() || "Membros inactivos";
+    const parsedThresholdNum = Number(participationThreshold);
+    const normalizedThreshold = (!Number.isNaN(parsedThresholdNum) && parsedThresholdNum >= 0 && parsedThresholdNum <= 100) ? parsedThresholdNum : 60;
     setActiveHighlightLabel(normalizedActiveHighlightLabel);
     setInactiveHighlightLabel(normalizedInactiveHighlightLabel);
-    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName: organizationName.trim(), defaultQuotaAmount: normalizedQuotaAmount, activeHighlightLabel: normalizedActiveHighlightLabel, inactiveHighlightLabel: normalizedInactiveHighlightLabel, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
+    setParticipationThreshold(String(normalizedThreshold));
+    organizationSaveMutation.mutate({ keyName: "organization", keyValue: JSON.stringify({ organizationName: organizationName.trim(), defaultQuotaAmount: normalizedQuotaAmount, activeHighlightLabel: normalizedActiveHighlightLabel, inactiveHighlightLabel: normalizedInactiveHighlightLabel, participationThreshold: normalizedThreshold, headerTitleText, email, phone, location: organizationLocation, logoUrl, logoName, logoKey, logoAlignment, logoSize, headerTextAlignment, headerFontSize, headerFontSizePoints: persistedHeaderFontSizePoints, headerFontFamily, headerTextColor: persistedHeaderTextColor, headerTemplates: persistedTemplates, activeTemplateId }) });
   };
 
   const beginEditTemplate = (template: (typeof headerTemplates)[number]) => {
@@ -574,8 +580,15 @@ export default function Settings() {
                       <Input id="active-highlight-label" value={activeHighlightLabel} onChange={(event) => setActiveHighlightLabel(event.target.value)} placeholder="Membros activos" maxLength={60} />
                     </div>
                     <div>
-                      <label htmlFor="inactive-highlight-label" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destaque de participação inferior a 60%</label>
+                      <label htmlFor="inactive-highlight-label" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Destaque de participação abaixo do limiar</label>
                       <Input id="inactive-highlight-label" value={inactiveHighlightLabel} onChange={(event) => setInactiveHighlightLabel(event.target.value)} placeholder="Membros inactivos" maxLength={60} />
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <label htmlFor="participation-threshold-input" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Limiar percentual de participação para ativos (%)</label>
+                    <div className="flex items-center gap-2">
+                      <Input id="participation-threshold-input" type="number" min="0" max="100" step="1" value={participationThreshold} onChange={(event) => setParticipationThreshold(event.target.value)} placeholder="60" className="max-w-[140px]" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Membros com presença igual ou superior a este valor são classificados como ativos (padrão: 60%).</span>
                     </div>
                   </div>
                 </div>

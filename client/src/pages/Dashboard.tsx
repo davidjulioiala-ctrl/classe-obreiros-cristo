@@ -124,8 +124,18 @@ export default function Dashboard() {
   const [participationSexFilter, setParticipationSexFilter] = useState("all");
   const [participationGroupFilter, setParticipationGroupFilter] = useState<number | "all">("all");
   const [participationSort, setParticipationSort] = useState<ParticipationMemberSort>("percentage-desc");
-  const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery({ threshold: 60, recentLimit: 7 });
   const organizationSettingsQuery = trpc.settings.get.useQuery({ keyName: "organization" });
+  const participationThresholdConfig = useMemo(() => {
+    if (!organizationSettingsQuery.data) return 60;
+    try {
+      const parsed = JSON.parse(organizationSettingsQuery.data) as { participationThreshold?: unknown };
+      const num = Number(parsed.participationThreshold);
+      return (!Number.isNaN(num) && num >= 0 && num <= 100) ? num : 60;
+    } catch {
+      return 60;
+    }
+  }, [organizationSettingsQuery.data]);
+  const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery({ threshold: participationThresholdConfig, recentLimit: 7 });
   const participationQuery = trpc.dashboard.participationByType.useQuery(
     { startDate: dateFrom || undefined, endDate: dateTo || undefined },
     { enabled: !dateRangeInvalid },
@@ -138,10 +148,12 @@ export default function Dashboard() {
     const fallback = { active: "Membros activos", inactive: "Membros inactivos" };
     if (!organizationSettingsQuery.data) return fallback;
     try {
-      const parsed = JSON.parse(organizationSettingsQuery.data) as { activeHighlightLabel?: unknown; inactiveHighlightLabel?: unknown };
+      const parsed = JSON.parse(organizationSettingsQuery.data) as { activeHighlightLabel?: unknown; inactiveHighlightLabel?: unknown; participationThreshold?: unknown };
+      const thresh = Number(parsed.participationThreshold);
+      const thresholdVal = (!Number.isNaN(thresh) && thresh >= 0 && thresh <= 100) ? thresh : 60;
       return {
-        active: typeof parsed.activeHighlightLabel === "string" && parsed.activeHighlightLabel.trim() ? parsed.activeHighlightLabel.trim() : fallback.active,
-        inactive: typeof parsed.inactiveHighlightLabel === "string" && parsed.inactiveHighlightLabel.trim() ? parsed.inactiveHighlightLabel.trim() : fallback.inactive,
+        active: typeof parsed.activeHighlightLabel === "string" && parsed.activeHighlightLabel.trim() ? parsed.activeHighlightLabel.trim() : `Membros activos (≥${thresholdVal}%)`,
+        inactive: typeof parsed.inactiveHighlightLabel === "string" && parsed.inactiveHighlightLabel.trim() ? parsed.inactiveHighlightLabel.trim() : `Membros inactivos (<${thresholdVal}%)`,
       };
     } catch {
       return fallback;
@@ -235,22 +247,21 @@ export default function Dashboard() {
           <StatCard icon={<Users className="w-6 h-6" />} label="Pessoas registadas" value={registeredPeopleCount} trendValue="Total no sistema" />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            label={`${participationLabels.active} por participação`}
+            label={participationLabels.active}
             value={activePeopleCount}
-            trendValue="60% ou mais de presença"
+            trendValue={`≥${participationThresholdConfig}% de presença`}
             onClick={() => setParticipationGroup("active")}
           />
           <StatCard
             icon={<Users className="w-6 h-6" />}
-            label={`${participationLabels.inactive} por participação`}
+            label={participationLabels.inactive}
             value={inactivePeopleCount}
-            trendValue="Menos de 60% de presença"
+            trendValue={`<${participationThresholdConfig}% de presença`}
             accent="amber"
             onClick={() => setParticipationGroup("inactive")}
           />
           <StatCard icon={<Users className="w-6 h-6" />} label="Membros regulares" value={regularMemberCount} trendValue="Sem convidados e líderes" />
           <StatCard icon={<Calendar className="w-6 h-6" />} label="Actividades registadas" value={totalActivities} trendValue="Calendário activo" />
-          <StatCard icon={<DollarSign className="w-6 h-6" />} label="Cotas registadas" value={quotas?.length ?? 0} trendValue="Módulo financeiro" />
           <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Grupos operacionais" value={groups?.length ?? 0} trendValue="Dados reais" />
         </motion.div>
 

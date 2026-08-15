@@ -7046,3 +7046,15 @@
 - [x] Aplicar um contorno azul suave (`border-blue-200 dark:border-blue-800/60 ring-1 ring-blue-100 dark:ring-blue-900/30`) em todos os cartões de destaque e estatísticas da Página Inicial.
 - [x] Adicionar nas Definições campos para personalizar as etiquetas/nomes dos destaques de ativos e inativos, salvando a preferência na base de dados/definições da aplicação.
 - [x] Adicionar testes unitários para a ordenação e filtros dos modais e validar a compilação.
+
+## Nova Tarefa — Contorno Azul em Todos os Destaques do Sistema
+- [ ] Localizar todos os cartões de estatística e resumo (StatCard) nas páginas e componentes principais.
+- [ ] Aplicar o contorno azul suave (`border-blue-200 dark:border-blue-800/60 ring-1 ring-blue-100 dark:ring-blue-900/30`) de forma uniforme em todos eles.
+- [ ] Validar a compilação, executar os testes unitários e guardar checkpoint.
+
+## Nova Tarefa — Remoção de Quotas do Dashboard e Limiar Flexível
+- [ ] Sincronizar a pré-visualização e reiniciar o servidor de desenvolvimento (`webdev_restart_server`).
+- [ ] Remover o cartão de quotas da grelha de estatísticas da Página Inicial (reservando essa informação para Administrador e Finanças).
+- [ ] Adicionar nas Definições um campo numérico para configurar o limiar flexível de participação de ativos e inativos (por defeito 60%).
+- [ ] Atualizar o cálculo global de ativos e inativos na Página Inicial para respeitar o limiar configurável salvo nas Definições.
+- [ ] Validar a compilação, typecheck e testes unitários.
