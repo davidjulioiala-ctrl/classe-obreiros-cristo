@@ -7257,3 +7257,11 @@
 - [ ] Implementar correções robustas em backend e frontend para 2FA, perfil e senha.
 - [ ] Adicionar testes de regressão específicos para estes fluxos.
 - [ ] Executar testes Vitest, typecheck e build, salvando checkpoint e publicação.
+
+
+## Restauração e Expansão do 2FA para Todos os Utilizadores
+- [x] Garantir que o componente TwoFactorSettings está acessível no perfil de todos os utilizadores autenticados (não apenas administradores)
+- [x] Confirmar que o backend permite setup e confirmação 2FA para qualquer utilizador autenticado
+- [x] Validar o fluxo de login quando o utilizador tem 2FA ativo (código TOTP ou código de recuperação)
+- [x] Adicionar regressões para assegurar que o 2FA é extensível a todos sem obrigatoriedade bloqueante
+- [x] Executar testes, typecheck, build e verificação visual
