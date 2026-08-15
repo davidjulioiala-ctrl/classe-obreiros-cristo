@@ -985,6 +985,7 @@ const backupRouter = router({
   export: adminProcedure
     .input(z.object({ destination: z.enum(["local", "drive"]).default("local"), cloudEmail: safeEmail().optional(), versionLabel: safeText(255, false) }))
     .mutation(async ({ input, ctx }) => {
+      if (input.cloudEmail) await db.setAppSetting("notification_recipient_email", input.cloudEmail.trim());
       const version = await db.createBackupVersion({ createdBy: ctx.user.id, destination: input.destination, cloudEmail: input.cloudEmail, versionLabel: input.versionLabel });
       await writeAudit(ctx, "exportar", `backup_${input.destination}`, version.id, { version: version.versionLabel, destination: input.destination, cloudEmail: input.cloudEmail ?? null });
       return { id: version.id, versionLabel: version.versionLabel, destination: version.destination, cloudEmail: version.cloudEmail, fileUrl: version.fileUrl, fileSize: version.fileSize, checksum: version.checksum, message: input.destination === "drive" ? "Backup guardado no armazenamento cloud do sistema. O email foi associado à versão para identificação administrativa." : "Backup preparado para descarregamento local." };
@@ -1017,8 +1018,9 @@ const backupRouter = router({
       } else if (taskUid) {
         await updateHeartbeatJob(taskUid, { enable: false }, sessionToken);
       }
+      if (input.cloudEmail) await db.setAppSetting("notification_recipient_email", input.cloudEmail.trim());
       const schedule = await db.createBackupSchedule({ id: current?.id, hour: input.hour, minute: input.minute, destination: input.destination, cloudEmail: input.cloudEmail ?? null, enabled: input.enabled, scheduleCronTaskUid: taskUid ?? null, createdBy: current?.createdBy ?? ctx.user.id });
-      await writeAudit(ctx, "configurar", "backup_schedule", schedule.id, { hour: input.hour, minute: input.minute, enabled: input.enabled, destination: input.destination });
+      await writeAudit(ctx, "configurar", "backup_schedule", schedule.id, { hour: input.hour, minute: input.minute, enabled: input.enabled, destination: input.destination, notificationRecipientConfigured: Boolean(input.cloudEmail) });
       return schedule;
     }),
 

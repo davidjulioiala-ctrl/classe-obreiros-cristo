@@ -1549,3 +1549,32 @@ export async function getMemberMonthlyAttendanceStats(memberId: number, month?: 
     percentage,
   };
 }
+
+export async function getAdministrativeNotificationEmail(): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const isEmail = (value: unknown): value is string =>
+    typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  try {
+    const configuredRecipient = await getAppSetting("notification_recipient_email");
+    if (isEmail(configuredRecipient)) return configuredRecipient.trim();
+  } catch {}
+
+  try {
+    const schedules = await db.select().from(backupSchedules).orderBy(desc(backupSchedules.updatedAt)).limit(1);
+    const scheduleEmail = schedules[0]?.cloudEmail;
+    if (isEmail(scheduleEmail)) return scheduleEmail.trim();
+  } catch {}
+
+  try {
+    const orgSetting = await getAppSetting("organization");
+    if (orgSetting) {
+      const parsed = JSON.parse(orgSetting);
+      if (isEmail(parsed.email)) return parsed.email.trim();
+    }
+  } catch {}
+
+  return null;
+}

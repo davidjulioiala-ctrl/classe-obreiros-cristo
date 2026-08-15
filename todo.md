@@ -7064,3 +7064,13 @@
 - [x] Atualizar o ecrã de autenticação (Login) para utilizar o nome oficial da organização configurado e substituir a letra "C" estática pelo logótipo carregado nas Definições (com fallback elegante quando o logótipo não estiver definido).
 - [x] Garantir que as alterações aplicadas refletem-se instantaneamente na Página Inicial e em todo o sistema.
 - [x] Adicionar testes de regressão e validar a compilação.
+
+## Nova Tarefa — Notificações e Destino de Email de Backup
+- [x] Remover permanentemente o endereço `davidjulioiala@gmail.com` de qualquer vinculação fixa nas notificações do sistema.
+- [x] Configurar o motor de notificações e auditoria para enviar todas as mensagens e resumos operacionais para o email definido nas Definições para receber backups.
+- [x] Garantir que o botão "Guardar" nas Definições substitui integralmente a configuração anterior sem acumular resíduos antigos.
+- [x] Validar testes unitários, typecheck e build de produção.
+
+- [x] Redirecionar as notificações operacionais para o email administrativo configurado na área de backup, removendo referências ao email pessoal do programador.
+- [x] Garantir persistência imediata do destinatário quando o email administrativo for alterado e validar o comportamento com testes.
+- [x] Sincronizar backups manuais e agendados com uma chave canónica de destinatário administrativo para que a alteração seja aplicada imediatamente em todos os fluxos.

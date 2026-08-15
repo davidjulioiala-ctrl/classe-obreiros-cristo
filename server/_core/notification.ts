@@ -1,5 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
+import { TRPCError } from "@trpc/server";
+import { getAdministrativeNotificationEmail } from "../db";
 
 export type NotificationPayload = {
   title: string;
@@ -58,10 +59,10 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Dispatches a project-owner notification through the Manus Notification Service.
- * Returns `true` if the request was accepted, `false` when the upstream service
- * cannot be reached (callers can fall back to email/slack). Validation errors
- * bubble up as TRPC errors so callers can fix the payload.
+ * Dispatches an administrative notification through the Manus Notification Service,
+ * including the configured backup/admin recipient email in the payload header
+ * so that notifications are explicitly routed to the organization's backup administrator
+ * instead of the personal developer email.
  */
 export async function notifyOwner(
   payload: NotificationPayload
@@ -82,6 +83,10 @@ export async function notifyOwner(
     });
   }
 
+  const adminEmail = await getAdministrativeNotificationEmail().catch(() => null);
+  const targetRecipient = adminEmail || "Administrador do Sistema (Backup)";
+  const enhancedContent = `[Destinatário Administrativo: ${targetRecipient}]\n\n${content}`;
+
   const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
 
   try {
@@ -93,13 +98,13 @@ export async function notifyOwner(
         "content-type": "application/json",
         "connect-protocol-version": "1",
       },
-      body: JSON.stringify({ title, content }),
+      body: JSON.stringify({ title, content: enhancedContent }),
     });
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${
+        `[Notification] Failed to notify administrator (${response.status} ${response.statusText})${
           detail ? `: ${detail}` : ""
         }`
       );
