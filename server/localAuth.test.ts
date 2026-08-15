@@ -112,6 +112,18 @@ describe("contrato do login 2FA", () => {
     expect(source).toContain("A configuração 2FA desta conta está incompleta");
   });
 
+  it("expõe o estado 2FA sem filtrar utilizadores comuns e mantém setup por sessão", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const authSource = readFileSync(fileURLToPath(new URL("./_core/localAuth.ts", import.meta.url)), "utf8");
+    const middlewareSource = readFileSync(fileURLToPath(new URL("./_core/localAuthMiddleware.ts", import.meta.url)), "utf8");
+    expect(authSource).toContain("if (user.twoFactorEnabled)");
+    expect(authSource).not.toContain('user.role !== "admin" || !user.isActive');
+    expect(authSource).not.toContain("Apenas administradores podem configurar 2FA");
+    expect(middlewareSource).toContain("twoFactorEnabled: Boolean(user.twoFactorEnabled)");
+    expect(middlewareSource).not.toContain('user.role === "admin" ? Boolean(user.twoFactorEnabled) : false');
+  });
+
   it("verifica a persistência do segredo e distingue setup pendente de código inválido", async () => {
     const { readFileSync } = await import("node:fs");
     const { fileURLToPath } = await import("node:url");

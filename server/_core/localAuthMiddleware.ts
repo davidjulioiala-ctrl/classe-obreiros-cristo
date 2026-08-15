@@ -50,7 +50,7 @@ export async function localAuthMiddleware(
       role: user.role,
       churchRole: user.churchRole,
       isActive: user.isActive,
-      twoFactorEnabled: user.role === "admin" ? Boolean(user.twoFactorEnabled) : false,
+      twoFactorEnabled: Boolean(user.twoFactorEnabled),
     };
 
     return next();

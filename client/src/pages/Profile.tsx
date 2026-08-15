@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import TwoFactorSettings from "@/components/TwoFactorSettings";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Profile() {
@@ -55,6 +56,8 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        <TwoFactorSettings />
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link href="/settings" className="w-full sm:w-auto">

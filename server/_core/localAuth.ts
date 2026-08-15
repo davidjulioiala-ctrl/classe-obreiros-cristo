@@ -20,7 +20,7 @@ function publicUser(user: any) {
     role: user.role,
     churchRole: user.churchRole,
     isActive: user.isActive,
-    twoFactorEnabled: user.role === "admin" ? Boolean(user.twoFactorEnabled) : false,
+    twoFactorEnabled: Boolean(user.twoFactorEnabled),
   };
 }
 
@@ -74,7 +74,7 @@ export function registerLocalAuthRoutes(app: Express) {
       }
 
       clearLoginFailures(req, normalizedUsername);
-      if (user.role === "admin" && user.twoFactorEnabled) {
+      if (user.twoFactorEnabled) {
         const settings = await getTwoFactorSettings(user.id);
         if (!settings?.enabled || !settings.secret) {
           return res.status(503).json({ success: false, error: "A configuração 2FA desta conta está incompleta. Contacte outro administrador para a recuperar antes de tentar entrar novamente." });
@@ -99,7 +99,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const challenge = verifyTwoFactorChallengeToken(cookies[TWO_FACTOR_CHALLENGE_COOKIE]);
       if (!challenge || !normalizedCode) return res.status(401).json({ success: false, error: "O desafio 2FA expirou. Volte ao login e introduza novamente as suas credenciais." });
       const user = await getUserById(challenge.userId);
-      if (!user || user.role !== "admin" || !user.isActive || (user.sessionVersion ?? 1) !== challenge.sessionVersion || !user.twoFactorEnabled) {
+      if (!user || !user.isActive || (user.sessionVersion ?? 1) !== challenge.sessionVersion || !user.twoFactorEnabled) {
         clearChallengeCookie(req, res);
         return res.status(401).json({ success: false, error: "Não foi possível validar o desafio 2FA." });
       }
@@ -134,7 +134,7 @@ export function registerLocalAuthRoutes(app: Express) {
   app.post("/api/auth/2fa/setup", requireSameOrigin, localAuthMiddleware, async (req: Request, res: Response) => {
     try {
       const user = await getUserById((req as Request & { localUser?: { id: number } }).localUser?.id ?? 0);
-      if (!user || user.role !== "admin") return res.status(403).json({ success: false, error: "Apenas administradores podem configurar 2FA." });
+      if (!user) return res.status(401).json({ success: false, error: "Sessão não autenticada. Entre novamente para configurar o 2FA." });
       const secret = generateTotpSecret();
       const recoveryCodes = generateRecoveryCodes();
       if (user.twoFactorEnabled) return res.status(409).json({ success: false, error: "O 2FA já está activo nesta conta. Desactive-o primeiro se precisar de configurar um novo dispositivo." });
@@ -161,7 +161,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const { code } = req.body as { code?: string };
       const normalizedCode = typeof code === "string" ? code.trim().slice(0, 64) : "";
       const settings = user ? await getTwoFactorSettings(user.id) : null;
-      if (!user || user.role !== "admin") return res.status(403).json({ success: false, error: "Apenas administradores podem activar 2FA." });
+      if (!user) return res.status(401).json({ success: false, error: "Sessão não autenticada. Entre novamente para activar o 2FA." });
       if (!settings?.secret) return res.status(409).json({ success: false, error: "Não existe uma configuração 2FA pendente. Clique em Configurar 2FA novamente." });
       if (!normalizedCode || !verifyTotpCode(settings.secret, normalizedCode)) return res.status(400).json({ success: false, error: "Código 2FA inválido ou expirado. Confirme o código actual da aplicação autenticadora e tente novamente." });
       if (!await enableTwoFactor(user.id)) return res.status(503).json({ success: false, error: "Não foi possível activar o 2FA. Tente novamente." });
@@ -181,7 +181,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const user = await getUserById(current?.id ?? 0);
       const { code } = req.body as { code?: string };
       const settings = user ? await getTwoFactorSettings(user.id) : null;
-      if (!user || user.role !== "admin" || !settings?.secret || !code || !verifyTotpCode(settings.secret, code)) return res.status(400).json({ success: false, error: "É necessário um código válido da aplicação autenticadora." });
+      if (!user || !settings?.secret || !code || !verifyTotpCode(settings.secret, code)) return res.status(400).json({ success: false, error: "É necessário um código válido da aplicação autenticadora." });
       if (!await disableTwoFactor(user.id)) return res.status(503).json({ success: false, error: "Não foi possível desactivar o 2FA." });
       const updatedUser = await getUserById(user.id);
       if (updatedUser) setSessionCookie(req, res, updatedUser);

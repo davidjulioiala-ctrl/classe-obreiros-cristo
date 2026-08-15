@@ -7208,3 +7208,10 @@
 - [x] Corrigir o contrato entre QR Code, segredo temporário, sessão e confirmação do código.
 - [x] Adicionar regressões para activação, cancelamento, confirmação e recuperação do 2FA.
 - [x] Validar testes, typecheck, build e publicação.
+
+## 2FA para todos os utilizadores — novo ciclo
+- [x] Auditar e corrigir a autorização que actualmente limita a configuração 2FA aos administradores.
+- [x] Disponibilizar configuração e confirmação 2FA para cada utilizador autenticado, com segredo isolado por conta.
+- [x] Actualizar o login, códigos de recuperação e mensagens para suportar todos os perfis sem bloquear configurações incompletas.
+- [x] Adicionar regressões de permissões, activação, cancelamento e login 2FA por perfil.
+- [x] Validar testes, typecheck, build, responsividade e publicação.
