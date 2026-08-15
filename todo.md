@@ -7076,10 +7076,10 @@
 - [x] Sincronizar backups manuais e agendados com uma chave canónica de destinatário administrativo para que a alteração seja aplicada imediatamente em todos os fluxos.
 
 ## Nova Tarefa — Correção de Definições, Tema Escuro, Notificações e 2FA
-- [ ] Adicionar um botão explícito de salvamento das configurações gerais (nome da organização, quotas e limiar de ativos) na interface de Definições.
-- [ ] Garantir que o seletor de tema claro/escuro na barra lateral ou Definições comuta efetivamente as classes CSS e persiste a preferência do utilizador.
-- [ ] Desvincular totalmente e limpar qualquer canal de notificação vinculado ao email pessoal do criador, redirecionando os alertas para o email administrativo configurado ou desativando o envio externo caso o endereço esteja vazio.
-- [ ] Implementar ou clarificar a configuração de Autenticação de 2 Fatores (2FA) para proteger o acesso administrativo com códigos temporários e explicar a sua utilidade e vantagem para comercialização.
+- [x] Adicionar um botão explícito de salvamento das configurações gerais (nome da organização, quotas e limiar de ativos) na interface de Definições.
+- [x] Garantir que o seletor de tema claro/escuro na barra lateral ou Definições comuta efetivamente as classes CSS e persiste a preferência do utilizador.
+- [x] Desvincular totalmente e limpar qualquer canal de notificação vinculado ao email pessoal do criador, redirecionando os alertas para o email administrativo configurado ou desativando o envio externo caso o endereço esteja vazio.
+- [x] Implementar ou clarificar a configuração de Autenticação de 2 Fatores (2FA) para proteger o acesso administrativo com códigos temporários e explicar a sua utilidade e vantagem para comercialização.
 
 ## Nova Tarefa — Consulta e Exportação de Pagamentos de Quotas
 - [x] Adicionar filtros combináveis por ano, mês, nome/ID da pessoa e grupo na consulta de pagamentos de quotas.
