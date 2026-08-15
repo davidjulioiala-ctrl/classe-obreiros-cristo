@@ -94,4 +94,15 @@ describe("login transition regression guards", () => {
     expect(auditSource).toContain("Ver captura anexada");
     expect(auditSource).toContain('rel="noreferrer"');
   });
+
+  it("makes administrator 2FA activation usable with QR and manual fallback", () => {
+    const userManagementSource = readProjectFile("client/src/pages/UserManagement.tsx");
+
+    expect(userManagementSource).toContain('from "qrcode"');
+    expect(userManagementSource).toContain("QRCode.toDataURL");
+    expect(userManagementSource).toContain("/api/auth/2fa/setup");
+    expect(userManagementSource).toContain("/api/auth/2fa/confirm");
+    expect(userManagementSource).toContain("código de 6 dígitos");
+    expect(userManagementSource).toContain("códigos de recuperação");
+  });
 });

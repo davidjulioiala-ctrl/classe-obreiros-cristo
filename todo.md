@@ -7088,13 +7088,20 @@
 - [x] Adicionar testes Vitest para filtros, âmbitos de exportação e casos sem resultados.
 
 ## Nova Tarefa — Erro de Tema e Menus
-- [ ] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
-- [ ] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
-- [ ] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
-- [ ] Validar desktop, telemóvel, typecheck, testes, build e publicação.
+- [x] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
+- [x] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
+- [x] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
+- [x] Validar desktop, telemóvel, typecheck, testes, build e publicação.
 
 ## Nova Tarefa — Erro de Tema e Menus
-- [ ] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
-- [ ] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
-- [ ] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
-- [ ] Validar desktop, telemóvel, typecheck, testes, build e publicação.
+- [x] Reproduzir e diagnosticar o erro ERR-MSU9QKIE-XQINUX na alternância entre modo claro e escuro.
+- [x] Identificar e corrigir as causas dos menus que falham ao carregar ou executar operações.
+- [x] Adicionar testes de regressão para o tema e para os fluxos de menus afetados.
+- [x] Validar desktop, telemóvel, typecheck, testes, build e publicação.
+
+## Nova Tarefa — Ativação de 2FA
+- [x] Reproduzir a falha no fluxo de ativação, geração do QR Code e confirmação do primeiro código 2FA.
+- [x] Corrigir a ativação, persistência e desativação segura do 2FA.
+- [x] Melhorar mensagens de erro e orientar a configuração com aplicações autenticadoras e códigos de recuperação.
+- [x] Adicionar testes de regressão para ativação, confirmação, login e recuperação do 2FA.
+- [x] Validar typecheck, suíte completa, build, responsividade e publicação.

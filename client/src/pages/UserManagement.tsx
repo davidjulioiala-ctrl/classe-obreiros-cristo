@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Edit2, Eye, EyeOff, Loader2, Plus, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import * as QRCode from "qrcode";
 
 const churchRoles = [
   { value: "membro", label: "Membro" },
@@ -94,8 +95,42 @@ export default function UserManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>(emptyForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetup | null>(null);
+  const [twoFactorQrCode, setTwoFactorQrCode] = useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!twoFactorSetup) {
+      setTwoFactorQrCode(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void QRCode.toDataURL(twoFactorSetup.otpauthUri, {
+      width: 240,
+      margin: 2,
+      errorCorrectionLevel: "M",
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setTwoFactorQrCode(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setTwoFactorQrCode(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [twoFactorSetup]);
+
+  async function copyTwoFactorValue(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copiado.`);
+    } catch {
+      toast.error(`Não foi possível copiar ${label.toLowerCase()}. Utilize a opção manual apresentada.`);
+    }
+  }
 
   function closeDialog() {
     setDialogOpen(false);
@@ -275,9 +310,18 @@ export default function UserManagement() {
               <div className="mt-4 max-w-md"><label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código para desactivar</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Código da aplicação autenticadora" maxLength={16} /></div>
             )}
             {twoFactorSetup && (
-              <div className="mt-5 grid gap-4 border-t border-emerald-200 pt-5 dark:border-emerald-900/50 lg:grid-cols-2">
-                <div className="space-y-3 text-sm"><p className="font-semibold text-slate-900 dark:text-white">1. Registe este segredo na aplicação autenticadora</p><code className="block break-all rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.secret}</code><p className="text-xs text-slate-600 dark:text-slate-400">URI de configuração manual:</p><code className="block max-h-24 overflow-auto break-all rounded-lg bg-white p-3 font-mono text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">{twoFactorSetup.otpauthUri}</code></div>
-                <div className="space-y-3 text-sm"><p className="font-semibold text-slate-900 dark:text-white">2. Guarde os códigos de recuperação</p><div className="grid grid-cols-2 gap-2 rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.recoveryCodes.map((code) => <span key={code}>{code}</span>)}</div><p className="text-xs text-slate-600 dark:text-slate-400">Cada código só pode ser usado uma vez e não será mostrado novamente depois desta configuração.</p><div><label className="mb-1 block font-medium text-slate-700 dark:text-slate-200">3. Confirme com o código actual</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} /></div><div className="flex gap-2"><Button onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy || !twoFactorCode.trim()} className="bg-emerald-600 text-white hover:bg-emerald-700">{twoFactorBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar activação</Button><Button variant="outline" onClick={() => { setTwoFactorSetup(null); setTwoFactorCode(""); }}>Cancelar</Button></div></div>
+              <div className="mt-5 grid gap-5 border-t border-emerald-200 pt-5 dark:border-emerald-900/50 lg:grid-cols-[240px_minmax(0,1fr)]">
+                <div className="flex flex-col items-center gap-3 rounded-xl bg-white p-4 text-center dark:bg-slate-900">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">1. Leia o QR Code</p>
+                  {twoFactorQrCode ? <img src={twoFactorQrCode} alt="QR Code para configurar a autenticação de dois fatores" className="h-[210px] w-[210px] rounded-lg border border-slate-200 bg-white p-2" /> : <div className="flex h-[210px] w-[210px] items-center justify-center rounded-lg border border-dashed border-slate-300 text-xs text-slate-500">A gerar QR Code…</div>}
+                  <p className="text-xs leading-5 text-slate-600 dark:text-slate-400">Abra Google Authenticator, Microsoft Authenticator ou Authy e escolha adicionar uma conta.</p>
+                </div>
+                <div className="space-y-4 text-sm">
+                  <div><p className="font-semibold text-slate-900 dark:text-white">2. Se não conseguir ler o QR Code</p><p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">Use a chave abaixo na opção de configuração manual da aplicação autenticadora.</p><div className="mt-2 flex gap-2"><code className="min-w-0 flex-1 break-all rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.secret}</code><Button type="button" variant="outline" size="sm" onClick={() => void copyTwoFactorValue(twoFactorSetup.secret, "Segredo")}>Copiar</Button></div><details className="mt-2"><summary className="cursor-pointer text-xs font-medium text-emerald-700 dark:text-emerald-300">Mostrar URI completa</summary><div className="mt-2 flex gap-2"><code className="min-w-0 flex-1 break-all rounded-lg bg-white p-3 font-mono text-[11px] text-slate-700 dark:bg-slate-900 dark:text-slate-300">{twoFactorSetup.otpauthUri}</code><Button type="button" variant="outline" size="sm" onClick={() => void copyTwoFactorValue(twoFactorSetup.otpauthUri, "URI")}>Copiar</Button></div></details></div>
+                  <div><p className="font-semibold text-slate-900 dark:text-white">3. Guarde os códigos de recuperação</p><div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.recoveryCodes.map((code) => <span key={code}>{code}</span>)}</div><p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">Cada código só pode ser usado uma vez e não será mostrado novamente depois desta configuração.</p></div>
+                  <div><label className="mb-1 block font-medium text-slate-700 dark:text-slate-200">4. Introduza o código de 6 dígitos</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código da aplicação autenticadora" maxLength={6} /><p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Depois de introduzir o código atual, clique em Confirmar ativação.</p></div>
+                  <div className="flex flex-wrap gap-2"><Button onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy || twoFactorCode.length !== 6} className="bg-emerald-600 text-white hover:bg-emerald-700">{twoFactorBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar ativação</Button><Button variant="outline" onClick={() => { setTwoFactorSetup(null); setTwoFactorQrCode(null); setTwoFactorCode(""); }}>Cancelar</Button></div>
+                </div>
               </div>
             )}
           </Card>
