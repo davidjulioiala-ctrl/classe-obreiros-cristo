@@ -7280,3 +7280,10 @@
 - [x] Criar um banner de aviso proeminente no Painel Inicial para utilizadores que ainda não ativaram o 2FA, com botão directo para a configuração.
 - [x] Varrer o código fonte e substituir qualquer ocorrência residual de "Eu IA" por "ID".
 - [x] Validar a experiência de login, o funcionamento do banner, testes unitários, typecheck e build de produção.
+
+
+## Correção e Exigência Estrita de 2FA
+- [x] Investigar porque razão a ativação 2FA falha ou não persiste no perfil.
+- [x] Adicionar na página de Definições uma opção clara para o administrador ligar a obrigatoriedade global de 2FA.
+- [x] Bloquear o acesso às rotas e funcionalidades do sistema para qualquer utilizador sem 2FA activo quando a obrigatoriedade estiver ligada (forçando o ecrã de setup).
+- [x] Validar testes unitários, typecheck, build e verificação visual.
