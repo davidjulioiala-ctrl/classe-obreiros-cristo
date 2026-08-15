@@ -7105,3 +7105,9 @@
 - [x] Melhorar mensagens de erro e orientar a configuração com aplicações autenticadoras e códigos de recuperação.
 - [x] Adicionar testes de regressão para ativação, confirmação, login e recuperação do 2FA.
 - [x] Validar typecheck, suíte completa, build, responsividade e publicação.
+
+## Nova Tarefa — Branding Global e Erro 2FA
+- [x] Garantir que o nome da organização configurado substitui o nome anterior em login, layout, páginas, mensagens e documentos onde o branding institucional é usado.
+- [x] Reproduzir e diagnosticar o erro ERR-MSUANVD3-Z2UAA8 durante a ativação do 2FA.
+- [x] Corrigir o fluxo de ativação 2FA e adicionar mensagens de erro úteis sem expor detalhes sensíveis.
+- [x] Adicionar regressões, validar typecheck, testes, build, responsividade e publicar a correção.

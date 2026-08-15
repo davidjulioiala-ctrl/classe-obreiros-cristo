@@ -1,5 +1,8 @@
 import { notifyOwner } from "./notification";
 
+import { getAppSetting } from "../db";
+import { parsePublicOrganizationBranding } from "../../shared/organizationBranding";
+
 const recentAlerts = new Map<string, number>();
 const DEDUPE_WINDOW_MS = 60_000;
 const SAFE_METADATA_KEYS = new Set(["ip", "formato", "inicio", "fim", "registos"]);
@@ -30,8 +33,9 @@ export async function notifySecurityEvent(alert: SecurityAlert) {
     .filter((entry): entry is readonly [string, string] => entry[1] !== undefined)
     .map(([key, value]) => `${key}: ${value}`)
     .join("\n");
+  const organization = parsePublicOrganizationBranding(await getAppSetting("organization"));
   const content = [
-    "Foi detectado um evento de segurança no sistema Classe Obreiros de Cristo.",
+    `Foi detectado um evento de segurança no sistema ${organization.organizationName}.`,
     `Tipo: ${alert.kind}`,
     alert.actorId ? `Utilizador autenticado: #${alert.actorId}` : "Utilizador autenticado: não identificado",
     alert.resource ? `Recurso: ${sanitizeValue(alert.resource)}` : undefined,

@@ -80,7 +80,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             <AlertTriangle aria-hidden="true" size={30} />
           </div>
           <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
-            Classe Obreiros de Cristo
+            Sistema de Gestão
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-white">
             Ocorreu um erro inesperado

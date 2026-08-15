@@ -99,7 +99,8 @@ describe("login transition regression guards", () => {
     const userManagementSource = readProjectFile("client/src/pages/UserManagement.tsx");
 
     expect(userManagementSource).toContain('from "qrcode"');
-    expect(userManagementSource).toContain("QRCode.toDataURL");
+    expect(userManagementSource).toContain("toDataURL");
+    expect(userManagementSource).toContain("qrGenerator");
     expect(userManagementSource).toContain("/api/auth/2fa/setup");
     expect(userManagementSource).toContain("/api/auth/2fa/confirm");
     expect(userManagementSource).toContain("código de 6 dígitos");

@@ -1,7 +1,7 @@
 import { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
 import { authenticateUser, disableTwoFactor, enableTwoFactor, getTwoFactorSettings, getUserById, saveTwoFactorSetup, updateTwoFactorRecoveryCodes } from "../auth";
-import { createAuditLog } from "../db";
+import { createAuditLog, getAppSetting } from "../db";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { localAuthMiddleware } from "./localAuthMiddleware";
@@ -9,6 +9,7 @@ import { createLocalSessionToken } from "./localSession";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure, requireSameOrigin } from "./security";
 import { buildTotpUri, checkTwoFactorRateLimit, clearTwoFactorFailures, consumeRecoveryCode, createTwoFactorChallengeToken, generateRecoveryCodes, generateTotpSecret, recordTwoFactorFailure, TWO_FACTOR_CHALLENGE_COOKIE, TWO_FACTOR_CHALLENGE_TTL_SECONDS, verifyTotpCode, verifyTwoFactorChallengeToken } from "./twoFactor";
 import { notifySecurityEvent } from "./securityAlerts";
+import { parsePublicOrganizationBranding } from "../../shared/organizationBranding";
 
 function publicUser(user: any) {
   return {
@@ -129,7 +130,8 @@ export function registerLocalAuthRoutes(app: Express) {
       const saved = await saveTwoFactorSetup(user.id, secret, recoveryCodes);
       if (!saved) return res.status(503).json({ success: false, error: "Não foi possível guardar a configuração 2FA." });
       await createAuditLog({ userId: user.id, action: "configurar", entityType: "two_factor", entityId: user.id, details: JSON.stringify({ action: "setup_started" }) });
-      return res.json({ success: true, secret, otpauthUri: buildTotpUri(secret, user.username ?? `admin-${user.id}`), recoveryCodes, message: "Guarde os códigos de recuperação antes de confirmar." });
+      const organization = parsePublicOrganizationBranding(await getAppSetting("organization"));
+      return res.json({ success: true, secret, otpauthUri: buildTotpUri(secret, user.username ?? `admin-${user.id}`, organization.organizationName), recoveryCodes, message: "Guarde os códigos de recuperação antes de confirmar." });
     } catch (error) {
       console.error("[LocalAuth] 2FA setup error:", error);
       return res.status(500).json({ success: false, error: "Não foi possível iniciar a configuração 2FA." });

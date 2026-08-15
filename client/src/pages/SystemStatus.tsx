@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 export type PublicMaintenanceState = {
   enabled: boolean;
@@ -193,6 +194,8 @@ export default function SystemStatus() {
     }
   };
 
+  const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
+  const organizationName = organizationQuery.data?.organizationName ?? "Sistema de Gestão Eclesiástica";
   const view = getSystemStatusView(state, hasError, checking);
   const styles = toneStyles[view.tone];
   const Icon =
@@ -210,7 +213,7 @@ export default function SystemStatus() {
             <Icon aria-hidden="true" className="h-8 w-8" />
           </div>
           <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-            Classe Obreiros de Cristo
+            {organizationName}
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Estado do sistema

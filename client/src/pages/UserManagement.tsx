@@ -107,17 +107,25 @@ export default function UserManagement() {
         cancelled = true;
       };
     }
-    void QRCode.toDataURL(twoFactorSetup.otpauthUri, {
-      width: 240,
-      margin: 2,
-      errorCorrectionLevel: "M",
-    })
-      .then((dataUrl) => {
-        if (!cancelled) setTwoFactorQrCode(dataUrl);
+    try {
+      const qrGenerator = QRCode as typeof import("qrcode");
+      if (typeof qrGenerator.toDataURL !== "function") {
+        throw new Error("QR_CODE_UNAVAILABLE");
+      }
+      void qrGenerator.toDataURL(twoFactorSetup.otpauthUri, {
+        width: 240,
+        margin: 2,
+        errorCorrectionLevel: "M",
       })
-      .catch(() => {
-        if (!cancelled) setTwoFactorQrCode(null);
-      });
+        .then((dataUrl) => {
+          if (!cancelled) setTwoFactorQrCode(dataUrl);
+        })
+        .catch(() => {
+          if (!cancelled) setTwoFactorQrCode(null);
+        });
+    } catch {
+      setTwoFactorQrCode(null);
+    }
     return () => {
       cancelled = true;
     };

@@ -4,9 +4,10 @@ import { registerTransferPdfRoute } from "./transferPdf";
 
 const getLocalUserFromRequest = vi.hoisted(() => vi.fn());
 const getAllMembers = vi.hoisted(() => vi.fn());
+const getAppSetting = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 
 vi.mock("./_core/localAuthMiddleware", () => ({ getLocalUserFromRequest }));
-vi.mock("./db", () => ({ getAllMembers }));
+vi.mock("./db", () => ({ getAllMembers, getAppSetting }));
 
 describe("rota de PDF das transferências de adultos", () => {
   it("gera PDF horizontal para membros que já foram marcados como inativos", async () => {

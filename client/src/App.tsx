@@ -35,6 +35,13 @@ function Router() {
     enabled: Boolean(user),
     retry: false,
   });
+  const organizationQuery = trpc.settings.getPublicOrganization.useQuery(undefined, { retry: false });
+
+  useEffect(() => {
+    if (organizationQuery.data?.organizationName && typeof document !== "undefined") {
+      document.title = `${organizationQuery.data.organizationName} - Sistema de Gestão`;
+    }
+  }, [organizationQuery.data?.organizationName]);
 
   useEffect(() => {
     if (!appearanceQuery.data) return;
