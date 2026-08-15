@@ -132,6 +132,7 @@ export function verifyTwoFactorChallengeToken(token: string | undefined, now = D
   return { userId, sessionVersion, issuedAt, expiresAt };
 }
 
+export const TWO_FACTOR_REQUIRED_FOR_ALL = true;
 const twoFactorAttempts = new Map<string, { count: number; resetAt: number }>();
 const TWO_FACTOR_MAX_ATTEMPTS = 5;
 const TWO_FACTOR_WINDOW_MS = 5 * 60 * 1000;

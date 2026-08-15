@@ -5,15 +5,12 @@ import { fileURLToPath } from "node:url";
 const userManagementSource = readFileSync(fileURLToPath(new URL("./UserManagement.tsx", import.meta.url)), "utf8");
 
 describe("edição de funções de utilizadores", () => {
-  it("mantém o fluxo 2FA completo com QR Code, fallback manual e códigos de recuperação", () => {
-    expect(userManagementSource).toContain('fetch(path, {');
-    expect(userManagementSource).toContain('"/api/auth/2fa/setup"');
-    expect(userManagementSource).toContain('"/api/auth/2fa/confirm"');
-    expect(userManagementSource).toContain('"/api/auth/2fa/disable"');
-    expect(userManagementSource).toContain('qrGenerator.toDataURL');
-    expect(userManagementSource).toContain('recoveryCodes');
-    expect(userManagementSource).toContain('if (!cancelled) setTwoFactorQrCode(dataUrl);');
+  it("não mantém um painel 2FA duplicado nem endpoints de configuração administrativa", () => {
+    expect(userManagementSource).not.toContain("/api/auth/2fa/");
+    expect(userManagementSource).not.toContain("twoFactorSetup");
+    expect(userManagementSource).not.toContain("Apenas administradores");
   });
+
   it("normaliza o papel do sistema e a função eclesiástica antes de guardar", () => {
     expect(userManagementSource).toContain("function isSystemRole");
     expect(userManagementSource).toContain("function isChurchRole");
@@ -34,13 +31,5 @@ describe("edição de funções de utilizadores", () => {
     expect(userManagementSource).toContain('if (isChurchRole(value))');
     expect(userManagementSource).toContain('<SelectItem value="user">Utilizador</SelectItem>');
     expect(userManagementSource).toContain('<SelectItem value="admin">Administrador</SelectItem>');
-  });
-
-  it("renova a sessão antes do setup e confirma a activação devolvida pelo servidor", () => {
-    expect(userManagementSource).toContain('await refresh();\n      const data = await twoFactorRequest("/api/auth/2fa/setup")');
-    expect(userManagementSource).toContain('cache: "no-store"');
-    expect(userManagementSource).toContain('response.status === 401');
-    expect(userManagementSource).toContain('normalizeTwoFactorInput');
-    expect(userManagementSource).toContain('if (!data.twoFactorEnabled)');
   });
 });
