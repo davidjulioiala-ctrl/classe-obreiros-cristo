@@ -35,4 +35,12 @@ describe("edição de funções de utilizadores", () => {
     expect(userManagementSource).toContain('<SelectItem value="user">Utilizador</SelectItem>');
     expect(userManagementSource).toContain('<SelectItem value="admin">Administrador</SelectItem>');
   });
+
+  it("renova a sessão antes do setup e confirma a activação devolvida pelo servidor", () => {
+    expect(userManagementSource).toContain('await refresh();\n      const data = await twoFactorRequest("/api/auth/2fa/setup")');
+    expect(userManagementSource).toContain('cache: "no-store"');
+    expect(userManagementSource).toContain('response.status === 401');
+    expect(userManagementSource).toContain('normalizeTwoFactorInput');
+    expect(userManagementSource).toContain('if (!data.twoFactorEnabled)');
+  });
 });

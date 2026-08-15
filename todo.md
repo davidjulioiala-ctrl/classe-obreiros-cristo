@@ -7202,3 +7202,9 @@
 - [x] Corrigir o fluxo de login administrativo com segunda etapa 2FA e mensagens de erro claras.
 - [x] Adicionar regressões para criação, credenciais, sessão e verificação 2FA.
 - [x] Validar testes, typecheck, build e publicação.
+
+## Correcção da activação 2FA — novo ciclo
+- [x] Reproduzir a falha ao iniciar ou confirmar a configuração 2FA.
+- [x] Corrigir o contrato entre QR Code, segredo temporário, sessão e confirmação do código.
+- [x] Adicionar regressões para activação, cancelamento, confirmação e recuperação do 2FA.
+- [x] Validar testes, typecheck, build e publicação.

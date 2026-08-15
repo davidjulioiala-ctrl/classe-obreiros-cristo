@@ -182,17 +182,27 @@ export default function UserManagement() {
     const response = await fetch(path, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(body ?? {}),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || data.message || "Não foi possível concluir a operação 2FA.");
+    if (!response.ok) {
+      if (response.status === 401) throw new Error("A sua sessão expirou. Entre novamente e tente activar o 2FA.");
+      if (response.status === 403) throw new Error(data.error || "A sessão não foi autorizada para configurar o 2FA.");
+      throw new Error(data.error || data.message || "Não foi possível concluir a operação 2FA.");
+    }
     return data as TwoFactorSetup & { success: boolean; twoFactorEnabled?: boolean };
+  }
+
+  function normalizeTwoFactorInput(value: string) {
+    return value.replace(/[^0-9]/g, "").slice(0, 6);
   }
 
   async function startTwoFactorSetup() {
     setTwoFactorBusy(true);
     try {
+      await refresh();
       const data = await twoFactorRequest("/api/auth/2fa/setup");
       setTwoFactorSetup({ secret: data.secret, otpauthUri: data.otpauthUri, recoveryCodes: data.recoveryCodes });
       toast.success("Configuração 2FA preparada. Guarde os códigos de recuperação.");
@@ -210,7 +220,8 @@ export default function UserManagement() {
     }
     setTwoFactorBusy(true);
     try {
-      await twoFactorRequest("/api/auth/2fa/confirm", { code: twoFactorCode });
+      const data = await twoFactorRequest("/api/auth/2fa/confirm", { code: normalizeTwoFactorInput(twoFactorCode) });
+      if (!data.twoFactorEnabled) throw new Error("O servidor não confirmou a activação do 2FA. Tente novamente.");
       setTwoFactorSetup(null);
       setTwoFactorCode("");
       await refresh();
@@ -329,7 +340,7 @@ export default function UserManagement() {
               </div>
             </div>
             {currentUser.twoFactorEnabled && (
-              <div className="mt-4 max-w-md"><label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código para desactivar</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={10} /></div>
+              <div className="mt-4 max-w-md"><label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código para desactivar</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(normalizeTwoFactorInput(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} /></div>
             )}
             {twoFactorSetup && (
               <div className="mt-5 grid gap-5 border-t border-emerald-200 pt-5 dark:border-emerald-900/50 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -341,7 +352,7 @@ export default function UserManagement() {
                 <div className="space-y-4 text-sm">
                   <div><p className="font-semibold text-slate-900 dark:text-white">2. Se não conseguir ler o QR Code</p><p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">Use a chave abaixo na opção de configuração manual da aplicação autenticadora.</p><div className="mt-2 flex gap-2"><code className="min-w-0 flex-1 break-all rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.secret}</code><Button type="button" variant="outline" size="sm" onClick={() => void copyTwoFactorValue(twoFactorSetup.secret, "Segredo")}>Copiar</Button></div><details className="mt-2"><summary className="cursor-pointer text-xs font-medium text-emerald-700 dark:text-emerald-300">Mostrar URI completa</summary><div className="mt-2 flex gap-2"><code className="min-w-0 flex-1 break-all rounded-lg bg-white p-3 font-mono text-[11px] text-slate-700 dark:bg-slate-900 dark:text-slate-300">{twoFactorSetup.otpauthUri}</code><Button type="button" variant="outline" size="sm" onClick={() => void copyTwoFactorValue(twoFactorSetup.otpauthUri, "URI")}>Copiar</Button></div></details></div>
                   <div><p className="font-semibold text-slate-900 dark:text-white">3. Guarde os códigos de recuperação</p><div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">{twoFactorSetup.recoveryCodes.map((code) => <span key={code}>{code}</span>)}</div><p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">Cada código só pode ser usado uma vez e não será mostrado novamente depois desta configuração.</p></div>
-                  <div><label className="mb-1 block font-medium text-slate-700 dark:text-slate-200">4. Introduza o código de 6 dígitos</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={10} /><p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Depois de introduzir o código atual, clique em Confirmar ativação.</p></div>
+                  <div><label className="mb-1 block font-medium text-slate-700 dark:text-slate-200">4. Introduza o código de 6 dígitos</label><Input value={twoFactorCode} onChange={(event) => setTwoFactorCode(normalizeTwoFactorInput(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} /><p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Depois de introduzir o código atual, clique em Confirmar ativação.</p></div>
                   <div className="flex flex-wrap gap-2"><Button onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy || twoFactorCode.length !== 6} className="bg-emerald-600 text-white hover:bg-emerald-700">{twoFactorBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar ativação</Button><Button variant="outline" onClick={() => { setTwoFactorSetup(null); setTwoFactorQrCode(null); setTwoFactorCode(""); }}>Cancelar</Button></div>
                 </div>
               </div>

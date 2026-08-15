@@ -111,4 +111,14 @@ describe("contrato do login 2FA", () => {
     expect(source).toContain("O desafio 2FA expirou. Volte ao login");
     expect(source).toContain("A configuração 2FA desta conta está incompleta");
   });
+
+  it("verifica a persistência do segredo e distingue setup pendente de código inválido", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const source = readFileSync(fileURLToPath(new URL("./_core/localAuth.ts", import.meta.url)), "utf8");
+    expect(source).toContain("const persistedSetup = await getTwoFactorSettings(user.id);");
+    expect(source).toContain("A configuração 2FA não pôde ser validada no servidor");
+    expect(source).toContain("Não existe uma configuração 2FA pendente");
+    expect(source).toContain("O 2FA não ficou activo");
+  });
 });

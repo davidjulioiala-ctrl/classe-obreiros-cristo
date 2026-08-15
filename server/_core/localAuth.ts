@@ -137,8 +137,14 @@ export function registerLocalAuthRoutes(app: Express) {
       if (!user || user.role !== "admin") return res.status(403).json({ success: false, error: "Apenas administradores podem configurar 2FA." });
       const secret = generateTotpSecret();
       const recoveryCodes = generateRecoveryCodes();
+      if (user.twoFactorEnabled) return res.status(409).json({ success: false, error: "O 2FA já está activo nesta conta. Desactive-o primeiro se precisar de configurar um novo dispositivo." });
       const saved = await saveTwoFactorSetup(user.id, secret, recoveryCodes);
-      if (!saved) return res.status(503).json({ success: false, error: "Não foi possível guardar a configuração 2FA." });
+      if (!saved) return res.status(503).json({ success: false, error: "Não foi possível guardar a configuração 2FA. Tente novamente." });
+      const persistedSetup = await getTwoFactorSettings(user.id);
+      if (!persistedSetup?.secret || persistedSetup.secret !== secret) {
+        console.error("[LocalAuth] 2FA setup persistence verification failed", { userId: user.id });
+        return res.status(503).json({ success: false, error: "A configuração 2FA não pôde ser validada no servidor. Reinicie a configuração." });
+      }
       await createAuditLog({ userId: user.id, action: "configurar", entityType: "two_factor", entityId: user.id, details: JSON.stringify({ action: "setup_started" }) });
       const organization = parsePublicOrganizationBranding(await getAppSetting("organization"));
       return res.json({ success: true, secret, otpauthUri: buildTotpUri(secret, user.username ?? `admin-${user.id}`, organization.organizationName), recoveryCodes, message: "Guarde os códigos de recuperação antes de confirmar." });
@@ -153,9 +159,14 @@ export function registerLocalAuthRoutes(app: Express) {
       const current = (req as Request & { localUser?: { id: number } }).localUser;
       const user = await getUserById(current?.id ?? 0);
       const { code } = req.body as { code?: string };
+      const normalizedCode = typeof code === "string" ? code.trim().slice(0, 64) : "";
       const settings = user ? await getTwoFactorSettings(user.id) : null;
-      if (!user || user.role !== "admin" || !settings?.secret || !code || !verifyTotpCode(settings.secret, code)) return res.status(400).json({ success: false, error: "Código inválido. Confirme o código actual da aplicação autenticadora." });
-      if (!await enableTwoFactor(user.id)) return res.status(503).json({ success: false, error: "Não foi possível activar o 2FA." });
+      if (!user || user.role !== "admin") return res.status(403).json({ success: false, error: "Apenas administradores podem activar 2FA." });
+      if (!settings?.secret) return res.status(409).json({ success: false, error: "Não existe uma configuração 2FA pendente. Clique em Configurar 2FA novamente." });
+      if (!normalizedCode || !verifyTotpCode(settings.secret, normalizedCode)) return res.status(400).json({ success: false, error: "Código 2FA inválido ou expirado. Confirme o código actual da aplicação autenticadora e tente novamente." });
+      if (!await enableTwoFactor(user.id)) return res.status(503).json({ success: false, error: "Não foi possível activar o 2FA. Tente novamente." });
+      const enabledUser = await getUserById(user.id);
+      if (!enabledUser?.twoFactorEnabled) return res.status(503).json({ success: false, error: "O 2FA não ficou activo. Tente confirmar novamente." });
       await createAuditLog({ userId: user.id, action: "activar", entityType: "two_factor", entityId: user.id, details: JSON.stringify({ action: "enabled" }) });
       return res.json({ success: true, twoFactorEnabled: true });
     } catch (error) {
