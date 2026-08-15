@@ -7192,3 +7192,7 @@
 ## Bloqueio da interface após operações
 - [x] Diagnosticar e corrigir os fluxos que deixam a interface bloqueada até ao recarregamento do navegador
 - [x] Testar os fluxos afectados sem depender de actualização manual
+
+## Regresso ao login durante a manutenção
+- [x] Adicionar um botão claro para voltar à tela de login na página de manutenção do utilizador.
+- [x] Validar a navegação, responsividade e testes do novo botão.

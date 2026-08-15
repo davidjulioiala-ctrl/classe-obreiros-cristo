@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Clock3, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 
 type MaintenanceState = {
   enabled: boolean;
@@ -25,6 +27,9 @@ type MaintenanceGateProps = {
 export default function MaintenanceGate({ user, children }: MaintenanceGateProps) {
   const [state, setState] = useState<MaintenanceState>({ enabled: false });
   const [checking, setChecking] = useState(true);
+  const [returningToLogin, setReturningToLogin] = useState(false);
+  const [, navigate] = useLocation();
+  const { logout } = useLocalAuth();
 
   const checkState = async () => {
     try {
@@ -51,6 +56,17 @@ export default function MaintenanceGate({ user, children }: MaintenanceGateProps
 
   const estimatedCompletion = formatEstimatedCompletion(state.estimatedCompletionAt);
 
+  const handleReturnToLogin = async () => {
+    if (returningToLogin) return;
+    setReturningToLogin(true);
+    try {
+      await logout();
+      navigate("/login");
+    } finally {
+      setReturningToLogin(false);
+    }
+  };
+
   if (checking || !state.enabled || user?.role === "admin") {
     return (
       <>
@@ -76,7 +92,7 @@ export default function MaintenanceGate({ user, children }: MaintenanceGateProps
         {state.customMessage && <p className="mt-4 whitespace-pre-wrap rounded-lg border border-amber-400/20 bg-amber-400/10 p-3 text-left text-sm leading-6 text-amber-50">{state.customMessage}</p>}
         {estimatedCompletion && <p className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-amber-200"><Clock3 className="h-4 w-4" />Conclusão estimada: {estimatedCompletion}</p>}
         {state.incidentId && <p className="mt-3 text-xs text-slate-500">Incidente #{state.incidentId}</p>}
-        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap"><Button type="button" variant="outline" className="border-slate-600 text-slate-100 hover:bg-slate-800" onClick={() => void checkState()}><RefreshCw className="mr-2 h-4 w-4" />Verificar novamente</Button><a className="inline-flex h-10 items-center justify-center rounded-md border border-slate-600 px-4 text-sm font-medium text-slate-100 hover:bg-slate-800" href="/status">Ver estado do sistema</a><a className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700" href="/login"><ShieldCheck className="mr-2 h-4 w-4" />Voltar ao login</a></div>
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap"><Button type="button" variant="outline" className="border-slate-600 text-slate-100 hover:bg-slate-800" onClick={() => void checkState()}><RefreshCw className="mr-2 h-4 w-4" />Verificar novamente</Button><a className="inline-flex h-10 items-center justify-center rounded-md border border-slate-600 px-4 text-sm font-medium text-slate-100 hover:bg-slate-800" href="/status">Ver estado do sistema</a><Button type="button" disabled={returningToLogin} className="h-10 bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700" onClick={() => void handleReturnToLogin()}><ShieldCheck className="mr-2 h-4 w-4" />{returningToLogin ? "A terminar sessão…" : "Voltar ao login"}</Button></div>
       </section>
     </main>
   );
