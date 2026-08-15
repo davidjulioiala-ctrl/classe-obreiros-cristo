@@ -83,7 +83,7 @@ export function verifyTotpCode(secret: string, code: string, now = Date.now()) {
     return false;
   }
   const currentCounter = Math.floor(now / 1000 / TOTP_PERIOD_SECONDS);
-  for (const offset of [-1, 0, 1]) {
+  for (const offset of [-2, -1, 0, 1, 2]) {
     const counter = BigInt(currentCounter + offset);
     const counterBuffer = Buffer.alloc(8);
     counterBuffer.writeBigUInt64BE(counter);

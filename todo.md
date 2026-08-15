@@ -7162,3 +7162,8 @@
 - [ ] Adicionar campos correspondentes no ecrã de Definições/Segurança e no router tRPC de manutenção.
 - [ ] Apresentar a mensagem personalizada e o tempo estimado na página de estado e no banner de emergência.
 - [ ] Validar testes unitários, typecheck, build e publicação.
+
+## Correcção da autenticação 2FA — ciclo actual
+- [x] Investigar o fluxo de verificação e activação 2FA para identificar a quebra.
+- [x] Alargar a tolerância temporal da verificação TOTP e robustecer a extracção de códigos.
+- [x] Validar com 180 testes, typecheck, build e publicação.

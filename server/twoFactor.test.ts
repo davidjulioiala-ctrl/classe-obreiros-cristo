@@ -30,7 +30,7 @@ describe("twoFactor", () => {
     const now = 1_234_567_890_000;
     const counter = Math.floor(now / 1000 / 30);
     expect(verifyTotpCode(secret, hotp(secret, counter), now)).toBe(true);
-    expect(verifyTotpCode(secret, hotp(secret, counter - 2), now)).toBe(false);
+    expect(verifyTotpCode(secret, hotp(secret, counter - 3), now)).toBe(false);
   });
 
   it("consumes a recovery code only once", () => {
