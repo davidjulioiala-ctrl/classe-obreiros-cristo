@@ -7342,3 +7342,9 @@
 
 ## Reposição de Nomes Neutros dos Grupos
 - [x] Repor os 5 grupos existentes com os nomes "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4" e "Convidados", preservando IDs e membros.
+
+
+## Limpeza de Utilizadores e Preservação de Admin
+- [x] Remover todas as contas locais excepto `admin`.
+- [x] Configurar a conta `admin` com a senha `admin123` e privilégios de administrador.
+- [x] Ajustar contadores e validar a integridade da base de dados.
