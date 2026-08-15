@@ -7111,3 +7111,20 @@
 - [x] Reproduzir e diagnosticar o erro ERR-MSUANVD3-Z2UAA8 durante a ativação do 2FA.
 - [x] Corrigir o fluxo de ativação 2FA e adicionar mensagens de erro úteis sem expor detalhes sensíveis.
 - [x] Adicionar regressões, validar typecheck, testes, build, responsividade e publicar a correção.
+
+## Nova Tarefa — Ativos, Inativos e Gráfico de Participação
+- [ ] Adicionar exportação de membros ativos e inativos por data específica e por intervalo de datas.
+- [ ] Tornar todos os destaques da Página Inicial clicáveis, mostrando os dados correspondentes em detalhe.
+- [ ] Corrigir o gráfico de participação por tipo de atividade, incluindo estados de carregamento, vazio e erro.
+- [ ] Adicionar testes de regressão para filtros temporais, cartões interativos e dados do gráfico.
+- [ ] Validar responsividade, typecheck, testes, build e publicação.
+
+
+## Continuação: Página Inicial, participação temporal e exportações
+- [ ] Estender a classificação de membros ativos/inativos para uma data específica ou intervalo de datas.
+- [ ] Tornar os destaques de ativos e inativos clicáveis, com detalhe, pesquisa, ordenação e exportação da lista filtrada.
+- [ ] Corrigir o gráfico de participação por tipo de atividade para apresentar dados reais, completos e filtráveis por intervalo de datas.
+- [ ] Fazer as exportações de ativos/inativos respeitarem período, estado, colunas selecionadas e os formatos PDF, CSV e Excel.
+- [ ] Rever e atualizar os testes unitários, typecheck, build e verificação responsiva desta continuação.
+
+> Nota desta continuação: a classificação considera apenas atividades existentes no período escolhido; uma data inicial igual à data final representa esse dia específico. A exportação mantém os filtros e colunas selecionados e não introduz dados fictícios.

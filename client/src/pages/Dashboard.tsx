@@ -19,6 +19,7 @@ import {
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import { trpc } from "@/lib/trpc";
 import { filterAndSortParticipationMembers, type ParticipationMemberSort } from "@shared/memberParticipation";
+import { MEMBER_EXPORT_COLUMNS, MEMBER_EXPORT_COLUMN_KEYS, PERSONAL_MEMBER_EXPORT_COLUMNS, type MemberExportColumn } from "@shared/exportColumns";
 
 const COLORS = ["#10b981", "#06b6d4", "#8b5cf6", "#ec4899", "#f59e0b"];
 const PARTICIPATION_COLORS = ["#059669", "#0891b2", "#7c3aed", "#db2777", "#d97706", "#2563eb", "#65a30d"];
@@ -124,6 +125,8 @@ export default function Dashboard() {
   const [participationSexFilter, setParticipationSexFilter] = useState("all");
   const [participationGroupFilter, setParticipationGroupFilter] = useState<number | "all">("all");
   const [participationSort, setParticipationSort] = useState<ParticipationMemberSort>("percentage-desc");
+  const [participationExportColumns, setParticipationExportColumns] = useState<MemberExportColumn[]>(["id", "name", "sex", "position", "groupId", "isActive"]);
+  const [participationIncludePersonalData, setParticipationIncludePersonalData] = useState(false);
   const organizationSettingsQuery = trpc.settings.get.useQuery({ keyName: "organization" });
   const participationThresholdConfig = useMemo(() => {
     if (!organizationSettingsQuery.data) return 60;
@@ -135,7 +138,10 @@ export default function Dashboard() {
       return 60;
     }
   }, [organizationSettingsQuery.data]);
-  const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery({ threshold: participationThresholdConfig, recentLimit: 7 });
+  const participationHighlightsQuery = trpc.dashboard.memberParticipationHighlights.useQuery(
+    { threshold: participationThresholdConfig, recentLimit: 7, startDate: dateFrom || undefined, endDate: dateTo || undefined },
+    { enabled: !dateRangeInvalid },
+  );
   const participationQuery = trpc.dashboard.participationByType.useQuery(
     { startDate: dateFrom || undefined, endDate: dateTo || undefined },
     { enabled: !dateRangeInvalid },
@@ -212,6 +218,28 @@ export default function Dashboard() {
   const clearDateRange = () => {
     setDateFrom("");
     setDateTo("");
+  };
+
+  const selectableParticipationColumns = participationIncludePersonalData
+    ? MEMBER_EXPORT_COLUMN_KEYS
+    : MEMBER_EXPORT_COLUMN_KEYS.filter((column) => !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]));
+
+  const exportParticipation = (format: "pdf" | "csv" | "xlsx") => {
+    if (!participationGroup || participationExportColumns.length === 0) return;
+    const exportColumns = participationExportColumns.filter((column) => participationIncludePersonalData || !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]));
+    if (exportColumns.length === 0) return;
+    const params = new URLSearchParams({
+      participationStatus: participationGroup,
+      threshold: String(participationThresholdConfig),
+      columns: exportColumns.join(","),
+      includePersonalData: String(participationIncludePersonalData),
+    });
+    if (dateFrom) params.set("startDate", dateFrom);
+    if (dateTo) params.set("endDate", dateTo);
+    if (participationSearch.trim()) params.set("search", participationSearch.trim());
+    if (participationSexFilter !== "all") params.set("sex", participationSexFilter === "m" ? "M" : "F");
+    if (participationGroupFilter !== "all") params.set("groupId", String(participationGroupFilter));
+    window.location.assign(`/api/members/export/${format}?${params.toString()}`);
   };
 
   const containerVariants = {
@@ -370,7 +398,7 @@ export default function Dashboard() {
             <DialogHeader>
               <DialogTitle>{participationGroup === "active" ? `${participationLabels.active} por participação` : `${participationLabels.inactive} por participação`}</DialogTitle>
               <DialogDescription>
-                Classificação calculada sobre {participationHighlightsQuery.data?.totalActivities ?? 0} actividades registadas. Activo significa presença igual ou superior a 60%; inactivo significa presença inferior a 60%.
+                Classificação calculada sobre {participationHighlightsQuery.data?.totalActivities ?? 0} actividades{dateFrom || dateTo ? ` no período ${dateFrom || "inicial"} a ${dateTo || "final"}` : ""}. Activo significa presença igual ou superior a {participationThresholdConfig}%; inactivo significa presença inferior a {participationThresholdConfig}%.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3 dark:border-blue-900/50 dark:bg-blue-950/20 sm:grid-cols-[1.5fr_1fr_1fr_1fr_auto] sm:items-end">
@@ -403,6 +431,42 @@ export default function Dashboard() {
                 </select>
               </div>
               <button type="button" onClick={() => { setParticipationSearch(""); setParticipationSexFilter("all"); setParticipationGroupFilter("all"); setParticipationSort("percentage-desc"); }} className="h-9 rounded-md border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40">Limpar</button>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Colunas da exportação</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A exportação respeita os filtros desta janela e inclui apenas as colunas seleccionadas.</p>
+                </div>
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200">
+                  <input type="checkbox" checked={participationIncludePersonalData} onChange={(event) => { const enabled = event.target.checked; setParticipationIncludePersonalData(enabled); if (!enabled) setParticipationExportColumns((current) => current.filter((column) => !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]))); }} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  Incluir dados pessoais
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                {MEMBER_EXPORT_COLUMNS.map((column) => (
+                  <label key={column.key} className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={participationExportColumns.includes(column.key) && (participationIncludePersonalData || !PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column.key as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number]))}
+                      disabled={!participationIncludePersonalData && PERSONAL_MEMBER_EXPORT_COLUMNS.includes(column.key as (typeof PERSONAL_MEMBER_EXPORT_COLUMNS)[number])}
+                      onChange={(event) => setParticipationExportColumns((current) => event.target.checked ? Array.from(new Set([...current, column.key])) : current.filter((key) => key !== column.key))}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    {column.label}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setParticipationExportColumns([...selectableParticipationColumns])} className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Seleccionar todas</button>
+                <button type="button" onClick={() => setParticipationExportColumns([])} className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Desmarcar todas</button>
+                <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">{participationExportColumns.length} seleccionadas</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" disabled={participationExportColumns.length === 0} onClick={() => exportParticipation("pdf")} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">Exportar PDF</button>
+                <button type="button" disabled={participationExportColumns.length === 0} onClick={() => exportParticipation("csv")} className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50">Exportar CSV</button>
+                <button type="button" disabled={participationExportColumns.length === 0} onClick={() => exportParticipation("xlsx")} className="rounded-md bg-violet-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50">Exportar Excel</button>
+              </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">A mostrar {selectedParticipationMembers.length} de {participationMembersForGroup.length} pessoas{hasParticipationFilters ? " após os filtros" : ""}.</p>
             {participationHighlightsQuery.isLoading ? (

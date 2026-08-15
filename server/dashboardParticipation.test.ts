@@ -36,3 +36,15 @@ describe("participação por tipo de actividade", () => {
     ]);
   });
 });
+
+
+  it("combina valores internos e etiquetas humanizadas sem duplicar categorias", () => {
+    const result = completeParticipationByActivityType([
+      { type: "Estudo bíblico", activityCount: "2", presentCount: "5", recordedCount: "6" },
+      { type: "reunião", activityCount: "1", presentCount: "3", recordedCount: "4" },
+    ]);
+
+    expect(result.filter((entry) => entry.type === "Estudo bíblico")).toHaveLength(1);
+    expect(result.filter((entry) => entry.type === "Reunião")).toHaveLength(1);
+    expect(result.find((entry) => entry.type === "Estudo bíblico")).toMatchObject({ activityCount: 2, presentCount: 5 });
+  });

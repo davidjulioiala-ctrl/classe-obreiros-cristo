@@ -60,3 +60,29 @@ describe("resumo de participação dos membros", () => {
     expect(result.active[0].lastActivities.map((activity) => activity.id)).toEqual([8, 7, 6, 5, 4, 3, 2]);
   });
 });
+
+
+  it("calcula a percentagem apenas para o intervalo temporal seleccionado", () => {
+    const temporalMember = { id: 1, name: "Ana Silva", sex: "F", position: "Membro", groupId: 1, isGuest: false, isActive: true };
+    const temporalActivities = Array.from({ length: 8 }, (_, index) => ({
+      id: index + 1,
+      name: `Actividade ${index + 1}`,
+      date: `2026-01-${String(index + 1).padStart(2, "0")}`,
+      type: "Culto",
+      status: "realizada",
+    }));
+    const result = summarizeMemberParticipation(
+      [temporalMember],
+      temporalActivities,
+      [
+        { memberId: 1, activityId: 1, isPresent: true },
+        { memberId: 1, activityId: 4, isPresent: true },
+        { memberId: 1, activityId: 8, isPresent: false },
+      ],
+      { threshold: 50, startDate: "2026-01-02", endDate: "2026-01-05" },
+    );
+
+    expect(result.totalActivities).toBe(4);
+    expect(result.active).toHaveLength(0);
+    expect(result.inactive[0]).toMatchObject({ id: 1, presentCount: 1, attendancePercentage: 25 });
+  });

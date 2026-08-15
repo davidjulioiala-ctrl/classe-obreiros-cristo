@@ -459,30 +459,40 @@ export function normalizeParticipationByActivityType(rows: ParticipationByActivi
   }));
 }
 
+function normalizeActivityTypeKey(value: string | null | undefined) {
+  return (value ?? "").trim().toLocaleLowerCase("pt-PT");
+}
+
 export function completeParticipationByActivityType(rows: ParticipationByActivityTypeRow[]) {
   const normalized = normalizeParticipationByActivityType(rows);
-  const byType = new Map(normalized.map((row) => [row.type.toLowerCase(), row]));
+  const byType = new Map(normalized.map((row) => [normalizeActivityTypeKey(row.type), row]));
   const catalogRows = ACTIVITY_TYPE_CATALOG.map(({ value, label }) => {
-    const existing = byType.get(value.toLowerCase());
+    const existing = byType.get(normalizeActivityTypeKey(value)) ?? byType.get(normalizeActivityTypeKey(label));
     return existing ? { ...existing, type: label } : { type: label, activityCount: 0, presentCount: 0, recordedCount: 0 };
   });
-  const catalogValues = new Set(ACTIVITY_TYPE_CATALOG.map(({ value }) => value.toLowerCase()));
+  const catalogValues = new Set(ACTIVITY_TYPE_CATALOG.flatMap(({ value, label }) => [normalizeActivityTypeKey(value), normalizeActivityTypeKey(label)]));
   const extraRows = normalized
-    .filter((row) => !catalogValues.has(row.type.toLowerCase()))
+    .filter((row) => !catalogValues.has(normalizeActivityTypeKey(row.type)))
     .map((row) => ({ ...row, type: activityTypeLabel(row.type) }));
   return [...catalogRows, ...extraRows];
+}
+
+function toDatabaseDate(value: Date) {
+  return value.toISOString().slice(0, 10);
 }
 
 export async function getParticipationByActivityType(options?: { startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const dateFilter = options?.startDate && options?.endDate
-    ? between(activities.date, options.startDate, options.endDate)
-    : options?.startDate
-      ? sql`${activities.date} >= ${options.startDate}`
-      : options?.endDate
-        ? sql`${activities.date} <= ${options.endDate}`
+  const startDate = options?.startDate ? toDatabaseDate(options.startDate) : undefined;
+  const endDate = options?.endDate ? toDatabaseDate(options.endDate) : undefined;
+  const dateFilter = startDate && endDate
+    ? between(activities.date, new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`))
+    : startDate
+      ? sql`${activities.date} >= ${startDate}`
+      : endDate
+        ? sql`${activities.date} <= ${endDate}`
         : undefined;
 
   const rows = await db
@@ -495,19 +505,31 @@ export async function getParticipationByActivityType(options?: { startDate?: Dat
     .from(activities)
     .leftJoin(attendance, eq(attendance.activityId, activities.id))
     .where(dateFilter)
-    .groupBy(activities.type)
-    .orderBy(desc(sql`presentCount`), asc(activities.type));
+      .groupBy(activities.type)
+    .orderBy(
+      desc(sql`COALESCE(SUM(CASE WHEN ${attendance.isPresent} = 1 THEN 1 ELSE 0 END), 0)`),
+      asc(activities.type),
+    );
 
   return completeParticipationByActivityType(rows);
 }
 
-export async function getMemberParticipationHighlights(options?: { threshold?: number; recentLimit?: number }) {
+export async function getMemberParticipationHighlights(options?: { threshold?: number; recentLimit?: number; startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  const startDate = options?.startDate ? toDatabaseDate(options.startDate) : undefined;
+  const endDate = options?.endDate ? toDatabaseDate(options.endDate) : undefined;
+  const dateFilter = startDate && endDate
+    ? between(activities.date, new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`))
+    : startDate
+      ? sql`${activities.date} >= ${startDate}`
+      : endDate
+        ? sql`${activities.date} <= ${endDate}`
+        : undefined;
   const [memberRows, activityRows, attendanceRows] = await Promise.all([
     db.select().from(members).orderBy(asc(members.id)),
-    db.select({ id: activities.id, name: activities.name, date: activities.date, type: activities.type, status: activities.status }).from(activities).orderBy(desc(activities.date), desc(activities.id)),
+    db.select({ id: activities.id, name: activities.name, date: activities.date, type: activities.type, status: activities.status }).from(activities).where(dateFilter).orderBy(desc(activities.date), desc(activities.id)),
     db.select({ memberId: attendance.memberId, activityId: attendance.activityId, isPresent: attendance.isPresent }).from(attendance),
   ]);
 

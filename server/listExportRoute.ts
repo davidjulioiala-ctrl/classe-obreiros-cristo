@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
-import { getAllMembers, listReports } from "./db";
+import { getAllMembers, getMemberParticipationHighlights, listReports } from "./db";
 import { filterMembers } from "@shared/memberSearch";
 import { sanitizeMemberExportColumns, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
@@ -20,6 +20,19 @@ function parseColumns<T extends string>(value: unknown, validKeys: readonly T[])
 
 function parseIncludePersonalData(value: unknown): boolean {
   return value === "true" || value === true;
+}
+
+function parseDateBoundary(value: unknown, endOfDay = false) {
+  const raw = safeSearch(value);
+  if (!raw) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const date = new Date(`${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseParticipationThreshold(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : 60;
 }
 
 function canExportMembers(user: { role: string; churchRole: string } | null) {
@@ -49,7 +62,13 @@ export function registerListExportRoutes(app: Express) {
       const sexFilter = safeSearch(req.query.sex);
       const statusFilter = safeSearch(req.query.status);
       const guestFilter = safeSearch(req.query.guest);
+      const participationStatus = safeSearch(req.query.participationStatus);
+      const startDate = parseDateBoundary(req.query.startDate);
+      const endDate = parseDateBoundary(req.query.endDate, true);
       const groupIdFilter = req.query.groupId ? Number(req.query.groupId) : NaN;
+      if (startDate === null || endDate === null) return res.status(400).json({ error: "O intervalo de participação contém uma data inválida." });
+      if (startDate && endDate && startDate > endDate) return res.status(400).json({ error: "A data final não pode ser anterior à data inicial." });
+      if (participationStatus && participationStatus !== "active" && participationStatus !== "inactive") return res.status(400).json({ error: "O estado de participação é inválido." });
 
       const requestedColumns = parseColumns(req.query.columns, MEMBER_EXPORT_COLUMN_KEYS);
       if (!requestedColumns) return res.status(400).json({ error: "A selecção de colunas é inválida." });
@@ -57,7 +76,7 @@ export function registerListExportRoutes(app: Express) {
       if (columns.length === 0) return res.status(400).json({ error: "Seleccione pelo menos uma coluna não pessoal para exportar." });
 
       const allMembers = await getAllMembers();
-      const filteredMembers = filterMembers(allMembers, {
+      let filteredMembers = filterMembers(allMembers, {
         query: searchQuery,
         position: positionFilter || "all",
         sex: (sexFilter === "M" || sexFilter === "F" ? sexFilter : "all"),
@@ -66,26 +85,33 @@ export function registerListExportRoutes(app: Express) {
         groupId: Number.isNaN(groupIdFilter) ? "all" : groupIdFilter,
       });
 
-      const hasActiveFilters = Boolean(searchQuery.trim()) || Boolean(positionFilter && positionFilter !== "all") || Boolean(sexFilter && sexFilter !== "all") || Boolean(statusFilter && statusFilter !== "all") || Boolean(guestFilter && guestFilter !== "all") || !Number.isNaN(groupIdFilter);
+      if (participationStatus) {
+        const highlights = await getMemberParticipationHighlights({ threshold: parseParticipationThreshold(req.query.threshold), recentLimit: 7, startDate: startDate ?? undefined, endDate: endDate ?? undefined });
+        const source = participationStatus === "active" ? highlights.active : highlights.inactive;
+        const participationIds = new Set(source.map((member) => member.id));
+        filteredMembers = filteredMembers.filter((member) => participationIds.has(member.id));
+      }
+
+      const hasActiveFilters = Boolean(searchQuery.trim()) || Boolean(positionFilter && positionFilter !== "all") || Boolean(sexFilter && sexFilter !== "all") || Boolean(statusFilter && statusFilter !== "all") || Boolean(guestFilter && guestFilter !== "all") || Boolean(participationStatus) || Boolean(startDate) || Boolean(endDate) || !Number.isNaN(groupIdFilter);
       const suffix = hasActiveFilters ? "-filtrados" : "";
       if (format === "pdf") {
         const buffer = await generateMembersPdf(filteredMembers, searchQuery, columns as MemberExportColumn[]);
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.pdf"`);
-        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:pdf", metadata: { count: filteredMembers.length, filtered: hasActiveFilters } });
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:pdf", metadata: { count: filteredMembers.length, filtered: hasActiveFilters, participationStatus: participationStatus || undefined, startDate: safeSearch(req.query.startDate) || undefined, endDate: safeSearch(req.query.endDate) || undefined } });
         return res.send(buffer);
       }
       if (format === "xlsx") {
         const workbook = generateMembersExcel(filteredMembers, columns as MemberExportColumn[]);
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.xlsx"`);
-        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:xlsx", metadata: { count: filteredMembers.length, filtered: hasActiveFilters } });
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:xlsx", metadata: { count: filteredMembers.length, filtered: hasActiveFilters, participationStatus: participationStatus || undefined, startDate: safeSearch(req.query.startDate) || undefined, endDate: safeSearch(req.query.endDate) || undefined } });
         return res.send(workbook);
       }
       const csv = generateMembersCsv(filteredMembers, columns as MemberExportColumn[]);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="membros${suffix}.csv"`);
-      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:csv", metadata: { count: filteredMembers.length, filtered: hasActiveFilters } });
+      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de membros concluída", actorId: user.id, resource: "membros:csv", metadata: { count: filteredMembers.length, filtered: hasActiveFilters, participationStatus: participationStatus || undefined, startDate: safeSearch(req.query.startDate) || undefined, endDate: safeSearch(req.query.endDate) || undefined } });
       return res.send(csv);
     } catch (error) {
       console.error("[MembersExport]", error);

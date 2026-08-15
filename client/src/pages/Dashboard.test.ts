@@ -24,7 +24,8 @@ describe("filtro temporal do Dashboard", () => {
 
   it("apresenta destaques de activos e inactivos com limiar configurável e acesso às últimas sete actividades", () => {
     expect(dashboardSource).toContain("participationThresholdConfig");
-    expect(dashboardSource).toContain("memberParticipationHighlights.useQuery({ threshold: participationThresholdConfig, recentLimit: 7 })");
+    expect(dashboardSource).toContain("memberParticipationHighlights.useQuery(");
+    expect(dashboardSource).toContain("threshold: participationThresholdConfig, recentLimit: 7, startDate: dateFrom || undefined, endDate: dateTo || undefined");
     expect(dashboardSource).toContain("participationLabels.active");
     expect(dashboardSource).toContain("participationLabels.inactive");
     expect(dashboardSource).toContain('activeHighlightLabel');
@@ -38,5 +39,9 @@ describe("filtro temporal do Dashboard", () => {
     expect(dashboardSource).toContain("participation-sort");
     expect(dashboardSource).toContain("filterAndSortParticipationMembers");
     expect(dashboardSource).toContain("shadow-[0_0_0_1px_rgba(147,197,253,0.18)]");
+    expect(dashboardSource).toContain("participationStatus: participationGroup");
+    expect(dashboardSource).toContain("Exportar PDF");
+    expect(dashboardSource).toContain("Exportar CSV");
+    expect(dashboardSource).toContain("Exportar Excel");
   });
 });

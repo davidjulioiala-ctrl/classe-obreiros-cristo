@@ -1037,16 +1037,25 @@ const backupRouter = router({
 
 // ============ DASHBOARD ROUTER ============
 
-const dashboardDateRangeInput = z.object({
+const dashboardDateRangeFields = {
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inicial inválida.").optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data final inválida.").optional(),
-}).superRefine((input, ctx) => {
+};
+
+function validateDashboardDateRange(input: { startDate?: string; endDate?: string }, ctx: z.RefinementCtx) {
   const start = input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined;
   const end = input.endDate ? new Date(`${input.endDate}T23:59:59.999Z`) : undefined;
   if (start && Number.isNaN(start.getTime())) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["startDate"], message: "Data inicial inválida." });
   if (end && Number.isNaN(end.getTime())) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endDate"], message: "Data final inválida." });
   if (start && end && start > end) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endDate"], message: "A data final não pode ser anterior à data inicial." });
-});
+}
+
+const dashboardDateRangeInput = z.object(dashboardDateRangeFields).superRefine(validateDashboardDateRange);
+const dashboardHighlightsInput = z.object({
+  ...dashboardDateRangeFields,
+  threshold: z.number().min(0).max(100).default(60),
+  recentLimit: z.number().int().min(1).max(20).default(7),
+}).superRefine(validateDashboardDateRange);
 
 const dashboardRouter = router({
   participationByType: protectedProcedure
@@ -1057,8 +1066,12 @@ const dashboardRouter = router({
       return await db.getParticipationByActivityType({ startDate, endDate });
     }),
   memberParticipationHighlights: protectedProcedure
-    .input(z.object({ threshold: z.number().min(0).max(100).default(60), recentLimit: z.number().int().min(1).max(20).default(7) }))
-    .query(async ({ input }) => db.getMemberParticipationHighlights(input)),
+    .input(dashboardHighlightsInput)
+    .query(async ({ input }) => {
+      const startDate = input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined;
+      const endDate = input.endDate ? new Date(`${input.endDate}T23:59:59.999Z`) : undefined;
+      return await db.getMemberParticipationHighlights({ threshold: input.threshold, recentLimit: input.recentLimit, startDate, endDate });
+    }),
 });
 
 // ============ MAIN ROUTER ============

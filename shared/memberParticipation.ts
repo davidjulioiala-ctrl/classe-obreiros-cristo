@@ -50,11 +50,20 @@ export function summarizeMemberParticipation(
   members: ParticipationMemberInput[],
   activities: ParticipationActivityInput[],
   attendance: ParticipationAttendanceInput[],
-  options?: { threshold?: number; recentLimit?: number },
+  options?: { threshold?: number; recentLimit?: number; startDate?: Date | string; endDate?: Date | string },
 ): MemberParticipationHighlights {
   const threshold = Math.min(100, Math.max(0, options?.threshold ?? 60));
   const recentLimit = Math.min(20, Math.max(1, options?.recentLimit ?? 7));
-  const activityMap = new Map(activities.map((activity) => [activity.id, activity]));
+  const startTimestamp = options?.startDate === undefined ? undefined : toDateValue(options.startDate);
+  const endTimestamp = options?.endDate === undefined ? undefined : toDateValue(options.endDate);
+  const filteredActivities = activities.filter((activity) => {
+    if (startTimestamp === undefined && endTimestamp === undefined) return true;
+    const activityTimestamp = toDateValue(activity.date);
+    if (!activityTimestamp) return false;
+    return (startTimestamp === undefined || activityTimestamp >= startTimestamp)
+      && (endTimestamp === undefined || activityTimestamp <= endTimestamp);
+  });
+  const activityMap = new Map(filteredActivities.map((activity) => [activity.id, activity]));
   const presentActivityIdsByMember = new Map<number, Set<number>>();
 
   for (const record of attendance) {
@@ -64,7 +73,7 @@ export function summarizeMemberParticipation(
     presentActivityIdsByMember.set(record.memberId, activityIds);
   }
 
-  const totalActivities = activities.length;
+  const totalActivities = filteredActivities.length;
   const summaries = members.map((member) => {
     const presentActivityIds = presentActivityIdsByMember.get(member.id) ?? new Set<number>();
     const presentCount = presentActivityIds.size;
