@@ -7048,9 +7048,9 @@
 - [x] Adicionar testes unitários para a ordenação e filtros dos modais e validar a compilação.
 
 ## Nova Tarefa — Contorno Azul em Todos os Destaques do Sistema
-- [ ] Localizar todos os cartões de estatística e resumo (StatCard) nas páginas e componentes principais.
-- [ ] Aplicar o contorno azul suave (`border-blue-200 dark:border-blue-800/60 ring-1 ring-blue-100 dark:ring-blue-900/30`) de forma uniforme em todos eles.
-- [ ] Validar a compilação, executar os testes unitários e guardar checkpoint.
+- [x] Localizar todos os cartões de estatística e resumo (StatCard) nas páginas e componentes principais.
+- [x] Aplicar o contorno azul suave (`border-blue-200 dark:border-blue-800/60 ring-1 ring-blue-100 dark:ring-blue-900/30`) de forma uniforme em todos eles.
+- [x] Validar a compilação, executar os testes unitários e guardar checkpoint.
 
 ## Nova Tarefa — Remoção de Quotas do Dashboard e Limiar Flexível
 - [x] Sincronizar a pré-visualização e reiniciar o servidor de desenvolvimento (`webdev_restart_server`).
