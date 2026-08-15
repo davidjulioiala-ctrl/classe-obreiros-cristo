@@ -7252,11 +7252,11 @@
 
 
 ## Correção de 2FA, Perfil e Senha — ciclo atual
-- [ ] Diagnosticar por que a criação e ativação de 2FA falham no navegador.
-- [ ] Verificar os endpoints de edição de perfil e alteração de senha de utilizadores.
-- [ ] Implementar correções robustas em backend e frontend para 2FA, perfil e senha.
-- [ ] Adicionar testes de regressão específicos para estes fluxos.
-- [ ] Executar testes Vitest, typecheck e build, salvando checkpoint e publicação.
+- [x] Diagnosticar por que a criação e ativação de 2FA falham no navegador.
+- [x] Verificar os endpoints de edição de perfil e alteração de senha de utilizadores.
+- [x] Implementar correções robustas em backend e frontend para 2FA, perfil e senha.
+- [x] Adicionar testes de regressão específicos para estes fluxos.
+- [x] Executar testes Vitest, typecheck e build, salvando checkpoint e publicação.
 
 
 ## Restauração e Expansão do 2FA para Todos os Utilizadores
@@ -7265,3 +7265,11 @@
 - [x] Validar o fluxo de login quando o utilizador tem 2FA ativo (código TOTP ou código de recuperação)
 - [x] Adicionar regressões para assegurar que o 2FA é extensível a todos sem obrigatoriedade bloqueante
 - [x] Executar testes, typecheck, build e verificação visual
+
+
+## Obrigatoriedade e Ativação Global de 2FA
+- [x] Adicionar opção clara de ativação de 2FA no painel de utilizadores/perfil
+- [x] Criar controlo no painel de administração para obrigar todos os utilizadores a ativarem o 2FA no próximo login
+- [x] Implementar verificação de login para detetar política global ativa sem 2FA
+- [x] Criar ecrã de setup guiado obrigatório no login
+- [x] Adicionar testes e validar build
