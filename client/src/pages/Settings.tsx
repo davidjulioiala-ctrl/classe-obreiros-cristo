@@ -209,6 +209,7 @@ export default function Settings() {
   const [notifAttendance, setNotifAttendance] = useState(true);
   const [notifFinances, setNotifFinances] = useState(true);
   const [notifTransfers, setNotifTransfers] = useState(true);
+  const [notifExternalOwnerAlerts, setNotifExternalOwnerAlerts] = useState(false);
   const [themeMode, setThemeMode] = useState(theme);
 
   const trpcUtils = trpc.useUtils();
@@ -302,6 +303,7 @@ export default function Settings() {
         if (parsed.attendance !== undefined) setNotifAttendance(parsed.attendance);
         if (parsed.finances !== undefined) setNotifFinances(parsed.finances);
         if (parsed.transfers !== undefined) setNotifTransfers(parsed.transfers);
+        if (parsed.externalOwnerAlerts !== undefined) setNotifExternalOwnerAlerts(parsed.externalOwnerAlerts === true);
       } catch {}
     }
   }, [notifQuery.data]);
@@ -511,7 +513,7 @@ export default function Settings() {
   };
 
   const handleSaveNotifications = () => {
-    setSettingsMutation.mutate({ keyName: "notifications", keyValue: JSON.stringify({ activities: notifActivities, attendance: notifAttendance, finances: notifFinances, transfers: notifTransfers }) });
+    setSettingsMutation.mutate({ keyName: "notifications", keyValue: JSON.stringify({ activities: notifActivities, attendance: notifAttendance, finances: notifFinances, transfers: notifTransfers, externalOwnerAlerts: notifExternalOwnerAlerts }) });
   };
 
   const handleThemeChange = (nextTheme: "light" | "dark") => {
@@ -929,6 +931,13 @@ export default function Settings() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">Alertas sobre transferências de membros</p>
                   </div>
                   <input type="checkbox" checked={notifTransfers} onChange={(e) => setNotifTransfers(e.target.checked)} className="w-5 h-5 rounded border-slate-300" />
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/20">
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">Alertas externos do proprietário do projecto</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Desativado por defeito. Quando activo, o canal externo do projecto pode enviar alertas operacionais ao proprietário, e não ao email administrativo da organização.</p>
+                  </div>
+                  <input type="checkbox" checked={notifExternalOwnerAlerts} onChange={(e) => setNotifExternalOwnerAlerts(e.target.checked)} className="h-5 w-5 rounded border-slate-300" aria-label="Activar alertas externos do proprietário do projecto" />
                 </div>
                 <Button onClick={handleSaveNotifications} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Save className="w-4 h-4 mr-2" /> Guardar Preferências

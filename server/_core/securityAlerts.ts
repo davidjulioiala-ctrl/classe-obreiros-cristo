@@ -21,6 +21,19 @@ function sanitizeValue(value: string | number | boolean | undefined) {
 }
 
 export async function notifySecurityEvent(alert: SecurityAlert) {
+  let externalOwnerAlertsEnabled = false;
+  try {
+    const rawPreferences = await getAppSetting("notifications");
+    if (rawPreferences) {
+      const preferences = JSON.parse(rawPreferences) as { externalOwnerAlerts?: unknown };
+      externalOwnerAlertsEnabled = preferences.externalOwnerAlerts === true;
+    }
+  } catch {}
+
+  // O canal notifyOwner é dirigido ao proprietário do projecto. Mantém-se desligado por defeito
+  // para que o email pessoal do proprietário não receba alertas operacionais da organização.
+  if (!externalOwnerAlertsEnabled) return false;
+
   const stableKey = `${alert.kind}:${alert.actorId ?? "unknown"}:${alert.resource ?? "unknown"}:${sanitizeValue(alert.metadata?.ip) ?? "unknown"}`;
   const now = Date.now();
   const previous = recentAlerts.get(stableKey);

@@ -54,5 +54,8 @@ describe("personalização de cabeçalhos", () => {
     expect(settingsSource).toContain('value="notifications"');
     expect(settingsSource).toContain("handleSaveNotifications");
     expect(settingsSource).toContain("requestedTab === \"notifications\"");
+    expect(settingsSource).toContain("notifExternalOwnerAlerts");
+    expect(settingsSource).toContain("externalOwnerAlerts");
+    expect(settingsSource).toContain("Desativado por defeito");
   });
 });

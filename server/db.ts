@@ -1585,6 +1585,9 @@ export async function getAdministrativeNotificationEmail(): Promise<string | nul
   try {
     const configuredRecipient = await getAppSetting("notification_recipient_email");
     if (isEmail(configuredRecipient)) return configuredRecipient.trim();
+    if (configuredRecipient === "" || configuredRecipient === null || configuredRecipient === undefined) {
+      // Explicitly cleared or empty
+    }
   } catch {}
 
   try {
