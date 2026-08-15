@@ -6983,9 +6983,9 @@
 - [x] Validar testes e build de produção.
 
 ## Pesquisa de Presenças por Data e Membro
-- [ ] Adicionar filtro por data específica no menu de Presenças.
-- [ ] Adicionar campo de pesquisa por membro (nome ou ID) para consultar o histórico de presenças.
-- [ ] Validar testes unitários e build de produção.
+- [x] Adicionar filtro por data específica no menu de Presenças.
+- [x] Adicionar campo de pesquisa por membro (nome ou ID) para consultar o histórico de presenças.
+- [x] Validar testes unitários e build de produção.
 
 ## Pesquisa de Presenças por Data e Membro Específico
 - [x] Adicionar filtro por data específica no menu de presenças.
@@ -6993,9 +6993,9 @@
 - [x] Validar testes unitários e build de produção.
 
 ## Indicador de Percentagem de Presenças no Perfil
-- [ ] Adicionar cálculo de presenças mensais por membro nas rotas ou procedimentos tRPC.
-- [ ] Criar indicador visual (barra de progresso e estatísticas) no perfil detalhado do membro.
-- [ ] Validar testes unitários, typecheck e build de produção.
+- [x] Adicionar cálculo de presenças mensais por membro nas rotas ou procedimentos tRPC.
+- [x] Criar indicador visual (barra de progresso e estatísticas) no perfil detalhado do membro.
+- [x] Validar testes unitários, typecheck e build de produção.
 
 ## Indicador de Percentagem de Presenças no Perfil
 - [x] Adicionar estatística mensal de presenças por membro no servidor e base de dados.
@@ -7003,11 +7003,11 @@
 - [x] Validar testes unitários e build de produção.
 
 ## Funcionalidades Avançadas de Grupos e Presenças
-- [ ] Implementar detalhe completo e pesquisa por grupo de membros.
-- [ ] Adicionar exportação PDF de grupo por intervalo de datas (bloqueada para oficiais).
-- [ ] Adicionar campo de nota justificativa de falta no registo de presenças.
-- [ ] Implementar exportação de relatórios de presença por data específica ou por membro.
-- [ ] Validar testes unitários, typecheck e build de produção.
+- [x] Implementar detalhe completo e pesquisa por grupo de membros.
+- [x] Adicionar exportação PDF de grupo por intervalo de datas (bloqueada para oficiais).
+- [x] Adicionar campo de nota justificativa de falta no registo de presenças.
+- [x] Implementar exportação de relatórios de presença por data específica ou por membro.
+- [x] Validar testes unitários, typecheck e build de produção.
 
 ## Alteração solicitada — Pesquisa e filtros de membros
 - [x] Implementar pesquisa por nome ou ID e filtros combináveis na lista de membros, com limpeza rápida e experiência responsiva.
@@ -7074,3 +7074,15 @@
 - [x] Redirecionar as notificações operacionais para o email administrativo configurado na área de backup, removendo referências ao email pessoal do programador.
 - [x] Garantir persistência imediata do destinatário quando o email administrativo for alterado e validar o comportamento com testes.
 - [x] Sincronizar backups manuais e agendados com uma chave canónica de destinatário administrativo para que a alteração seja aplicada imediatamente em todos os fluxos.
+
+## Nova Tarefa — Correção de Definições, Tema Escuro, Notificações e 2FA
+- [ ] Adicionar um botão explícito de salvamento das configurações gerais (nome da organização, quotas e limiar de ativos) na interface de Definições.
+- [ ] Garantir que o seletor de tema claro/escuro na barra lateral ou Definições comuta efetivamente as classes CSS e persiste a preferência do utilizador.
+- [ ] Desvincular totalmente e limpar qualquer canal de notificação vinculado ao email pessoal do criador, redirecionando os alertas para o email administrativo configurado ou desativando o envio externo caso o endereço esteja vazio.
+- [ ] Implementar ou clarificar a configuração de Autenticação de 2 Fatores (2FA) para proteger o acesso administrativo com códigos temporários e explicar a sua utilidade e vantagem para comercialização.
+
+## Nova Tarefa — Consulta e Exportação de Pagamentos de Quotas
+- [x] Adicionar filtros combináveis por ano, mês, nome/ID da pessoa e grupo na consulta de pagamentos de quotas.
+- [x] Adicionar âmbito de exportação por pessoa, grupo ou todos os resultados filtrados.
+- [x] Garantir que CSV, PDF e Excel respeitam os filtros, a seleção de colunas e a orientação horizontal.
+- [x] Adicionar testes Vitest para filtros, âmbitos de exportação e casos sem resultados.

@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { generateQuotasCsv, generateQuotasExcel, generateQuotasPdf, type ExportQuotaItem } from "./quotaExport";
+import { filterQuotaExportItems, generateQuotasCsv, generateQuotasExcel, generateQuotasPdf, type ExportQuotaItem } from "./quotaExport";
 
 describe("quota exports", () => {
   const sampleItems: ExportQuotaItem[] = [
@@ -41,6 +41,19 @@ describe("quota exports", () => {
     expect(csv).not.toContain("David Júlio");
     expect(csv).toContain("—");
     expect(csv).not.toContain("Admin");
+  });
+
+  it("filters export items by year, month, member, group and name/ID query", () => {
+    const items: ExportQuotaItem[] = [
+      { ...sampleItems[0], groupId: 1 },
+      { ...sampleItems[1], groupId: 2 },
+      { id: 3, memberId: 3, memberName: "Maria do Grupo Um", groupId: 1, year: 2025, month: 1, amount: "5000.00", isPaid: true, responsibleName: "Admin" },
+      { id: 4, memberId: 4, memberName: "Pessoa Pendente", groupId: 1, year: 2026, month: 1, amount: "5000.00", isPaid: false, responsibleName: "Admin" },
+    ];
+    expect(filterQuotaExportItems(items, { year: 2026, month: 1, groupId: 1 }).map((item) => item.id)).toEqual([1]);
+    expect(filterQuotaExportItems(items, { year: 2026, memberId: 2 }).map((item) => item.id)).toEqual([2]);
+    expect(filterQuotaExportItems(items, { year: 2026, memberQuery: "maria" })).toEqual([]);
+    expect(filterQuotaExportItems(items, { year: 2025, memberQuery: "3" }).map((item) => item.id)).toEqual([3]);
   });
 
   it("generates Excel workbook with 12 sheets (one per month)", () => {

@@ -669,7 +669,8 @@ export async function applyQuotaPayment(memberId: number, incomingAmount: string
 export type QuotaCompliancePeriod = { month?: number; year: number };
 
 export async function getQuotaCompliance(period: QuotaCompliancePeriod) {
-  const [memberRows, quotaRows] = await Promise.all([getAllMembers(false), listQuotas()]);
+  const [memberRows, quotaRows, groupRows] = await Promise.all([getAllMembers(false), listQuotas(), getAllGroups()]);
+  const groupMap = new Map(groupRows.map((group) => [group.id, group.name]));
   const targetQuotas = quotaRows.filter((quota) => quota.year === period.year && (period.month === undefined || quota.month === period.month));
   const paidInTarget = new Map<number, (typeof quotaRows)[number]>();
   for (const quota of targetQuotas) if (quota.isPaid && !paidInTarget.has(quota.memberId)) paidInTarget.set(quota.memberId, quota);
@@ -686,6 +687,8 @@ export async function getQuotaCompliance(period: QuotaCompliancePeriod) {
     return {
       id: member.id,
       name: member.name,
+      groupId: member.groupId ?? null,
+      groupName: member.groupId ? (groupMap.get(member.groupId) ?? null) : null,
       isActive: member.isActive,
       status,
       amount: paid?.amount ?? null,

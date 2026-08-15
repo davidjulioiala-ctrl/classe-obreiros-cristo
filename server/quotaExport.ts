@@ -7,12 +7,29 @@ export type ExportQuotaItem = {
   id: number;
   memberId: number;
   memberName: string;
+  groupId?: number | null;
   year: number;
   month: number;
   amount: string | number;
   isPaid: boolean;
   responsibleName: string | null;
 };
+
+export type QuotaExportFilters = {
+  year: number;
+  month?: number;
+  memberId?: number;
+  groupId?: number;
+  memberQuery?: string;
+};
+
+export function filterQuotaExportItems(items: ExportQuotaItem[], filters: QuotaExportFilters) {
+  const memberQuery = String(filters.memberQuery ?? "").trim().toLocaleLowerCase("pt-PT");
+  return items.filter((item) => {
+    const matchesQuery = !memberQuery || String(item.memberId) === memberQuery || item.memberName.toLocaleLowerCase("pt-PT").includes(memberQuery);
+    return item.isPaid && item.year === filters.year && (filters.month === undefined || item.month === filters.month) && (filters.memberId === undefined || item.memberId === filters.memberId) && (filters.groupId === undefined || item.groupId === filters.groupId) && matchesQuery;
+  });
+}
 
 const MONTH_NAMES = [
   "Janeiro",
