@@ -7338,3 +7338,7 @@
 - [x] Forçar novo checkpoint para garantir propagação imediata da versão publicada em `classegestao-8kngqmdx.manus.space`.
 - [x] Verificar rotas e cabeçalhos de CORS/SameSite/Secure para o domínio público.
 - [x] Executar testes e build de produção limpo.
+
+
+## Reposição de Nomes Neutros dos Grupos
+- [x] Repor os 5 grupos existentes com os nomes "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4" e "Convidados", preservando IDs e membros.
