@@ -7215,3 +7215,10 @@
 - [x] Actualizar o login, códigos de recuperação e mensagens para suportar todos os perfis sem bloquear configurações incompletas.
 - [x] Adicionar regressões de permissões, activação, cancelamento e login 2FA por perfil.
 - [x] Validar testes, typecheck, build, responsividade e publicação.
+
+## Reversão do 2FA obrigatório e gestão de logs — ciclo concluído
+- [x] Reverter para a versão estável anterior ao ciclo de 2FA obrigatório, preservando os dados da base de dados.
+- [x] Inspeccionar os logs de acções e confirmar a permissão administrativa para eliminação.
+- [x] Adicionar seleccionar tudo, desmarcar tudo e eliminar registos seleccionados com confirmação.
+- [x] Actualizar a lista após eliminação e proteger a operação contra pedidos inválidos.
+- [x] Validar 205 testes, typecheck, build e verificação responsiva/publicada.
