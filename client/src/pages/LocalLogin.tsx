@@ -16,6 +16,7 @@ export default function LocalLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorSetupModal, setTwoFactorSetupModal] = useState(false);
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [showBootstrap, setShowBootstrap] = useState(false);
   const [bootstrapToken, setBootstrapToken] = useState("");
@@ -51,8 +52,7 @@ export default function LocalLogin() {
     try {
       const result = await login(username, password);
       if (result.twoFactorSetupRequired) {
-        toast.info("A ativação do 2FA é obrigatória. Por favor, configure o seu 2FA na sua conta.");
-        navigate("/profile");
+        setTwoFactorSetupModal(true);
         return;
       }
       if (result.twoFactorRequired) {
@@ -286,7 +286,30 @@ export default function LocalLogin() {
               )}
             </motion.form>
 
-            {bootstrapAvailable && !requiresTwoFactor && (
+            {twoFactorSetupModal && (
+              <div className="mt-6 rounded-xl bg-slate-900/90 p-5 border border-emerald-500/50 text-slate-100 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-emerald-400">Assistente de Configuração 2FA</h3>
+                  <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">Obrigatório</span>
+                </div>
+                <p className="text-sm text-slate-300">A administração exige a ativação da autenticação de dois fatores para proteger todas as contas do sistema.</p>
+                <div className="space-y-2 rounded-lg bg-slate-800/80 p-3 text-xs text-slate-300">
+                  <p className="font-semibold text-emerald-300">Passos para concluir:</p>
+                  <p>1. Instale uma aplicação como <strong>Google Authenticator</strong> ou <strong>Microsoft Authenticator</strong> no seu telemóvel.</p>
+                  <p>2. Aceda ao seu perfil para ler o QR Code ou copiar a chave manual.</p>
+                  <p>3. Insira o código de 6 dígitos gerado pela aplicação para concluir a ativação.</p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => navigate("/profile")}>
+                    Ir para Perfil e Configurar 2FA
+                  </Button>
+                  <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700" onClick={() => setTwoFactorSetupModal(false)}>
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            )}
+            {bootstrapAvailable && !requiresTwoFactor && !twoFactorSetupModal && (
               <div className="mt-6 border-t border-slate-700 pt-5">
                 {!showBootstrap ? (
                   <button type="button" onClick={() => setShowBootstrap(true)} className="w-full text-sm font-medium text-emerald-400 hover:text-emerald-300">Primeiro acesso: criar administrador</button>

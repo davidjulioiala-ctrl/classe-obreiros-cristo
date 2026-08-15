@@ -36,6 +36,7 @@ const safeUser = (user: any) => ({
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
   lastSignedIn: user.lastSignedIn,
+  twoFactorEnabled: !!user.twoFactorEnabled,
 });
 
 export const authRouter = router({
@@ -165,6 +166,16 @@ export const authRouter = router({
       const success = await deleteUser(input.userId);
       if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
       await createAuditLog({ userId: ctx.user.id, action: "apagar", entityType: "user", entityId: input.userId });
+      return { success: true } as const;
+    }),
+
+  adminResetTwoFactor: adminProcedure
+    .input(z.object({ userId: positiveId }))
+    .mutation(async ({ input, ctx }) => {
+      const { disableTwoFactor } = await import("../auth");
+      const success = await disableTwoFactor(input.userId);
+      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      await createAuditLog({ userId: ctx.user.id, action: "reset_2fa", entityType: "user", entityId: input.userId });
       return { success: true } as const;
     }),
 

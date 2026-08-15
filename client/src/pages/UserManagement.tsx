@@ -43,6 +43,7 @@ type UserItem = {
   churchRole: ChurchRole;
   isActive: boolean;
   createdAt: Date | string;
+  twoFactorEnabled?: boolean;
 };
 
 type TwoFactorSetup = {
@@ -97,6 +98,13 @@ export default function UserManagement() {
       toast.success("Utilizador eliminado com sucesso.");
     },
     onError: (error) => toast.error(error.message || "Não foi possível eliminar o utilizador."),
+  });
+  const resetTwoFactor = trpc.auth.adminResetTwoFactor.useMutation({
+    onSuccess: async () => {
+      await utils.auth.getAllUsers.invalidate();
+      toast.success("2FA redefinido com sucesso para o utilizador.");
+    },
+    onError: (error) => toast.error(error.message || "Não foi possível redefinir o 2FA."),
   });
 
   const [search, setSearch] = useState("");
@@ -224,18 +232,38 @@ export default function UserManagement() {
         ) : (
           <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[920px]">
-                <thead className="bg-slate-50 dark:bg-slate-700"><tr>{["ID", "Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "Ações"].map((heading) => <th key={heading} className="px-5 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200">{heading}</th>)}</tr></thead>
+              <table className="w-full min-w-[980px]">
+                <thead className="bg-slate-50 dark:bg-slate-700"><tr>{["ID", "Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "2FA", "Ações"].map((heading) => <th key={heading} className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200">{heading}</th>)}</tr></thead>
                 <tbody>
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-t border-slate-200 dark:border-slate-700">
-                      <td className="px-5 py-4"><RecordIdBadge id={user.id} /></td><td className="px-5 py-4 font-semibold">@{user.username}</td>
-                      <td className="px-5 py-4">{user.name || "—"}</td>
-                      <td className="px-5 py-4">{user.email || "—"}</td>
-                      <td className="px-5 py-4"><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{roleLabel(user.churchRole)}</span></td>
-                      <td className="px-5 py-4">{user.role === "admin" ? "Administrador" : "Utilizador"}</td>
-                      <td className="px-5 py-4">{user.isActive ? "Ativo" : "Inativo"}</td>
-                      <td className="px-5 py-4"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => openDialog(user)} aria-label={`Editar ${user.username}`}><Edit2 className="h-4 w-4" /></Button><Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button></div></td>
+                      <td className="px-4 py-4"><RecordIdBadge id={user.id} /></td>
+                      <td className="px-4 py-4 font-semibold">@{user.username}</td>
+                      <td className="px-4 py-4">{user.name || "—"}</td>
+                      <td className="px-4 py-4">{user.email || "—"}</td>
+                      <td className="px-4 py-4"><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{roleLabel(user.churchRole)}</span></td>
+                      <td className="px-4 py-4">{user.role === "admin" ? "Administrador" : "Utilizador"}</td>
+                      <td className="px-4 py-4">{user.isActive ? "Ativo" : "Inativo"}</td>
+                      <td className="px-4 py-4">
+                        {user.twoFactorEnabled ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            Pendente
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end gap-1.5">
+                          <Button variant="outline" size="sm" onClick={() => openDialog(user)} aria-label={`Editar ${user.username}`}><Edit2 className="h-4 w-4" /></Button>
+                          {user.twoFactorEnabled && (
+                            <Button variant="outline" size="sm" title="Redefinir / Desativar 2FA" onClick={() => { if (confirm(`Tem certeza que deseja redefinir/desativar o 2FA para ${user.username}?`)) resetTwoFactor.mutate({ userId: user.id }); }} className="text-amber-600 hover:text-amber-700"><ShieldCheck className="h-4 w-4" /></Button>
+                          )}
+                          <Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -7307,3 +7307,10 @@
 - [x] Adicionar na página de Definições uma secção clara de Segurança com o interruptor para o administrador activar a obrigatoriedade do 2FA para todos os membros.
 - [x] Garantir que, quando activada pelo administrador, os membros sem 2FA são bloqueados no login e forçados a configurar o 2FA.
 - [x] Validar o fluxo com testes automatizados, typecheck, build e verificação visual.
+
+
+## Tarefas Finais: Gestão e Obrigatoriedade 2FA Avançada
+- [x] Coluna de estado 2FA (Ativo / Pendente) na tabela de gestão de utilizadores (`UserManagement.tsx`).
+- [x] Assistente passo a passo integrado no ecrã de login para guiar contas obrigadas a configurar o 2FA.
+- [x] Opção de redefinição / desativação administrativa de 2FA por utilizador em `UserManagement.tsx`.
+- [x] Validação de testes, typecheck e build sem erros.
