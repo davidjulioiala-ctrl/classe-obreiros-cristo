@@ -74,7 +74,7 @@ export function consumeRecoveryCode(serialized: string | null | undefined, code:
 }
 
 export function verifyTotpCode(secret: string, code: string, now = Date.now()) {
-  const normalizedCode = code.replace(/\s/g, "");
+  const normalizedCode = String(code || "").replace(/[^0-9]/g, "");
   if (!/^\d{6}$/.test(normalizedCode)) return false;
   let key: Buffer;
   try {

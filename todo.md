@@ -7181,3 +7181,10 @@
 - [x] Diferenciar claramente função do sistema e função eclesiástica, mantendo promoções e rebaixamentos seguros.
 - [x] Adicionar testes de promoção, rebaixamento, persistência e protecção do último administrador.
 - [x] Validar typecheck, suíte Vitest completa, build e publicação.
+
+
+## Correcção da configuração 2FA — ciclo actual
+- [ ] Auditar os procedimentos tRPC e a interface de configuração 2FA.
+- [ ] Corrigir falhas na geração do QR Code, armazenamento temporário do segredo e validação do código.
+- [ ] Adicionar testes para o fluxo completo de configuração e activação do 2FA.
+- [ ] Validar com testes unitários, typecheck, build e publicação.
