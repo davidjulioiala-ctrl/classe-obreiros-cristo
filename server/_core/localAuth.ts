@@ -74,16 +74,35 @@ export function registerLocalAuthRoutes(app: Express) {
       }
 
       clearLoginFailures(req, normalizedUsername);
+      const globalPolicyRaw = await getAppSetting("global_two_factor_required");
+      let globalTwoFactorRequired = false;
+      try {
+        if (globalPolicyRaw) {
+          const parsed = JSON.parse(globalPolicyRaw);
+          globalTwoFactorRequired = Boolean(parsed.required);
+        }
+      } catch {
+        globalTwoFactorRequired = false;
+      }
+
       if (!user.twoFactorEnabled) {
-        // Obrigatório para todos os utilizadores: se não tem 2FA configurado, exige configuração imediata antes de entrar
-        setChallengeCookie(req, res, user);
-        return res.json({ success: true, twoFactorSetupRequired: true, message: "A autenticação de dois fatores (2FA) é obrigatória para todos os utilizadores. Por favor, configure o seu 2FA." });
+        if (globalTwoFactorRequired) {
+          setChallengeCookie(req, res, user);
+          return res.json({ success: true, twoFactorSetupRequired: true, message: "A administração exigiu a ativação obrigatória do 2FA para todos os utilizadores. Por favor, configure o seu 2FA." });
+        }
+        // Caso contrário, entra normalmente sem forçar 2FA (opcional)
+        setSessionCookie(req, res, user);
+        return res.json({ success: true, user: publicUser(user) });
       }
 
       const settings = await getTwoFactorSettings(user.id);
       if (!settings?.enabled || !settings.secret) {
-        setChallengeCookie(req, res, user);
-        return res.json({ success: true, twoFactorSetupRequired: true, message: "A configuração 2FA desta conta está incompleta. Por favor, complete a configuração." });
+        if (globalTwoFactorRequired) {
+          setChallengeCookie(req, res, user);
+          return res.json({ success: true, twoFactorSetupRequired: true, message: "A configuração 2FA desta conta está incompleta. Por favor, complete a configuração." });
+        }
+        setSessionCookie(req, res, user);
+        return res.json({ success: true, user: publicUser(user) });
       }
       setChallengeCookie(req, res, user);
       return res.json({ success: true, twoFactorRequired: true, message: "Introduza o código da aplicação autenticadora ou um código de recuperação." });

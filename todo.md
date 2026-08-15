@@ -7293,3 +7293,10 @@
 - [x] Investigar os erros no menu de utilizadores (listagem, criação, edição, senha ou 2FA).
 - [x] Corrigir as rotas tRPC ou o componente frontend (`UserManagement.tsx`) responsável pelo erro.
 - [x] Validar testes unitários, typecheck, build e verificação visual.
+
+
+## Activação Pessoal 2FA e Política Global de Obrigatoriedade
+- [x] Assegurar que qualquer administrador ou utilizador consegue configurar e activar o 2FA no seu perfil sem falhas.
+- [x] Criar nas Definições (ou Definições > Segurança) um interruptor exclusivo para o administrador activar a obrigatoriedade do 2FA para todos os membros.
+- [x] Configurar o middleware e o login para que, quando a obrigatoriedade estiver ligada, utilizadores sem 2FA activo sejam impedidos de aceder ao sistema e orientados para o setup obrigatório.
+- [x] Validar testes unitários, typecheck, build e verificação visual.
