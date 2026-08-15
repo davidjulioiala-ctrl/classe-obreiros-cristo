@@ -87,7 +87,7 @@ export function registerLocalAuthRoutes(app: Express) {
 
       if (!user.twoFactorEnabled) {
         if (globalTwoFactorRequired) {
-          setChallengeCookie(req, res, user);
+          setSessionCookie(req, res, user);
           return res.json({ success: true, twoFactorSetupRequired: true, message: "A administração exigiu a ativação obrigatória do 2FA para todos os utilizadores. Por favor, configure o seu 2FA." });
         }
         // Caso contrário, entra normalmente sem forçar 2FA (opcional)
@@ -98,7 +98,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const settings = await getTwoFactorSettings(user.id);
       if (!settings?.enabled || !settings.secret) {
         if (globalTwoFactorRequired) {
-          setChallengeCookie(req, res, user);
+          setSessionCookie(req, res, user);
           return res.json({ success: true, twoFactorSetupRequired: true, message: "A configuração 2FA desta conta está incompleta. Por favor, complete a configuração." });
         }
         setSessionCookie(req, res, user);

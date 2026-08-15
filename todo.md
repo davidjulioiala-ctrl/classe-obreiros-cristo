@@ -7326,3 +7326,9 @@
 - [x] Ajustar configurações de cookies (SameSite, Secure, Domain) em server/_core/cookies.ts e localAuth.ts para que o navegador externo aceite a sessão e o desafio 2FA.
 - [x] Validar rotas tRPC e endpoints tRPC/Auth para suportar requisições cross-origin ou proxies de domínio publicado.
 - [x] Executar testes, typecheck, build e verificação visual.
+
+
+## Diagnóstico de Domínio Publicado e Cookie SameSite/Secure
+- [x] Ajustar `getSessionCookieOptions` em `server/_core/cookies.ts` para detetar correctamente o protocolo HTTPS no domínio publicado e definir `sameSite: "lax"` ou `"none"` com `secure: true`.
+- [x] Assegurar que o endpoint `/api/auth/2fa/setup` aceita o desafio ou a sessão temporária para contas obrigadas.
+- [x] Executar testes, typecheck, build e verificação visual.
