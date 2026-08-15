@@ -7287,3 +7287,9 @@
 - [x] Adicionar na página de Definições uma opção clara para o administrador ligar a obrigatoriedade global de 2FA.
 - [x] Bloquear o acesso às rotas e funcionalidades do sistema para qualquer utilizador sem 2FA activo quando a obrigatoriedade estiver ligada (forçando o ecrã de setup).
 - [x] Validar testes unitários, typecheck, build e verificação visual.
+
+
+## Diagnóstico e Correção do Menu de Utilizadores
+- [x] Investigar os erros no menu de utilizadores (listagem, criação, edição, senha ou 2FA).
+- [x] Corrigir as rotas tRPC ou o componente frontend (`UserManagement.tsx`) responsável pelo erro.
+- [x] Validar testes unitários, typecheck, build e verificação visual.

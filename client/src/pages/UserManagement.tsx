@@ -11,7 +11,7 @@ import { RecordIdBadge } from "@/components/RecordIdBadge";
 import TwoFactorSettings from "@/components/TwoFactorSettings";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 
 const churchRoles = [
   { value: "membro", label: "Membro" },
@@ -73,7 +73,7 @@ const emptyForm: FormData = {
 
 export default function UserManagement() {
   const utils = trpc.useUtils();
-  const { user: currentUser, refresh } = useAuth();
+  const { user: currentUser, refresh } = useLocalAuth();
   const usersQuery = trpc.auth.getAllUsers.useQuery(undefined, { retry: false });
   const createUser = trpc.auth.createUser.useMutation({
     onSuccess: async () => {
