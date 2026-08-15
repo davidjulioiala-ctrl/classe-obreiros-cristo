@@ -7332,3 +7332,9 @@
 - [x] Ajustar `getSessionCookieOptions` em `server/_core/cookies.ts` para detetar correctamente o protocolo HTTPS no domínio publicado e definir `sameSite: "lax"` ou `"none"` com `secure: true`.
 - [x] Assegurar que o endpoint `/api/auth/2fa/setup` aceita o desafio ou a sessão temporária para contas obrigadas.
 - [x] Executar testes, typecheck, build e verificação visual.
+
+
+## Sincronização e Validação do Domínio Público
+- [x] Forçar novo checkpoint para garantir propagação imediata da versão publicada em `classegestao-8kngqmdx.manus.space`.
+- [x] Verificar rotas e cabeçalhos de CORS/SameSite/Secure para o domínio público.
+- [x] Executar testes e build de produção limpo.
