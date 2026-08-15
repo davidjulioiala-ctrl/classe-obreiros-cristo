@@ -25,18 +25,21 @@ function hotp(secret: string, counter: number) {
 }
 
 describe("twoFactor", () => {
-  it("verifies a TOTP code with the accepted clock window", () => {
+  it("verifies a TOTP code with the accepted clock window and sanitizes presentation characters", () => {
     const secret = "JBSWY3DPEHPK3PXP";
     const now = 1_234_567_890_000;
     const counter = Math.floor(now / 1000 / 30);
     expect(verifyTotpCode(secret, hotp(secret, counter), now)).toBe(true);
+    expect(verifyTotpCode(secret, hotp(secret, counter - 2), now)).toBe(true);
+    expect(verifyTotpCode(secret, ` ${hotp(secret, counter + 2).slice(0, 3)}-${hotp(secret, counter + 2).slice(3)} `, now)).toBe(true);
     expect(verifyTotpCode(secret, hotp(secret, counter - 3), now)).toBe(false);
   });
 
-  it("consumes a recovery code only once", () => {
+  it("consumes a recovery code only once and accepts harmless separators", () => {
     const codes = generateRecoveryCodes(2);
     const serialized = serializeRecoveryCodes(codes);
-    const remaining = consumeRecoveryCode(serialized, codes[0]);
+    const formattedCode = `${codes[0].slice(0, 4)}-${codes[0].slice(4)}`;
+    const remaining = consumeRecoveryCode(serialized, formattedCode);
     expect(remaining).not.toBeNull();
     expect(consumeRecoveryCode(remaining, codes[0])).toBeNull();
     expect(consumeRecoveryCode(remaining, codes[1])).not.toBeNull();

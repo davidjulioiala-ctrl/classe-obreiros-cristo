@@ -33,6 +33,8 @@ export async function maintenanceGate(req: Request, res: Response, next: NextFun
       error: "O sistema está em manutenção de emergência.",
       maintenance: true,
       reason: state.reason || "As operações estão temporariamente bloqueadas.",
+      customMessage: state.customMessage || null,
+      estimatedCompletionAt: state.estimatedCompletionAt,
       incidentId: state.incidentId,
     });
   } catch (error) {

@@ -7158,10 +7158,10 @@
 
 
 ## Mensagem personalizada e tempo estimado de manutenção — ciclo actual
-- [ ] Atualizar o esquema e os helpers de base de dados para guardar customMessage e estimatedCompletion.
-- [ ] Adicionar campos correspondentes no ecrã de Definições/Segurança e no router tRPC de manutenção.
-- [ ] Apresentar a mensagem personalizada e o tempo estimado na página de estado e no banner de emergência.
-- [ ] Validar testes unitários, typecheck, build e publicação.
+- [x] Atualizar o esquema e os helpers de base de dados para guardar customMessage e estimatedCompletion.
+- [x] Adicionar campos correspondentes no ecrã de Definições/Segurança e no router tRPC de manutenção.
+- [x] Apresentar a mensagem personalizada e o tempo estimado na página de estado e no banner de emergência.
+- [x] Validar testes unitários, typecheck, build e publicação.
 
 ## Correcção da autenticação 2FA — ciclo actual
 - [x] Investigar o fluxo de verificação e activação 2FA para identificar a quebra.
@@ -7184,10 +7184,10 @@
 
 
 ## Correcção da configuração 2FA — ciclo actual
-- [ ] Auditar os procedimentos tRPC e a interface de configuração 2FA.
-- [ ] Corrigir falhas na geração do QR Code, armazenamento temporário do segredo e validação do código.
-- [ ] Adicionar testes para o fluxo completo de configuração e activação do 2FA.
-- [ ] Validar com testes unitários, typecheck, build e publicação.
+- [x] Auditar os procedimentos tRPC e a interface de configuração 2FA.
+- [x] Corrigir falhas na geração do QR Code, armazenamento temporário do segredo e validação do código.
+- [x] Adicionar testes para o fluxo completo de configuração e activação do 2FA.
+- [x] Validar com testes unitários, typecheck, build e publicação.
 
 ## Bloqueio da interface após operações
 - [x] Diagnosticar e corrigir os fluxos que deixam a interface bloqueada até ao recarregamento do navegador

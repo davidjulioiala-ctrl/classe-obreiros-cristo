@@ -29,6 +29,8 @@ describe("gate de manutenção de emergência", () => {
     getSystemMaintenanceStateMock.mockResolvedValue({
       enabled: true,
       reason: "Investigação de segurança",
+      customMessage: "Estamos a aplicar uma actualização de segurança.",
+      estimatedCompletionAt: "2026-08-15T18:30:00.000Z",
       incidentId: 12,
       startedAt: new Date().toISOString(),
       updatedBy: 1,
@@ -42,6 +44,19 @@ describe("gate de manutenção de emergência", () => {
     expect(res.status).toHaveBeenCalledWith(503);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ maintenance: true, incidentId: 12 }));
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it("devolve a mensagem personalizada e a conclusão estimada no bloqueio", async () => {
+    const res = response();
+    const next = vi.fn();
+    await maintenanceGate(request("/api/trpc/members.create"), res, next);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      maintenance: true,
+      reason: "Investigação de segurança",
+      customMessage: "Estamos a aplicar uma actualização de segurança.",
+      estimatedCompletionAt: "2026-08-15T18:30:00.000Z",
+      incidentId: 12,
+    }));
   });
 
   it("permite que um administrador autenticado mantenha acesso à consola durante a manutenção", async () => {
