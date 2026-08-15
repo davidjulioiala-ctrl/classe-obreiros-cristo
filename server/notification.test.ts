@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getAdministrativeNotificationEmailMock } = vi.hoisted(() => ({
+const { getAdministrativeNotificationEmailMock, getAppSettingMock } = vi.hoisted(() => ({
   getAdministrativeNotificationEmailMock: vi.fn(),
+  getAppSettingMock: vi.fn(),
 }));
 
 vi.mock("./db", () => ({
   getAdministrativeNotificationEmail: getAdministrativeNotificationEmailMock,
+  getAppSetting: getAppSettingMock,
 }));
 
 import { notifyOwner } from "./_core/notification";
@@ -14,10 +16,20 @@ describe("notificações administrativas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getAdministrativeNotificationEmailMock.mockResolvedValue("admin@example.org");
+    getAppSettingMock.mockResolvedValue(JSON.stringify({ externalOwnerAlerts: false }));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, statusText: "OK" }));
   });
 
-  it("inclui o email administrativo configurado no destino da notificação", async () => {
+  it("não envia alertas externos quando a preferência está desactivada", async () => {
+    await expect(notifyOwner({ title: "Alerta", content: "Operação concluída" })).resolves.toBe(false);
+
+    expect(getAdministrativeNotificationEmailMock).not.toHaveBeenCalled();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+
+  it("inclui o email administrativo quando o canal é activado explicitamente", async () => {
+    getAppSettingMock.mockResolvedValue(JSON.stringify({ externalOwnerAlerts: true }));
+
     await expect(notifyOwner({ title: "Alerta", content: "Operação concluída" })).resolves.toBe(true);
 
     expect(getAdministrativeNotificationEmailMock).toHaveBeenCalledTimes(1);
@@ -28,16 +40,5 @@ describe("notificações administrativas", () => {
     expect(body.title).toBe("Alerta");
     expect(body.content).toContain("Destinatário Administrativo: admin@example.org");
     expect(body.content).toContain("Operação concluída");
-  });
-
-  it("usa um marcador administrativo quando ainda não existe email configurado", async () => {
-    getAdministrativeNotificationEmailMock.mockResolvedValue(null);
-
-    await expect(notifyOwner({ title: "Alerta", content: "Sem email" })).resolves.toBe(true);
-
-    const fetchMock = vi.mocked(fetch);
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    const body = JSON.parse(String(request.body)) as { content: string };
-    expect(body.content).toContain("Destinatário Administrativo: Administrador do Sistema (Backup)");
   });
 });

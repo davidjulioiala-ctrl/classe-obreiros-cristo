@@ -39,9 +39,11 @@ export function registerBackupRoutes(app: Express) {
         if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
         const schedule = await getBackupScheduleByTaskUid(user.taskUid);
         if (!schedule || !schedule.enabled) return res.json({ ok: true, skipped: "orphan-or-disabled" });
-        await createBackupVersion({ createdBy: -1, destination: schedule.destination, cloudEmail: schedule.cloudEmail ?? undefined, versionLabel: `Backup automático ${new Date().toLocaleString("pt-PT")}` });
+        
+        const backupResult = await createBackupVersion({ createdBy: -1, destination: schedule.destination, cloudEmail: schedule.cloudEmail ?? undefined, versionLabel: `Backup automático ${new Date().toLocaleString("pt-PT")}` });
         await markBackupScheduleRun(schedule.id);
-        return res.json({ ok: true, scheduleId: schedule.id });
+
+        return res.json({ ok: true, scheduleId: schedule.id, backupId: backupResult.id });
       } catch (error) {
         console.error("[ScheduledBackup]", error);
         return res.status(500).json({ error: String(error), timestamp: new Date().toISOString() });

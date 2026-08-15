@@ -1590,19 +1590,5 @@ export async function getAdministrativeNotificationEmail(): Promise<string | nul
     }
   } catch {}
 
-  try {
-    const schedules = await db.select().from(backupSchedules).orderBy(desc(backupSchedules.updatedAt)).limit(1);
-    const scheduleEmail = schedules[0]?.cloudEmail;
-    if (isEmail(scheduleEmail)) return scheduleEmail.trim();
-  } catch {}
-
-  try {
-    const orgSetting = await getAppSetting("organization");
-    if (orgSetting) {
-      const parsed = JSON.parse(orgSetting);
-      if (isEmail(parsed.email)) return parsed.email.trim();
-    }
-  } catch {}
-
   return null;
 }

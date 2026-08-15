@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { parse as parseCookie } from "cookie";
 import { randomUUID } from "node:crypto";
-import { createHeartbeatJob, updateHeartbeatJob, deleteHeartbeatJob } from "./_core/heartbeat";
+import { createHeartbeatJob, updateHeartbeatJob, deleteHeartbeatJob, listHeartbeatJobs } from "./_core/heartbeat";
 import { systemRouter } from "./_core/systemRouter";
 import { authRouter } from "./routers/auth";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -1015,22 +1015,32 @@ const backupRouter = router({
       const cron = `0 ${input.minute} ${input.hour} * * *`;
       let taskUid = current?.scheduleCronTaskUid ?? undefined;
       if (input.enabled) {
-        if (taskUid) {
-          await updateHeartbeatJob(taskUid, { cron, enable: true, path: "/api/scheduled/daily-backup", description: "Backup diário administrativo da Classe Obreiros de Cristo" }, sessionToken);
+        const jobs = await listHeartbeatJobs(sessionToken);
+        const currentJob = taskUid ? jobs.jobs.find((job) => job.taskUid === taskUid) : undefined;
+        if (currentJob) {
+          await updateHeartbeatJob(currentJob.taskUid, {
+            cron,
+            enable: true,
+            path: "/api/scheduled/daily-backup",
+            description: "Backup diário administrativo da Classe Obreiros de Cristo",
+          }, sessionToken);
         } else {
-          const job = await createHeartbeatJob({ name: `daily-backup-${ctx.user.id}`, cron, path: "/api/scheduled/daily-backup", description: "Backup diário administrativo da Classe Obreiros de Cristo" }, sessionToken);
+          const job = await createHeartbeatJob({
+            name: `daily-backup-${ctx.user.id}`,
+            cron,
+            path: "/api/scheduled/daily-backup",
+            description: "Backup diário administrativo da Classe Obreiros de Cristo",
+          }, sessionToken);
           taskUid = job.taskUid;
         }
       } else if (taskUid) {
-        await updateHeartbeatJob(taskUid, { enable: false }, sessionToken);
+        const jobs = await listHeartbeatJobs(sessionToken);
+        const currentJob = jobs.jobs.find((job) => job.taskUid === taskUid);
+        if (currentJob) await updateHeartbeatJob(currentJob.taskUid, { enable: false }, sessionToken);
+        else taskUid = undefined;
       }
-      if (input.cloudEmail !== undefined) {
-        if (input.cloudEmail.trim()) {
-          await db.setAppSetting("notification_recipient_email", input.cloudEmail.trim());
-        } else {
-          await db.setAppSetting("notification_recipient_email", "");
-        }
-      }
+      // O email de cloud identifica o destino do backup; nunca deve ser reutilizado como destinatário de alertas.
+      await db.setAppSetting("notification_recipient_email", "");
       const schedule = await db.createBackupSchedule({ id: current?.id, hour: input.hour, minute: input.minute, destination: input.destination, cloudEmail: input.cloudEmail ?? null, enabled: input.enabled, scheduleCronTaskUid: taskUid ?? null, createdBy: current?.createdBy ?? ctx.user.id });
       await writeAudit(ctx, "configurar", "backup_schedule", schedule.id, { hour: input.hour, minute: input.minute, enabled: input.enabled, destination: input.destination, notificationRecipientConfigured: Boolean(input.cloudEmail) });
       return schedule;

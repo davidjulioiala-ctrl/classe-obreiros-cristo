@@ -1,6 +1,6 @@
 import { ENV } from "./env";
 import { TRPCError } from "@trpc/server";
-import { getAdministrativeNotificationEmail } from "../db";
+import { getAdministrativeNotificationEmail, getAppSetting } from "../db";
 
 export type NotificationPayload = {
   title: string;
@@ -68,6 +68,17 @@ export async function notifyOwner(
   payload: NotificationPayload
 ): Promise<boolean> {
   const { title, content } = validatePayload(payload);
+  const externalSetting = await getAppSetting("notifications").catch(() => null);
+  let allowExternal = false;
+  if (externalSetting) {
+    try {
+      const parsed = JSON.parse(externalSetting);
+      allowExternal = Boolean(parsed.externalOwnerAlerts);
+    } catch {}
+  }
+  if (!allowExternal) {
+    return false;
+  }
 
   if (!ENV.forgeApiUrl) {
     throw new TRPCError({

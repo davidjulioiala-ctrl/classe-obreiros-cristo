@@ -7135,3 +7135,10 @@
 ## Correção de notificações externas — ciclo atual
 - [x] Impedir o envio automático de alertas operacionais para o proprietário do projecto e permitir activar esse canal apenas de forma explícita nas Definições.
 - [x] Validar que o email administrativo configurado não é apresentado como rota garantida quando o canal externo envia para o proprietário.
+
+
+## Correção de backup automático e alertas externos — ciclo atual
+- [x] Corrigir o salvamento do agendamento para recriar tarefas Heartbeat órfãs e usar callback diário válido.
+- [x] Garantir que o callback cria o backup, regista lastRunAt e devolve resposta JSON sem depender de email.
+- [x] Limpar o destinatário persistido e manter alertas externos desactivados, sem reutilizar o email de backup.
+- [x] Validar notificações, backup, suíte Vitest completa, typecheck, build e publicação.
