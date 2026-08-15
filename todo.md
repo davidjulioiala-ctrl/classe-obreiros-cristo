@@ -4,7 +4,7 @@
 - [x] Corrigir e validar a confirmação do código 2FA no login e configuração
 
 ## Funcionalidades Novas
-- [ ] Implementar importação de membros por CSV com pré-visualização e validação
+- [x] Implementar importação de membros por CSV com pré-visualização e validação (Rejeitado a pedido do utilizador)
 
 ## Correções Recentes: 2FA, Perfil e Senha
 - [x] Corrigir a criação e ativação do 2FA para funcionar corretamente sem quebras
