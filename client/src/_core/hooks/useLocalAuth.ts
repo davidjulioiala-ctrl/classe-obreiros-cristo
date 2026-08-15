@@ -11,8 +11,8 @@ export interface LocalUser {
   twoFactorEnabled?: boolean;
 }
 
-type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; twoFactorSetupRequired?: boolean; message?: string; error?: string };
-type LoginResult = { twoFactorRequired: boolean; twoFactorSetupRequired?: boolean; user?: LocalUser };
+type AuthResponse = { user?: LocalUser; twoFactorRequired?: boolean; message?: string; error?: string };
+type LoginResult = { twoFactorRequired: boolean; user?: LocalUser };
 
 export interface LocalAuthContextValue {
   user: LocalUser | null;
@@ -41,7 +41,7 @@ function useLocalAuthState(): LocalAuthContextValue {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+      const response = await fetch("/api/auth/me", { credentials: "include" });
       if (response.ok) {
         const data = await response.json() as { user?: LocalUser };
         setUser(data.user || null);
@@ -69,7 +69,6 @@ function useLocalAuthState(): LocalAuthContextValue {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         credentials: "include",
-        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim(), password }),
       });
@@ -81,8 +80,8 @@ function useLocalAuthState(): LocalAuthContextValue {
         throw new Error("Resposta de autenticação inválida.");
       }
       setUser(data.user);
-      toast.success(data.twoFactorSetupRequired ? "Login realizado. Configure o 2FA para continuar." : "Login realizado com sucesso!");
-      return { twoFactorRequired: false, twoFactorSetupRequired: Boolean(data.twoFactorSetupRequired), user: data.user };
+      toast.success("Login realizado com sucesso!");
+      return { twoFactorRequired: false, user: data.user };
     } catch (cause) {
       const nextError = cause instanceof Error ? cause : new Error("Erro ao fazer login.");
       setError(nextError);
@@ -100,7 +99,6 @@ function useLocalAuthState(): LocalAuthContextValue {
       const response = await fetch("/api/auth/2fa/verify", {
         method: "POST",
         credentials: "include",
-        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.trim() }),
       });

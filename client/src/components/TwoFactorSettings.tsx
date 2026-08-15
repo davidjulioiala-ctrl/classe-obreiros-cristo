@@ -72,6 +72,7 @@ export default function TwoFactorSettings() {
   async function startSetup() {
     setBusy(true);
     try {
+      await refresh();
       const data = await request("/api/auth/2fa/setup");
       if (!data.secret || !data.otpauthUri || !Array.isArray(data.recoveryCodes)) {
         throw new Error("O servidor não devolveu uma configuração 2FA completa. Tente novamente.");
@@ -107,6 +108,25 @@ export default function TwoFactorSettings() {
     }
   }
 
+  async function disableSetup() {
+    const normalized = normalizeCode(code);
+    if (normalized.length !== 6) {
+      toast.error("Introduza o código actual de 6 dígitos para desactivar o 2FA.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await request("/api/auth/2fa/disable", { code: normalized });
+      setCode("");
+      await refresh();
+      toast.success("2FA desactivado. A sessão foi renovada com segurança.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível desactivar o 2FA.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -116,16 +136,22 @@ export default function TwoFactorSettings() {
           <div className="rounded-xl bg-emerald-600 p-2 text-white"><ShieldCheck className="h-5 w-5" /></div>
           <div>
             <h2 className="font-semibold text-slate-900 dark:text-white">Autenticação de dois factores</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">A configuração é obrigatória para utilizar o sistema. O segredo é cifrado no servidor e os códigos de recuperação são de uso único.</p>
-            <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">Estado: {user.twoFactorEnabled ? "Activo" : "Configuração obrigatória pendente"}</p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">Proteja a sua conta com uma aplicação autenticadora. O segredo é cifrado no servidor e os códigos de recuperação são de uso único.</p>
+            <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">Estado: {user.twoFactorEnabled ? "Activo" : "Não configurado"}</p>
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
           {!user.twoFactorEnabled && !setup && <Button onClick={() => void startSetup()} disabled={busy} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}Configurar 2FA</Button>}
-          {user.twoFactorEnabled && <span className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">2FA activo e obrigatório</span>}
+          {user.twoFactorEnabled && <Button variant="outline" onClick={() => void disableSetup()} disabled={busy || normalizeCode(code).length !== 6} className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Desactivar 2FA</Button>}
         </div>
       </div>
 
+      {user.twoFactorEnabled && (
+        <div className="mt-4 max-w-md">
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código para desactivar</label>
+          <Input value={code} onChange={(event) => setCode(normalizeCode(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} />
+        </div>
+      )}
 
       {setup && (
         <div className="mt-5 grid gap-5 border-t border-emerald-200 pt-5 dark:border-emerald-900/50 lg:grid-cols-[240px_minmax(0,1fr)]">

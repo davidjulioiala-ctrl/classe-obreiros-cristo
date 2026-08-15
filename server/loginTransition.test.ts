@@ -41,13 +41,6 @@ describe("login transition regression guards", () => {
     expect(loginSource).toContain('navigate("/dashboard")');
   });
 
-  it("refreshes the local session without cache after mandatory 2FA confirmation", () => {
-    const hookSource = readProjectFile("client/src/_core/hooks/useLocalAuth.ts");
-
-    expect(hookSource).toContain('fetch("/api/auth/me", { credentials: "include", cache: "no-store" })');
-    expect(hookSource).toContain('cache: "no-store"');
-  });
-
   it("keeps protected tRPC operations on the local cookie session", () => {
     const mainSource = readProjectFile("client/src/main.tsx");
     const headerSource = readProjectFile("client/src/lib/localTrpcHeaders.ts");
@@ -102,18 +95,15 @@ describe("login transition regression guards", () => {
     expect(auditSource).toContain('rel="noreferrer"');
   });
 
-  it("forces every authenticated account through the shared mandatory 2FA setup", () => {
-    const appSource = readProjectFile("client/src/App.tsx");
-    const gateSource = readProjectFile("client/src/components/MandatoryTwoFactorGate.tsx");
-    const twoFactorSource = readProjectFile("client/src/components/TwoFactorSettings.tsx");
+  it("makes administrator 2FA activation usable with QR and manual fallback", () => {
+    const userManagementSource = readProjectFile("client/src/pages/UserManagement.tsx");
 
-    expect(appSource).toContain("!user.twoFactorEnabled");
-    expect(appSource).toContain("MandatoryTwoFactorGate");
-    expect(gateSource).toContain("TwoFactorSettings");
-    expect(gateSource).toContain("Terminar sessão");
-    expect(twoFactorSource).toContain('"/api/auth/2fa/setup"');
-    expect(twoFactorSource).toContain('"/api/auth/2fa/confirm"');
-    expect(twoFactorSource).toContain("qrGenerator.toDataURL");
-    expect(twoFactorSource).toContain("códigos de recuperação");
+    expect(userManagementSource).toContain('from "qrcode"');
+    expect(userManagementSource).toContain("toDataURL");
+    expect(userManagementSource).toContain("qrGenerator");
+    expect(userManagementSource).toContain("/api/auth/2fa/setup");
+    expect(userManagementSource).toContain("/api/auth/2fa/confirm");
+    expect(userManagementSource).toContain("código de 6 dígitos");
+    expect(userManagementSource).toContain("códigos de recuperação");
   });
 });

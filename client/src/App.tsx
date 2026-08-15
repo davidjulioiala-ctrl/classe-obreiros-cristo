@@ -21,7 +21,6 @@ import Materials from "@/pages/Materials";
 import SystemStatus from "@/pages/SystemStatus";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import MaintenanceGate from "./components/MaintenanceGate";
-import MandatoryTwoFactorGate from "./components/MandatoryTwoFactorGate";
 import { Route, Switch, useLocation } from "wouter";
 import { isAccentColor, ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { trpc } from "@/lib/trpc";
@@ -79,10 +78,6 @@ function Router() {
         <Route component={LocalLogin} />
       </Switch>
     );
-  }
-
-  if (!user.twoFactorEnabled) {
-    return <MandatoryTwoFactorGate user={user} logout={logout} />;
   }
 
   return (

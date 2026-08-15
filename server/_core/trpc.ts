@@ -2,7 +2,6 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
-import { TWO_FACTOR_REQUIRED_FOR_ALL } from "./twoFactor";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -16,10 +15,6 @@ const requireUser = t.middleware(async opts => {
 
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-
-  if (TWO_FACTOR_REQUIRED_FOR_ALL && !ctx.user.twoFactorEnabled) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Conclua a configuração do 2FA antes de utilizar o sistema." });
   }
 
   return next({

@@ -8,17 +8,16 @@ describe("segurança 2FA por utilizador", () => {
   it("usa os endpoints da própria sessão e apresenta QR Code, segredo e recuperação", () => {
     expect(componentSource).toContain('"/api/auth/2fa/setup"');
     expect(componentSource).toContain('"/api/auth/2fa/confirm"');
-    expect(componentSource).not.toContain('"/api/auth/2fa/disable"');
+    expect(componentSource).toContain('"/api/auth/2fa/disable"');
     expect(componentSource).toContain("qrGenerator.toDataURL");
     expect(componentSource).toContain("recoveryCodes");
-    expect(componentSource).toContain("A configuração é obrigatória");
+    expect(componentSource).toContain("Proteja a sua conta");
   });
 
-  it("normaliza códigos colados, actualiza a sessão após confirmar e não exige papel administrativo", () => {
+  it("normaliza códigos colados, renova a sessão e não exige papel administrativo", () => {
     expect(componentSource).toContain("function normalizeCode");
     expect(componentSource).toContain("await refresh();");
     expect(componentSource).not.toContain('user?.role === "admin"');
     expect(componentSource).not.toContain("Apenas administradores");
-    expect(componentSource).not.toContain("Desactivar 2FA");
   });
 });
