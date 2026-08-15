@@ -7142,3 +7142,9 @@
 - [x] Garantir que o callback cria o backup, regista lastRunAt e devolve resposta JSON sem depender de email.
 - [x] Limpar o destinatário persistido e manter alertas externos desactivados, sem reutilizar o email de backup.
 - [x] Validar notificações, backup, suíte Vitest completa, typecheck, build e publicação.
+
+
+## Correcção da revogação de sessões — ciclo actual
+- [x] Corrigir o onClick do botão para executar efectivamente handleRevokeSessions.
+- [x] Adicionar teste estrutural para impedir que o botão volte a passar apenas a referência da função.
+- [x] Validar revogação global, typecheck, testes, build e publicação.
