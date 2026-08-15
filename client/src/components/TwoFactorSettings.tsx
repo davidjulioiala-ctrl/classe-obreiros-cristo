@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 
 type TwoFactorSetup = {
   secret: string;
@@ -14,7 +14,7 @@ type TwoFactorSetup = {
 };
 
 export default function TwoFactorSettings() {
-  const { user, refresh } = useAuth();
+  const { user, refresh } = useLocalAuth();
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -28,8 +28,9 @@ export default function TwoFactorSettings() {
         cancelled = true;
       };
     }
-    const qrGenerator = QRCode as typeof import("qrcode");
-    if (typeof qrGenerator.toDataURL !== "function") {
+    const qrModule = QRCode as typeof import("qrcode") & { default?: typeof import("qrcode") };
+    const qrGenerator = typeof qrModule.toDataURL === "function" ? qrModule : qrModule.default;
+    if (!qrGenerator || typeof qrGenerator.toDataURL !== "function") {
       setQrCode(null);
       return () => {
         cancelled = true;
@@ -72,7 +73,9 @@ export default function TwoFactorSettings() {
   async function startSetup() {
     setBusy(true);
     try {
-      await refresh();
+      // O middleware renova o cookie da sessão na própria chamada. Não chamar
+      // refresh() aqui: ele activa o loading global e desmonta a rota, apagando
+      // o QR Code e os códigos de recuperação que acabámos de receber.
       const data = await request("/api/auth/2fa/setup");
       if (!data.secret || !data.otpauthUri || !Array.isArray(data.recoveryCodes)) {
         throw new Error("O servidor não devolveu uma configuração 2FA completa. Tente novamente.");

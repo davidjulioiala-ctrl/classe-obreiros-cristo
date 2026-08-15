@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import TwoFactorSettings from "@/components/TwoFactorSettings";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user } = useLocalAuth();
   const roleLabel = user?.churchRole === "lider" ? "Líder" : user?.churchRole === "oficial" ? "Oficial" : "Líder de Louvor";
 
   return (

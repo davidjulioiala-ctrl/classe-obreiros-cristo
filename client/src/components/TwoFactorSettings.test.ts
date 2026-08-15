@@ -14,9 +14,12 @@ describe("segurança 2FA por utilizador", () => {
     expect(componentSource).toContain("Proteja a sua conta");
   });
 
-  it("normaliza códigos colados, renova a sessão e não exige papel administrativo", () => {
+  it("normaliza códigos colados, preserva o setup durante a resposta e não exige papel administrativo", () => {
     expect(componentSource).toContain("function normalizeCode");
     expect(componentSource).toContain("await refresh();");
+    const setupStart = componentSource.slice(componentSource.indexOf("async function startSetup"), componentSource.indexOf("async function confirmSetup"));
+    expect(setupStart).not.toContain("await refresh();");
+    expect(componentSource).toContain("O middleware renova o cookie da sessão na própria chamada");
     expect(componentSource).not.toContain('user?.role === "admin"');
     expect(componentSource).not.toContain("Apenas administradores");
   });

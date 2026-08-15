@@ -7222,3 +7222,22 @@
 - [x] Adicionar seleccionar tudo, desmarcar tudo e eliminar registos seleccionados com confirmação.
 - [x] Actualizar a lista após eliminação e proteger a operação contra pedidos inválidos.
 - [x] Validar 205 testes, typecheck, build e verificação responsiva/publicada.
+
+## Correcção do setup 2FA após restauração — novo ciclo
+- [x] Reproduzir a falha de configuração 2FA na versão restaurada.
+- [x] Rastrear sessão, endpoints, QR Code e persistência para localizar a causa.
+- [x] Corrigir apenas o setup, confirmação e recuperação 2FA, sem obrigatoriedade global.
+- [x] Adicionar regressões e validar testes, typecheck, build e publicação.
+
+## Correcção 2FA após rollback — ciclo actual
+- [x] Diagnosticar e corrigir o fluxo de configuração 2FA opcional para todos os utilizadores
+- [x] Garantir geração de QR Code e fallback por chave manual no navegador
+- [x] Validar confirmação TOTP contra o segredo pendente e persistência cifrada
+- [x] Adicionar regressões para setup, confirmação, sessão e configuração pendente
+- [x] Verificar visualmente o painel 2FA no perfil em desktop e mobile
+- [x] Rever regressões do menu de logs após a restauração da versão estável
+- [x] Executar testes, typecheck e build antes do checkpoint
+
+> Nota deste ciclo: o 2FA deve permanecer opcional; não reintroduzir enforcement global obrigatório.
+> Nota deste ciclo: não apagar ou alterar dados de negócio existentes durante a validação.
+> Nota deste ciclo: a base de dados mostrou uma configuração pendente para `dani` (`twoFactorEnabled=0` com segredo cifrado), enquanto `admin` e outros utilizadores ainda não têm setup iniciado.
