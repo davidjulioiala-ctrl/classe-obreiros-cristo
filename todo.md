@@ -7167,3 +7167,17 @@
 - [x] Investigar o fluxo de verificação e activação 2FA para identificar a quebra.
 - [x] Alargar a tolerância temporal da verificação TOTP e robustecer a extracção de códigos.
 - [x] Validar com 180 testes, typecheck, build e publicação.
+
+
+## Correcção da edição de funções de utilizador — ciclo actual
+- [x] Auditar o procedimento updateUser no tRPC e o formulário de utilizadores no frontend.
+- [x] Garantir que churchRole e role são actualizados de forma síncrona e segura sem quebrar o sistema.
+- [x] Adicionar testes de promoção e rebaixamento de utilizadores.
+- [x] Validar com testes unitários, typecheck, build e publicação.
+
+
+## Correcção da edição de funções de utilizadores — ciclo actual
+- [x] Normalizar e validar os valores de função no formulário antes de enviar a mutação.
+- [x] Diferenciar claramente função do sistema e função eclesiástica, mantendo promoções e rebaixamentos seguros.
+- [x] Adicionar testes de promoção, rebaixamento, persistência e protecção do último administrador.
+- [x] Validar typecheck, suíte Vitest completa, build e publicação.

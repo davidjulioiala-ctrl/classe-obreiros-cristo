@@ -24,6 +24,16 @@ const churchRoles = [
 
 type ChurchRole = (typeof churchRoles)[number]["value"];
 type SystemRole = "user" | "admin";
+const systemRoles = ["user", "admin"] as const;
+
+function isSystemRole(value: string): value is SystemRole {
+  return systemRoles.includes(value as SystemRole);
+}
+
+function isChurchRole(value: string): value is ChurchRole {
+  return churchRoles.some((role) => role.value === value);
+}
+
 type UserItem = {
   id: number;
   username: string;
@@ -234,8 +244,12 @@ export default function UserManagement() {
     const username = formData.username.trim().toLowerCase();
     const name = formData.name.trim();
     const email = formData.email.trim();
-    if (!name || !email || (!editingUser && !username)) {
-      toast.error("Preencha nome, email e utilizador.");
+    const safeUsername = username || editingUser?.username || "";
+    const safeRole: SystemRole = isSystemRole(formData.role) ? formData.role : editingUser?.role === "admin" ? "admin" : "user";
+    const safeChurchRole: ChurchRole = isChurchRole(formData.churchRole) ? formData.churchRole : "membro";
+
+    if (!name || (!editingUser && (!safeUsername || !email))) {
+      toast.error(editingUser ? "Preencha pelo menos o nome do utilizador." : "Preencha nome, email e utilizador.");
       return;
     }
     if (!editingUser && formData.password.length < 8) {
@@ -249,23 +263,23 @@ export default function UserManagement() {
       }
       updateUser.mutate({
         userId: editingUser.id,
-        username,
+        username: safeUsername,
         name,
-        email,
-        role: formData.role,
-        churchRole: formData.churchRole,
+        ...(email ? { email } : {}),
+        role: safeRole,
+        churchRole: safeChurchRole,
         isActive: formData.isActive,
         ...(formData.password ? { password: formData.password } : {}),
       });
       return;
     }
     createUser.mutate({
-      username,
+      username: safeUsername,
       password: formData.password,
       name,
       email,
-      role: formData.role,
-      churchRole: formData.churchRole,
+      role: safeRole,
+      churchRole: safeChurchRole,
     });
   }
 
@@ -382,8 +396,8 @@ export default function UserManagement() {
             <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
             <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} placeholder="Nome completo" /></div>
             <div><label className="mb-1 block text-sm font-medium">Email</label><Input type="email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} placeholder="email@exemplo.com" /></div>
-            <div><label className="mb-1 block text-sm font-medium">Função eclesiástica</label><Select value={formData.churchRole} onValueChange={(value) => setFormData({ ...formData, churchRole: value as ChurchRole })}><SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger><SelectContent>{churchRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}</SelectContent></Select></div>
-            <div><label className="mb-1 block text-sm font-medium">Papel no sistema</label><Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as SystemRole })}><SelectTrigger><SelectValue placeholder="Selecione o papel" /></SelectTrigger><SelectContent><SelectItem value="user">Utilizador</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
+            <div><label className="mb-1 block text-sm font-medium">Função eclesiástica</label><Select value={formData.churchRole} onValueChange={(value) => { if (isChurchRole(value)) setFormData((current) => ({ ...current, churchRole: value })); }}><SelectTrigger aria-label="Função eclesiástica"><SelectValue placeholder="Selecione a função eclesiástica" /></SelectTrigger><SelectContent>{churchRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}</SelectContent></Select></div>
+            <div><label className="mb-1 block text-sm font-medium">Papel no sistema</label><Select value={formData.role} onValueChange={(value) => { if (isSystemRole(value)) setFormData((current) => ({ ...current, role: value })); }}><SelectTrigger aria-label="Papel no sistema"><SelectValue placeholder="Seleccione o papel no sistema" /></SelectTrigger><SelectContent><SelectItem value="user">Utilizador</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select><p className="mt-1 text-xs text-slate-500">Pode promover para administrador ou rebaixar para utilizador, respeitando a protecção da última conta administrativa.</p></div>
             <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} /> Utilizador ativo</label>
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeDialog}><X className="mr-2 h-4 w-4" /> Cancelar</Button><Button type="button" disabled={saving} onClick={saveUser} className="bg-emerald-600 text-white hover:bg-emerald-700">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingUser ? "Guardar alterações" : "Criar utilizador"}</Button></div>
           </div>
