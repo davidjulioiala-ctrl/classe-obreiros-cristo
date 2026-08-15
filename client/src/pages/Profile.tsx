@@ -1,15 +1,76 @@
-import { motion } from "framer-motion";
-import { Mail, ShieldCheck, UserCircle, Settings, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, ShieldCheck, UserCircle, Settings, ArrowRight, Lock, KeyRound, Loader2, User } from "lucide-react";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
 import TwoFactorSettings from "@/components/TwoFactorSettings";
 import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
+import { trpc } from "@/lib/trpc";
 
 export default function Profile() {
-  const { user } = useLocalAuth();
+  const { user, refresh } = useLocalAuth();
   const roleLabel = user?.churchRole === "lider" ? "Líder" : user?.churchRole === "oficial" ? "Oficial" : "Líder de Louvor";
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? "");
+      setEmail(user.email ?? "");
+    }
+  }, [user]);
+
+  const updateProfileMutation = trpc.auth.updateProfile.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success("Perfil atualizado com sucesso.");
+    },
+    onError: (err) => toast.error(err.message || "Erro ao atualizar perfil."),
+  });
+
+  const changePasswordMutation = trpc.auth.changePassword.useMutation({
+    onSuccess: () => {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Senha alterada com sucesso.");
+    },
+    onError: (err) => toast.error(err.message || "Erro ao alterar senha."),
+  });
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error("O nome não pode estar vazio.");
+      return;
+    }
+    updateProfileMutation.mutate({ name: name.trim(), email: email.trim() });
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      toast.error("Insira a senha atual.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("A confirmação da nova senha não coincide.");
+      return;
+    }
+    changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
 
   return (
     <DashboardLayoutCustom>
@@ -54,6 +115,54 @@ export default function Profile() {
               </div>
               <p className="text-sm text-slate-900 dark:text-white">{roleLabel}</p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm dark:bg-slate-800">
+          <CardHeader>
+            <CardTitle className="text-xl text-slate-900 dark:text-white">Editar Dados Pessoais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nome completo</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="O seu nome" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
+              </div>
+              <Button type="submit" disabled={updateProfileMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                {updateProfileMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
+                Guardar alterações do perfil
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm dark:bg-slate-800">
+          <CardHeader>
+            <CardTitle className="text-xl text-slate-900 dark:text-white">Alterar Senha</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Senha atual</label>
+                <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nova senha (mínimo 8 caracteres)</label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar nova senha</label>
+                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+              <Button type="submit" disabled={changePasswordMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                {changePasswordMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                Alterar senha
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

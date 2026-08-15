@@ -167,4 +167,39 @@ export const authRouter = router({
       await createAuditLog({ userId: ctx.user.id, action: "apagar", entityType: "user", entityId: input.userId });
       return { success: true } as const;
     }),
+
+  updateProfile: protectedProcedure
+    .input(
+      z.object({
+        name: safeText(255).optional(),
+        email: safeEmail().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const user = await updateUser(ctx.user.id, input);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ selfUpdate: true, ...input }) });
+      return { success: true, user: safeUser(user) };
+    }),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1).max(200),
+        newPassword: z.string().min(8).max(200),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const currentFullUser = await getUserById(ctx.user.id);
+      if (!currentFullUser) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      const { authenticateUser } = await import("../auth");
+      const verified = await authenticateUser(currentFullUser.username ?? "", input.currentPassword);
+      if (!verified) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "A senha atual está incorreta." });
+      }
+      const user = await updateUser(ctx.user.id, { password: input.newPassword });
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
+      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ passwordChanged: true }) });
+      return { success: true } as const;
+    }),
 });

@@ -96,14 +96,14 @@ describe("login transition regression guards", () => {
   });
 
   it("makes administrator 2FA activation usable with QR and manual fallback", () => {
-    const userManagementSource = readProjectFile("client/src/pages/UserManagement.tsx");
+    const twoFactorSource = readProjectFile("client/src/components/TwoFactorSettings.tsx");
 
-    expect(userManagementSource).toContain('from "qrcode"');
-    expect(userManagementSource).toContain("toDataURL");
-    expect(userManagementSource).toContain("qrGenerator");
-    expect(userManagementSource).toContain("/api/auth/2fa/setup");
-    expect(userManagementSource).toContain("/api/auth/2fa/confirm");
-    expect(userManagementSource).toContain("código de 6 dígitos");
-    expect(userManagementSource).toContain("códigos de recuperação");
+    expect(twoFactorSource).toContain('from "qrcode"');
+    expect(twoFactorSource).toContain("toDataURL");
+    expect(twoFactorSource).toContain("qrGenerator");
+    expect(twoFactorSource).toContain("/api/auth/2fa/setup");
+    expect(twoFactorSource).toContain("/api/auth/2fa/confirm");
+    expect(twoFactorSource).toContain("código de 6 dígitos");
+    expect(twoFactorSource).toContain("códigos de recuperação");
   });
 });

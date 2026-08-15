@@ -1,5 +1,13 @@
 # Classe Obreiros de Cristo - TODO
 
+## Correções Recentes: 2FA, Perfil e Senha
+- [x] Corrigir a criação e ativação do 2FA para funcionar corretamente sem quebras
+- [x] Unificar e robustecer a configuração, QR Code, chave manual e códigos de recuperação no componente TwoFactorSettings
+- [x] Implementar e corrigir a edição de perfil do utilizador logado (`updateProfile`)
+- [x] Implementar e corrigir a alteração de senha (`changePassword`) validando a senha atual antes de gravar
+- [x] Atualizar a página de Perfil (`Profile.tsx`) para incluir formulários dedicados de edição de dados pessoais e alteração de senha
+- [x] Validar todos os 205 testes unitários e build de produção sem erros
+
 ## Fase 1: Autenticação e Hierarquia
 - [x] Implementar modelo de dados de utilizadores com roles (Líder, Oficial, Líder de Louvor)
 - [x] Criar página de login com identidade visual e animações
@@ -7241,3 +7249,11 @@
 > Nota deste ciclo: o 2FA deve permanecer opcional; não reintroduzir enforcement global obrigatório.
 > Nota deste ciclo: não apagar ou alterar dados de negócio existentes durante a validação.
 > Nota deste ciclo: a base de dados mostrou uma configuração pendente para `dani` (`twoFactorEnabled=0` com segredo cifrado), enquanto `admin` e outros utilizadores ainda não têm setup iniciado.
+
+
+## Correção de 2FA, Perfil e Senha — ciclo atual
+- [ ] Diagnosticar por que a criação e ativação de 2FA falham no navegador.
+- [ ] Verificar os endpoints de edição de perfil e alteração de senha de utilizadores.
+- [ ] Implementar correções robustas em backend e frontend para 2FA, perfil e senha.
+- [ ] Adicionar testes de regressão específicos para estes fluxos.
+- [ ] Executar testes Vitest, typecheck e build, salvando checkpoint e publicação.
