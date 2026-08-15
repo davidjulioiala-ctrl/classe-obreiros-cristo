@@ -7300,3 +7300,10 @@
 - [x] Criar nas Definições (ou Definições > Segurança) um interruptor exclusivo para o administrador activar a obrigatoriedade do 2FA para todos os membros.
 - [x] Configurar o middleware e o login para que, quando a obrigatoriedade estiver ligada, utilizadores sem 2FA activo sejam impedidos de aceder ao sistema e orientados para o setup obrigatório.
 - [x] Validar testes unitários, typecheck, build e verificação visual.
+
+
+## Correção Definitiva: 2FA Pessoal e Política Global do Administrador
+- [ ] Garantir que a página de Perfil renderiza corretamente o componente TwoFactorSettings para o administrador sem erros de API ou de rede.
+- [ ] Adicionar na página de Definições uma secção clara de Segurança com o interruptor para o administrador activar a obrigatoriedade do 2FA para todos os membros.
+- [ ] Garantir que, quando activada pelo administrador, os membros sem 2FA são bloqueados no login e forçados a configurar o 2FA.
+- [ ] Validar o fluxo com testes automatizados, typecheck, build e verificação visual.

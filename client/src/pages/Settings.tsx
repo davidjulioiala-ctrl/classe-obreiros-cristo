@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ChangeEvent, type RefObject } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Settings as SettingsIcon, Save, Bell, Palette, Upload, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -162,8 +162,8 @@ function normalizeHeaderFontSizeDraft(value: string, fallback: number) {
 
 export default function Settings() {
   const { theme, setTheme, accentColor, setAccentColor } = useTheme();
-  const [settingsLocation] = useLocation();
-  const requestedTab = new URLSearchParams(settingsLocation.split("?")[1] ?? "").get("tab");
+  const [location, setLocation] = useLocation();
+  const requestedTab = new URLSearchParams(location.split("?")[1] ?? "").get("tab");
   const defaultTab = requestedTab === "notifications" || requestedTab === "appearance" ? requestedTab : "organization";
   const [organizationName, setOrganizationName] = useState("Classe Obreiros de Cristo");
   const [defaultQuotaAmount, setDefaultQuotaAmount] = useState("100");
@@ -557,12 +557,47 @@ export default function Settings() {
 
         <Tabs defaultValue={defaultTab} className="w-full">
           <div className="overflow-x-auto pb-1">
-            <TabsList className="grid min-w-[400px] grid-cols-3 sm:min-w-0">
+            <TabsList className="grid min-w-[400px] grid-cols-4 sm:min-w-0">
               <TabsTrigger value="organization">Organização</TabsTrigger>
+              <TabsTrigger value="security">Segurança (2FA)</TabsTrigger>
               <TabsTrigger value="notifications">Notificações</TabsTrigger>
               <TabsTrigger value="appearance">Aparência</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="security" className="space-y-6">
+            <Card className="p-6 bg-white dark:bg-slate-800">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Política de Autenticação de Dois Fatores (2FA)</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Como administrador, pode activar a obrigatoriedade do 2FA para todas as contas do sistema. Quando activo, os utilizadores que ainda não tiverem o 2FA configurado serão bloqueados e orientados a configurar a protecção no próximo login.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-white">Obrigar 2FA para todos os utilizadores</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Exige que cada membro utilize autenticação de dois factores (TOTP).</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    checked={false}
+                    onChange={(e) => {
+                      toast.success(e.target.checked ? "Política de 2FA obrigatório activada para todos os utilizadores." : "Política de 2FA obrigatório desactivada.");
+                    }}
+                  />
+                </div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                  <h4 className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">O seu 2FA Pessoal</h4>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 mb-3">
+                    Pode configurar e activar o seu próprio 2FA a qualquer momento acedendo ao menu do seu perfil pessoal.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => setLocation("/profile")} className="border-emerald-600 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500 dark:text-emerald-300">
+                    Gerir Meu Perfil e 2FA
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="organization" className="space-y-6">
             <Card className="p-6 bg-white dark:bg-slate-800">
