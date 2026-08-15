@@ -7320,3 +7320,9 @@
 - [x] Corrigir seletores Select e SelectItem em UserManagement.tsx para evitar valores vazios ou incompatíveis ao escolher Papel e Função eclesiástica.
 - [x] Assegurar que o endpoint e componente 2FA funcionam sem interrupções para todos os utilizadores autenticados.
 - [x] Validar testes unitários, typecheck, build e verificação visual.
+
+
+## Correção de Compatibilidade de Cookies e Sessão 2FA no Navegador Externo
+- [x] Ajustar configurações de cookies (SameSite, Secure, Domain) em server/_core/cookies.ts e localAuth.ts para que o navegador externo aceite a sessão e o desafio 2FA.
+- [x] Validar rotas tRPC e endpoints tRPC/Auth para suportar requisições cross-origin ou proxies de domínio publicado.
+- [x] Executar testes, typecheck, build e verificação visual.

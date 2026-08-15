@@ -17,6 +17,8 @@ export default function LocalLogin() {
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorSetupModal, setTwoFactorSetupModal] = useState(false);
+  const [setupData, setSetupData] = useState<{ secret?: string; qrCodeUrl?: string; recoveryCodes?: string[] } | null>(null);
+  const [setupConfirmCode, setSetupConfirmCode] = useState("");
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [showBootstrap, setShowBootstrap] = useState(false);
   const [bootstrapToken, setBootstrapToken] = useState("");
@@ -287,26 +289,65 @@ export default function LocalLogin() {
             </motion.form>
 
             {twoFactorSetupModal && (
-              <div className="mt-6 rounded-xl bg-slate-900/90 p-5 border border-emerald-500/50 text-slate-100 shadow-xl space-y-4">
+              <div className="mt-6 rounded-xl bg-slate-900/95 p-5 border border-emerald-500/50 text-slate-100 shadow-xl space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-emerald-400">Assistente de Configuração 2FA</h3>
-                  <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">Obrigatório</span>
+                  <h3 className="text-base font-bold text-emerald-400">Ativação Obrigatória 2FA</h3>
+                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">Passo 1 de 2</span>
                 </div>
-                <p className="text-sm text-slate-300">A administração exige a ativação da autenticação de dois fatores para proteger todas as contas do sistema.</p>
-                <div className="space-y-2 rounded-lg bg-slate-800/80 p-3 text-xs text-slate-300">
-                  <p className="font-semibold text-emerald-300">Passos para concluir:</p>
-                  <p>1. Instale uma aplicação como <strong>Google Authenticator</strong> ou <strong>Microsoft Authenticator</strong> no seu telemóvel.</p>
-                  <p>2. Aceda ao seu perfil para ler o QR Code ou copiar a chave manual.</p>
-                  <p>3. Insira o código de 6 dígitos gerado pela aplicação para concluir a ativação.</p>
+                <p className="text-xs text-slate-300">A administração exige o 2FA. Gere a sua chave segura para prosseguir.</p>
+                <div className="space-y-3">
+                  <button type="button" onClick={async () => {
+                    try {
+                      const res = await fetch("/api/auth/2fa/setup", { method: "POST", credentials: "include" });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Erro ao gerar segredo 2FA");
+                      setSetupData(data);
+                      toast.success("Segredo 2FA gerado! Leia o QR Code ou use a chave manual.");
+                    } catch (err: any) {
+                      toast.error(err.message || "Erro ao iniciar setup 2FA");
+                    }
+                  }} className="w-full rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                    Gerar Chave de Segurança e QR Code
+                  </button>
+                  {setupData && (
+                    <div className="space-y-3 rounded-lg bg-slate-800 p-3 text-xs">
+                      {setupData.qrCodeUrl && <div className="flex justify-center bg-white p-2 rounded"><img src={setupData.qrCodeUrl} alt="QR Code 2FA" className="h-32 w-32" /></div>}
+                      <p className="font-mono text-emerald-300 break-all text-center">Chave: {setupData.secret}</p>
+                      <p className="text-slate-300 text-center">Insira o código de 6 dígitos gerado pela sua app:</p>
+                      <Input value={setupConfirmCode} onChange={(e) => setSetupConfirmCode(e.target.value)} placeholder="000000" className="bg-slate-900 border-slate-700 text-center font-mono text-lg tracking-widest text-white" maxLength={6} />
+                      <Button type="button" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold" onClick={async () => {
+                        try {
+                          const res = await fetch("/api/auth/2fa/confirm", {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ code: setupConfirmCode, secret: setupData.secret, recoveryCodes: setupData.recoveryCodes })
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || "Código inválido");
+                          toast.success("2FA ativado com sucesso! Bem-vindo.");
+                          setTwoFactorSetupModal(false);
+                          navigate("/dashboard");
+                        } catch (err: any) {
+                          toast.error(err.message || "Erro ao confirmar código");
+                        }
+                      }}>
+                        Confirmar e Entrar
+                      </Button>
+                      {setupData.recoveryCodes && (
+                        <div className="mt-2 rounded bg-slate-900 p-2 text-[10px] text-slate-400">
+                          <p className="font-semibold text-amber-400">Códigos de recuperação (guarde num local seguro):</p>
+                          <ul className="list-disc pl-4 font-mono">
+                            {setupData.recoveryCodes.map((code: string, idx: number) => <li key={idx}>{code}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => navigate("/profile")}>
-                    Ir para Perfil e Configurar 2FA
-                  </Button>
-                  <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700" onClick={() => setTwoFactorSetupModal(false)}>
-                    Fechar
-                  </Button>
-                </div>
+                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 text-xs" onClick={() => setTwoFactorSetupModal(false)}>
+                  Cancelar
+                </Button>
               </div>
             )}
             {bootstrapAvailable && !requiresTwoFactor && !twoFactorSetupModal && (
