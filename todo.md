@@ -7348,3 +7348,10 @@
 - [x] Remover todas as contas locais excepto `admin`.
 - [x] Configurar a conta `admin` com a senha `admin123` e privilégios de administrador.
 - [x] Ajustar contadores e validar a integridade da base de dados.
+
+
+## Limpeza Total de Produção
+- [x] Apagar todos os registos de membros, actividades, finanças, logs e dados operacionais.
+- [x] Preservar exclusivamente o utilizador `admin` com senha `admin123`.
+- [x] Preservar os 5 grupos estruturais repondo os nomes: "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4" e "Convidados".
+- [x] Reiniciar contadores de ID e validar estado limpo.
