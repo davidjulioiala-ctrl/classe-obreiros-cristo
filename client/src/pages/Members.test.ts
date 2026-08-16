@@ -39,6 +39,15 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("Limpar filtros");
   });
 
+  it("oferece importação CSV/Excel com pré-visualização e confirmação", () => {
+    expect(membersSource).toContain("trpc.members.bulkImport.useMutation");
+    expect(membersSource).toContain("parseMemberImportFile");
+    expect(membersSource).toContain("Importar membros em massa");
+    expect(membersSource).toContain("Confirmar importação");
+    expect(membersSource).toContain("accept=\".csv,.xlsx,.xls");
+    expect(membersSource).toContain("canImportMembers");
+  });
+
   it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
     expect(membersSource).toContain('import { ExportColumnDialog } from "@/components/ExportColumnDialog"');
     expect(membersSource).toContain("const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS])");

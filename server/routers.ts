@@ -152,6 +152,88 @@ const membersRouter = router({
       return result;
     }),
 
+  bulkImport: oficialProcedure
+    .input(
+      z.object({
+        rows: z.array(
+          z.object({
+            name: safeText(255),
+            sex: z.enum(["M", "F"]),
+            birthDate: safeText(10, false),
+            father: safeText(255, false),
+            mother: safeText(255, false),
+            nationality: safeText(100, false),
+            region: safeText(100, false),
+            residence: safeText(500, false),
+            phoneOrange: safeText(40, false),
+            phoneTelecel: safeText(40, false),
+            email: safeEmail(),
+            position: safeText(255, false),
+            leaderRole: safeText(255, false),
+            louvorRole: safeText(255, false),
+            isGuest: z.boolean().default(false),
+            groupId: positiveId.optional(),
+          })
+        ).min(1).max(500),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      await db.ensureDefaultGroups();
+      const [allMembers, allGroups] = await Promise.all([db.getAllMembers(false), db.getAllGroups()]);
+      const names = new Map(allMembers.map((member) => [member.name.trim().toLocaleLowerCase("pt-PT"), member.id]));
+      const emails = new Map(allMembers.filter((member) => member.email).map((member) => [member.email!.trim().toLocaleLowerCase("pt-PT"), member.id]));
+      const prepared: Array<typeof input.rows[number] & { groupId: number | undefined }> = [];
+      const errors: string[] = [];
+
+      input.rows.forEach((row, index) => {
+        const rowNumber = index + 2;
+        const nameKey = row.name.trim().toLocaleLowerCase("pt-PT");
+        if (names.has(nameKey)) errors.push(`Linha ${rowNumber}: o nome já existe no sistema (ID ${names.get(nameKey)}).`);
+        else names.set(nameKey, -rowNumber);
+        const emailKey = row.email?.trim().toLocaleLowerCase("pt-PT");
+        if (emailKey) {
+          if (emails.has(emailKey)) errors.push(`Linha ${rowNumber}: o email já existe no sistema (ID ${emails.get(emailKey)}).`);
+          else emails.set(emailKey, -rowNumber);
+        }
+        if (row.groupId && !allGroups.some((group) => group.id === row.groupId)) errors.push(`Linha ${rowNumber}: o grupo indicado não existe.`);
+        if (row.birthDate) {
+          const birthDate = new Date(`${row.birthDate}T00:00:00Z`);
+          if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) errors.push(`Linha ${rowNumber}: a data de nascimento não é válida.`);
+        }
+        prepared.push({ ...row, groupId: row.groupId });
+      });
+      if (errors.length > 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `A importação foi rejeitada. ${errors.slice(0, 8).join(" ")}${errors.length > 8 ? ` E mais ${errors.length - 8} erro(s).` : ""}` });
+      }
+
+      let createdCount = 0;
+      for (const row of prepared) {
+        const groupId = row.groupId ?? await assignGroupAutomatically(row.isGuest);
+        await db.createMember({
+          name: row.name,
+          sex: row.sex,
+          birthDate: row.birthDate ? new Date(row.birthDate) : undefined,
+          father: row.father,
+          mother: row.mother,
+          nationality: row.nationality,
+          region: row.region,
+          residence: row.residence,
+          phoneOrange: row.phoneOrange,
+          phoneTelecel: row.phoneTelecel,
+          email: row.email,
+          position: row.position || "Membro",
+          leaderRole: row.leaderRole,
+          louvorRole: row.louvorRole,
+          isGuest: row.isGuest,
+          groupId,
+        });
+        createdCount++;
+      }
+
+      await writeAudit(ctx, "importar_massa", "member", undefined, { count: createdCount, source: "CSV/XLSX" });
+      return { success: true, count: createdCount };
+    }),
+
   bulkMoveGroup: oficialProcedure
     .input(
       z.object({
