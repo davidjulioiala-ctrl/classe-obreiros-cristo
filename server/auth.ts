@@ -123,7 +123,9 @@ export async function createUser(
   name: string,
   email: string,
   churchRole: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro" = "membro",
-  role: "user" | "admin" = "user"
+  role: "user" | "admin" = "user",
+  isActive: boolean = true,
+  suspendReason: string | null = null
 ): Promise<typeof users.$inferSelect | null> {
   const db = await getDb();
   if (!db) {
@@ -150,7 +152,8 @@ export async function createUser(
       loginMethod: "local",
       role,
       churchRole,
-      isActive: true,
+      isActive,
+      suspendReason: isActive ? null : suspendReason,
     });
 
     const createdUser = await db
@@ -170,15 +173,16 @@ export async function createUser(
 
 export async function updateUser(
   userId: number,
-  updates: {
-    username?: string;
-    name?: string;
-    email?: string;
-    churchRole?: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro";
-    role?: "user" | "admin";
-    isActive?: boolean;
-    password?: string;
-  }
+    updates: {
+      username?: string;
+      name?: string;
+      email?: string;
+      churchRole?: "lider" | "oficial" | "louvor" | "financeiro" | "financeira" | "membro";
+      role?: "user" | "admin";
+      isActive?: boolean;
+      suspendReason?: string | null;
+      password?: string;
+    }
 ): Promise<typeof users.$inferSelect | null> {
   const db = await getDb();
   if (!db) {
@@ -196,7 +200,13 @@ export async function updateUser(
     if (updates.email) updateData.email = updates.email;
     if (updates.churchRole) updateData.churchRole = updates.churchRole;
     if (updates.role) updateData.role = updates.role;
-    if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+    if (updates.isActive !== undefined) {
+      updateData.isActive = updates.isActive;
+      if (updates.isActive) {
+        updateData.suspendReason = null;
+      }
+    }
+    if (updates.suspendReason !== undefined) updateData.suspendReason = updates.suspendReason;
     if (updates.password) {
       updateData.password = await hashPassword(updates.password);
       const currentUser = await db.select({ sessionVersion: users.sessionVersion }).from(users).where(eq(users.id, userId)).limit(1);

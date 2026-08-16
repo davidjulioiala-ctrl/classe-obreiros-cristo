@@ -73,6 +73,8 @@ export const authRouter = router({
         email: safeEmail(),
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]),
         role: z.enum(["user", "admin"]),
+        isActive: z.boolean().optional(),
+        suspendReason: z.string().max(500).nullable().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -84,6 +86,8 @@ export const authRouter = router({
           input.email ?? "",
           input.churchRole,
           input.role,
+          input.isActive ?? true,
+          input.suspendReason ?? null,
         );
         if (!user) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o utilizador. Tente novamente." });
@@ -111,6 +115,7 @@ export const authRouter = router({
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).optional(),
         role: z.enum(["user", "admin"]).optional(),
         isActive: z.boolean().optional(),
+        suspendReason: z.string().max(500).nullable().optional(),
         password: z.string().min(6).max(200).optional(),
       }),
     )

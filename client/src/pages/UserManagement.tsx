@@ -61,6 +61,7 @@ type FormData = {
   role: SystemRole;
   churchRole: ChurchRole;
   isActive: boolean;
+  suspendReason: string;
 };
 
 const emptyForm: FormData = {
@@ -71,6 +72,7 @@ const emptyForm: FormData = {
   role: "user",
   churchRole: "membro",
   isActive: true,
+  suspendReason: "",
 };
 
 export default function UserManagement() {
@@ -139,6 +141,7 @@ export default function UserManagement() {
       role: user.role === "admin" ? "admin" : "user",
       churchRole: safeChurchRole,
       isActive: user.isActive !== false,
+      suspendReason: (user as any).suspendReason || "",
     });
     setDialogOpen(true);
   }
@@ -174,6 +177,7 @@ export default function UserManagement() {
         role: safeRole,
         churchRole: safeChurchRole,
         isActive: formData.isActive,
+        suspendReason: formData.isActive ? null : formData.suspendReason.trim() || null,
         ...(formData.password ? { password: formData.password } : {}),
       });
       return;
@@ -185,6 +189,8 @@ export default function UserManagement() {
       email,
       role: safeRole,
       churchRole: safeChurchRole,
+      isActive: formData.isActive,
+      suspendReason: formData.isActive ? null : formData.suspendReason.trim() || null,
     });
   }
 

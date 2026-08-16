@@ -7366,3 +7366,4 @@
 - [x] Adicionar filtros por intervalo de datas e função eclesiástica nas exportações CSV de membros e utilizadores
 - [x] Corrigir erro crítico no formulário de criação de utilizadores e seletores de função eclesiástica e papel
 - [x] Adicionar funcionalidade de suspensão e reativação temporária de utilizadores, preservando histórico e bloqueando acesso
+- [x] Adicionar campo de motivo de suspensão visível apenas para administradores na gestão de utilizadores

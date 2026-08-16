@@ -25,6 +25,7 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   churchRole: mysqlEnum("churchRole", ["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).default("membro").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
+  suspendReason: text("suspendReason"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
