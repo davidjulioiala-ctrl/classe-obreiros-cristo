@@ -7373,3 +7373,4 @@
 - [x] Implementar verificação de duplicados (nome ou email) ao criar ou atualizar membros
 - [x] Adicionar opção de selecionar o grupo específico (Grupo 1-4 ou Convidados) no formulário de criação/edição de membros
 - [x] Implementar ação em massa para mover múltiplos membros entre grupos com confirmação e auditoria
+- [x] Adicionar barra de pesquisa na lista de membros para encontrar rapidamente pessoas por nome ou ID antes da ação em massa
