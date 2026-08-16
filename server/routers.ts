@@ -102,6 +102,27 @@ const membersRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       await db.ensureDefaultGroups();
+      const allMembers = await db.getAllMembers(false);
+      const normalizedNewName = input.name.trim().toLowerCase();
+      const normalizedNewEmail = input.email ? input.email.trim().toLowerCase() : "";
+
+      const existingByName = allMembers.find(m => m.name.trim().toLowerCase() === normalizedNewName);
+      if (existingByName) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Já existe um membro registado com o nome "${existingByName.name}" (ID ${existingByName.id}).`,
+        });
+      }
+
+      if (normalizedNewEmail) {
+        const existingByEmail = allMembers.find(m => m.email && m.email.trim().toLowerCase() === normalizedNewEmail);
+        if (existingByEmail) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Já existe um membro registado com o email "${existingByEmail.email}" (ID ${existingByEmail.id}, Nome: ${existingByEmail.name}).`,
+          });
+        }
+      }
       let groupId = input.groupId;
       if (!groupId) {
         groupId = await assignGroupAutomatically(input.isGuest);
@@ -157,6 +178,28 @@ const membersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const allMembers = await db.getAllMembers(false);
+      if (input.data.name !== undefined) {
+        const normalizedName = input.data.name.trim().toLowerCase();
+        const conflict = allMembers.find(m => m.id !== input.id && m.name.trim().toLowerCase() === normalizedName);
+        if (conflict) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Já existe outro membro com o nome "${conflict.name}" (ID ${conflict.id}).`,
+          });
+        }
+      }
+      if (input.data.email !== undefined && input.data.email) {
+        const normalizedEmail = input.data.email.trim().toLowerCase();
+        const conflictEmail = allMembers.find(m => m.id !== input.id && m.email && m.email.trim().toLowerCase() === normalizedEmail);
+        if (conflictEmail) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Já existe outro membro com o email "${conflictEmail.email}" (ID ${conflictEmail.id}, Nome: ${conflictEmail.name}).`,
+          });
+        }
+      }
+
       const updateData = {
         ...input.data,
         birthDate: input.data.birthDate ? new Date(input.data.birthDate) : undefined,
