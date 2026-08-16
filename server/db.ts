@@ -1007,6 +1007,25 @@ export async function listAuditLogs(limit = 250) {
   return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(Math.min(Math.max(limit, 1), 500));
 }
 
+export async function getUserAuditHistory(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const logs = await db
+    .select()
+    .from(auditLog)
+    .where(and(eq(auditLog.entityType, "user"), eq(auditLog.entityId, userId)))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(Math.min(Math.max(limit, 1), 100));
+
+  const allUsers = await db.select({ id: users.id, name: users.name, username: users.username }).from(users);
+  const userMap = new Map(allUsers.map((u) => [u.id, u.name || u.username]));
+
+  return logs.map((log) => ({
+    ...log,
+    actorName: log.userId ? (userMap.get(log.userId) ?? `ID #${log.userId}`) : "Sistema",
+  }));
+}
+
 
 export async function getReportById(id: number) {
   const db = await getDb();

@@ -7368,3 +7368,4 @@
 - [x] Adicionar funcionalidade de suspensão e reativação temporária de utilizadores, preservando histórico e bloqueando acesso
 - [x] Adicionar campo de motivo de suspensão visível apenas para administradores na gestão de utilizadores
 - [x] Adicionar filtro por estado (todos, ativos, suspensos) na lista de utilizadores
+- [x] Adicionar histórico de auditoria de alterações de estado e suspensões no perfil do utilizador para administradores

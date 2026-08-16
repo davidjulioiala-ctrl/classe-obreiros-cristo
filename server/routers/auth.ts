@@ -12,7 +12,7 @@ import {
   UserCreationError,
   deleteUser,
 } from "../auth";
-import { createAuditLog } from "../db";
+import { createAuditLog, getUserAuditHistory } from "../db";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure, positiveId, safeEmail, safeText } from "../_core/security";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -149,6 +149,12 @@ export const authRouter = router({
       const user = await getUserById(input.userId);
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
       return safeUser(user);
+    }),
+
+  getUserAuditHistory: adminProcedure
+    .input(z.object({ userId: positiveId }))
+    .query(async ({ input }) => {
+      return await getUserAuditHistory(input.userId);
     }),
 
   getAllUsers: adminProcedure.query(async () => {

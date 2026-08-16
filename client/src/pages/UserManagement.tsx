@@ -110,6 +110,12 @@ export default function UserManagement() {
     onError: (error) => toast.error(error.message || "Não foi possível redefinir o 2FA."),
   });
 
+  const [selectedAuditUserId, setSelectedAuditUserId] = useState<number | null>(null);
+  const auditQuery = trpc.auth.getUserAuditHistory.useQuery(
+    { userId: selectedAuditUserId ?? 0 },
+    { enabled: !!selectedAuditUserId }
+  );
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -331,6 +337,7 @@ export default function UserManagement() {
                           {user.twoFactorEnabled && (
                             <Button variant="outline" size="sm" title="Redefinir / Desativar 2FA" onClick={() => { if (confirm(`Tem certeza que deseja redefinir/desativar o 2FA para ${user.username}?`)) resetTwoFactor.mutate({ userId: user.id }); }} className="text-amber-600 hover:text-amber-700"><ShieldCheck className="h-4 w-4" /></Button>
                           )}
+                          <Button variant="outline" size="sm" title="Histórico de auditoria" onClick={() => setSelectedAuditUserId(user.id)} className="text-slate-600 hover:text-slate-900 dark:text-slate-300"><FileText className="h-4 w-4" /></Button>
                           <Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar definitivamente ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </td>
@@ -392,7 +399,53 @@ export default function UserManagement() {
               <p className="mt-1 text-xs text-slate-500">Pode promover para administrador ou rebaixar para utilizador, respeitando a protecção da última conta administrativa.</p>
             </div>
             <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} /> Utilizador ativo</label>
+            {!formData.isActive && (
+              <div>
+                <label className="mb-1 block text-sm font-medium">Motivo da suspensão (exclusivo para administradores)</label>
+                <textarea
+                  value={formData.suspendReason}
+                  onChange={(event) => setFormData({ ...formData, suspendReason: event.target.value })}
+                  placeholder="Descreva o motivo pelo qual a conta foi suspensa..."
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+            )}
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeDialog}><X className="mr-2 h-4 w-4" /> Cancelar</Button><Button type="button" disabled={saving} onClick={saveUser} className="bg-emerald-600 text-white hover:bg-emerald-700">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingUser ? "Guardar alterações" : "Criar utilizador"}</Button></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selectedAuditUserId !== null} onOpenChange={(open) => { if (!open) setSelectedAuditUserId(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-xl">
+          <DialogHeader><DialogTitle>Histórico de Auditoria do Utilizador</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {auditQuery.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /> A carregar histórico...</div>
+            ) : auditQuery.isError ? (
+              <p className="text-sm text-red-600">Não foi possível carregar o histórico de auditoria.</p>
+            ) : !auditQuery.data?.length ? (
+              <p className="py-8 text-center text-sm text-slate-500">Nenhum registo de auditoria encontrado para este utilizador.</p>
+            ) : (
+              <div className="space-y-3">
+                {auditQuery.data.map((log) => (
+                  <div key={log.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                    <div className="flex items-center justify-between font-medium text-slate-900 dark:text-white">
+                      <span className="uppercase text-emerald-600 dark:text-emerald-400">{log.action}</span>
+                      <span className="text-xs text-slate-500">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Responsável: <span className="font-semibold">{log.actorName}</span></p>
+                    {log.details && (
+                      <pre className="mt-2 overflow-x-auto rounded bg-slate-50 p-2 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        {log.details}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end pt-2">
+              <Button type="button" variant="outline" onClick={() => setSelectedAuditUserId(null)}>Fechar</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
