@@ -7361,3 +7361,4 @@
 - [x] Preservar exclusivamente o utilizador `admin` com senha `admin123`.
 - [x] Preservar os 5 grupos estruturais repondo os nomes: "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4" e "Convidados".
 - [x] Reiniciar contadores de ID e validar estado limpo.
+- [x] Corrigir quebra no formulário de utilizadores ao selecionar papel e função eclesiástica

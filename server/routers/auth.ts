@@ -68,7 +68,7 @@ export const authRouter = router({
     .input(
       z.object({
         username: safeText(100),
-        password: z.string().min(8).max(200),
+        password: z.string().min(6).max(200),
         name: safeText(255),
         email: safeEmail(),
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]),
@@ -111,7 +111,7 @@ export const authRouter = router({
         churchRole: z.enum(["lider", "oficial", "louvor", "financeiro", "financeira", "membro"]).optional(),
         role: z.enum(["user", "admin"]).optional(),
         isActive: z.boolean().optional(),
-        password: z.string().min(8).max(200).optional(),
+        password: z.string().min(6).max(200).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
