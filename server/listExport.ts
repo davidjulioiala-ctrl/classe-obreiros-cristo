@@ -214,3 +214,62 @@ export async function generateReportsPdf(reports: ExportReport[], columns: Repor
   drawPdfTable(document, branding, "Lista de relatórios e atas", tableColumns, sortById(reports).map((report) => columns.map((column) => reportValue(report, column))), { landscape, emptyLabel: "Ainda não existem relatórios." });
   return finishPdf(document, chunks, branding);
 }
+
+
+type ErrorLogExportRow = {
+  id: number;
+  incidentCode: string;
+  category: string;
+  severity: string;
+  status: string;
+  title: string;
+  description: string;
+  source: string | null;
+  detectedAt: Date | string;
+};
+
+const errorLogLabels = ["ID", "Referência", "Categoria", "Gravidade", "Estado", "Título", "Descrição", "Origem", "Detectado em"];
+const errorLogPdfWeights = [0.45, 1.25, 1.15, 0.8, 1.0, 1.7, 3.2, 1.35, 1.35];
+
+function redactErrorText(value: unknown, maxLength = 2000) {
+  return String(value ?? "")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email oculto]")
+    .replace(/\bBearer\s+[A-Za-z0-9._-]+/gi, "Bearer [token oculto]")
+    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, "[token oculto]")
+    .slice(0, maxLength);
+}
+
+function errorLogValues(row: ErrorLogExportRow): unknown[] {
+  return [
+    row.id,
+    row.incidentCode,
+    redactErrorText(row.category, 100),
+    row.severity,
+    row.status,
+    redactErrorText(row.title, 255),
+    redactErrorText(row.description),
+    redactErrorText(row.source, 255),
+    displayDateTime(row.detectedAt),
+  ];
+}
+
+export function generateErrorLogsCsv(rows: ErrorLogExportRow[]) {
+  return generateCsv(errorLogLabels, [...rows].sort((a, b) => Number(a.id) - Number(b.id)).map(errorLogValues));
+}
+
+export function generateErrorLogsExcel(rows: ErrorLogExportRow[]) {
+  const data = [errorLogLabels, ...[...rows].sort((a, b) => Number(a.id) - Number(b.id)).map(errorLogValues)];
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+  applyWorksheetTableFormatting(worksheet, data, errorLogLabels.length, [8, 18, 18, 12, 18, 32, 60, 28, 22]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Logs de erro");
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
+export async function generateErrorLogsPdf(rows: ErrorLogExportRow[]) {
+  const landscape = true;
+  const { document, chunks, branding } = await createPdf("Logs de erro e incidentes", landscape);
+  const tableColumns: PdfTableColumn[] = errorLogLabels.map((title, index) => ({ title, weight: errorLogPdfWeights[index], align: index === 0 ? "center" : "left" }));
+  drawPdfTable(document, branding, "Logs de erro e incidentes", tableColumns, [...rows].sort((a, b) => Number(a.id) - Number(b.id)).map(errorLogValues), { landscape, emptyLabel: "Nenhum log de erro encontrado." });
+  return finishPdf(document, chunks, branding);
+}

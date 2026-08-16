@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { getAllMembers, getMemberParticipationHighlights, listReports } from "./db";
 import { filterMembers } from "@shared/memberSearch";
-import { sanitizeMemberExportColumns, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf } from "./listExport";
+import { sanitizeMemberExportColumns, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf, generateErrorLogsCsv, generateErrorLogsExcel, generateErrorLogsPdf } from "./listExport";
 import { notifySecurityEvent } from "./_core/securityAlerts";
 import { MEMBER_EXPORT_COLUMN_KEYS, REPORT_EXPORT_COLUMN_KEYS, type MemberExportColumn, type ReportExportColumn } from "../shared/exportColumns";
 
@@ -47,6 +47,13 @@ function canExportReports(user: { role: string; churchRole: string } | null) {
   const role = user.role.toLowerCase();
   const churchRole = user.churchRole.toLowerCase();
   return role === "admin" || churchRole.includes("líder") || churchRole.includes("lider") || churchRole.includes("financeiro");
+}
+
+function canExportErrorLogs(user: { role: string; churchRole: string } | null) {
+  if (!user) return false;
+  const role = user.role.toLowerCase();
+  const churchRole = user.churchRole.toLowerCase();
+  return role === "admin" || churchRole.includes("líder") || churchRole.includes("lider");
 }
 
 export function registerListExportRoutes(app: Express) {
@@ -151,6 +158,57 @@ export function registerListExportRoutes(app: Express) {
     } catch (error) {
       console.error("[ReportsExport]", error);
       return res.status(500).json({ error: "Não foi possível exportar os relatórios." });
+    }
+  });
+
+  app.get("/api/security-logs/export/:format", async (req: Request, res: Response) => {
+    try {
+      const user = await getLocalUserFromRequest(req);
+      if (!user) return res.status(401).json({ error: "Não autenticado" });
+      if (!canExportErrorLogs(user)) return res.status(403).json({ error: "Sem permissão para exportar logs de erro." });
+      const format = req.params.format;
+      if (format !== "pdf" && format !== "csv" && format !== "xlsx") return res.status(400).json({ error: "Formato inválido" });
+      const severity = safeSearch(req.query.severity);
+      const status = safeSearch(req.query.status);
+      const startDate = parseDateBoundary(req.query.startDate);
+      const endDate = parseDateBoundary(req.query.endDate, true);
+      if (startDate === null || endDate === null) return res.status(400).json({ error: "O intervalo de datas contém uma data inválida." });
+      if (startDate && endDate && startDate > endDate) return res.status(400).json({ error: "A data final não pode ser anterior à data inicial." });
+      if (severity && !["low", "medium", "high", "critical"].includes(severity)) return res.status(400).json({ error: "A gravidade indicada é inválida." });
+      if (status && !["open", "investigating", "contained", "resolved"].includes(status)) return res.status(400).json({ error: "O estado indicado é inválido." });
+
+      const { listSecurityIncidents } = await import("./db");
+      const incidents = await listSecurityIncidents(500);
+      const rows = incidents.filter((incident) => {
+        const detectedAt = new Date(incident.detectedAt).getTime();
+        return (!severity || incident.severity === severity)
+          && (!status || incident.status === status)
+          && (!startDate || detectedAt >= startDate.getTime())
+          && (!endDate || detectedAt <= endDate.getTime());
+      });
+      const suffix = rows.length ? `-${rows.length}-registos` : "-vazio";
+      if (format === "pdf") {
+        const buffer = await generateErrorLogsPdf(rows);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="logs-erros${suffix}.pdf"`);
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de logs de erro concluída", actorId: user.id, resource: "security_logs:pdf", metadata: { count: rows.length, severity: severity || undefined, status: status || undefined } });
+        return res.send(buffer);
+      }
+      if (format === "xlsx") {
+        const workbook = generateErrorLogsExcel(rows);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="logs-erros${suffix}.xlsx"`);
+        void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de logs de erro concluída", actorId: user.id, resource: "security_logs:xlsx", metadata: { count: rows.length, severity: severity || undefined, status: status || undefined } });
+        return res.send(workbook);
+      }
+      const csv = generateErrorLogsCsv(rows);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="logs-erros${suffix}.csv"`);
+      void notifySecurityEvent({ kind: "sensitive_export", title: "Exportação de logs de erro concluída", actorId: user.id, resource: "security_logs:csv", metadata: { count: rows.length, severity: severity || undefined, status: status || undefined } });
+      return res.send(csv);
+    } catch (error) {
+      console.error("[SecurityLogsExport]", error);
+      return res.status(500).json({ error: "Não foi possível exportar os logs de erro." });
     }
   });
 }

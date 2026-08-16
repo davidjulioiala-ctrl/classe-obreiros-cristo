@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { generateCsv, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf } from "./listExport";
+import { generateCsv, generateMembersCsv, generateMembersExcel, generateMembersPdf, generateReportsCsv, generateReportsExcel, generateReportsPdf, generateErrorLogsCsv, generateErrorLogsExcel, generateErrorLogsPdf } from "./listExport";
 
 describe("list exports", () => {
   it("generates UTF-8 CSV with semicolon delimiters and escaped values", () => {
@@ -114,6 +114,26 @@ describe("list exports", () => {
     const workbook = XLSX.read(generateMembersExcel(members, ["id", "name"]), { type: "buffer" });
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets.Membros, { header: 1, raw: false }) as unknown[][];
     expect(rows.slice(1)).toEqual([["1", "Ana"], ["2", "Bruno"], ["3", "Carlos"]]);
+  });
+
+  it("exports error logs with safe redaction in CSV and Excel", () => {
+    const rows = [{ id: 2, incidentCode: "ERR-2", category: "login", severity: "high", status: "open", title: "Falha para ana@example.org", description: "Bearer secret-token e eyJabc1234567890.def1234567890.ghi1234567890", source: "browser", detectedAt: "2026-08-16T10:00:00.000Z" }, { id: 1, incidentCode: "ERR-1", category: "dom", severity: "critical", status: "resolved", title: "Erro DOM", description: "NotFoundError", source: null, detectedAt: "2026-08-15T10:00:00.000Z" }];
+    const csv = generateErrorLogsCsv(rows);
+    expect(csv).toContain("ID;Referência;Categoria;Gravidade;Estado");
+    expect(csv).toContain("1;ERR-1;dom;critical;resolved");
+    expect(csv).toContain("[email oculto]");
+    expect(csv).not.toContain("secret-token");
+    const workbook = XLSX.read(generateErrorLogsExcel(rows), { type: "buffer" });
+    const sheetRows = XLSX.utils.sheet_to_json(workbook.Sheets["Logs de erro"], { header: 1, raw: false }) as unknown[][];
+    expect(sheetRows[0]).toEqual(["ID", "Referência", "Categoria", "Gravidade", "Estado", "Título", "Descrição", "Origem", "Detectado em"]);
+    expect(sheetRows[1]?.[0]).toBe("1");
+  });
+
+  it("generates a landscape PDF for error logs", async () => {
+    const pdf = await generateErrorLogsPdf([{ id: 1, incidentCode: "ERR-1", category: "dom", severity: "critical", status: "open", title: "Erro", description: "NotFoundError", source: "browser", detectedAt: "2026-08-16T10:00:00.000Z" }]);
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(pdf.toString("latin1")).toContain("841.89");
+    expect(pdf.length).toBeGreaterThan(1000);
   });
 
   it("generates A4 landscape table PDFs for both lists", async () => {

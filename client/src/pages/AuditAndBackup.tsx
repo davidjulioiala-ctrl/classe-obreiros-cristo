@@ -34,6 +34,11 @@ export default function AuditAndBackup() {
   const [maintenanceReason, setMaintenanceReason] = useState("");
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceEstimatedCompletion, setMaintenanceEstimatedCompletion] = useState("");
+  const [errorLogSeverity, setErrorLogSeverity] = useState<"" | "low" | "medium" | "high" | "critical">("");
+  const [errorLogStatus, setErrorLogStatus] = useState<"" | "open" | "investigating" | "contained" | "resolved">("");
+  const [errorLogStartDate, setErrorLogStartDate] = useState("");
+  const [errorLogEndDate, setErrorLogEndDate] = useState("");
+  const [errorLogExporting, setErrorLogExporting] = useState<"csv" | "pdf" | null>(null);
 
   const utils = trpc.useUtils();
   const auditQuery = trpc.audit.list.useQuery({ limit: 250 });
@@ -136,6 +141,32 @@ export default function AuditAndBackup() {
       window.setTimeout(() => { window.location.href = "/login"; }, 700);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível revogar as sessões.");
+    }
+  };
+
+  const handleErrorLogExport = async (format: "csv" | "pdf") => {
+    if (errorLogStartDate && errorLogEndDate && errorLogStartDate > errorLogEndDate) {
+      toast.error("A data final não pode ser anterior à data inicial.");
+      return;
+    }
+    try {
+      setErrorLogExporting(format);
+      const params = new URLSearchParams();
+      if (errorLogSeverity) params.set("severity", errorLogSeverity);
+      if (errorLogStatus) params.set("status", errorLogStatus);
+      if (errorLogStartDate) params.set("startDate", errorLogStartDate);
+      if (errorLogEndDate) params.set("endDate", errorLogEndDate);
+      const anchor = document.createElement("a");
+      anchor.href = `/api/security-logs/export/${format}?${params.toString()}`;
+      anchor.download = `logs-erros.${format}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      toast.success(`Exportação ${format.toUpperCase()} dos logs de erro iniciada.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar os logs de erro.");
+    } finally {
+      setErrorLogExporting(null);
     }
   };
 
@@ -286,8 +317,8 @@ export default function AuditAndBackup() {
           </Card>
 
         <Card className="border-0 shadow-sm dark:bg-slate-800">
-          <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Linha do tempo de incidentes</CardTitle></CardHeader>
-          <CardContent>{incidentQuery.isLoading ? <p className="text-sm text-slate-500">A carregar incidentes…</p> : incidents.length === 0 ? <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500 dark:bg-slate-900">Nenhum incidente registado.</p> : <div className="space-y-3">{incidents.map((incident) => <div key={incident.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-semibold text-slate-900 dark:text-white">#{incident.id} · {incident.title}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{incident.category} · Gravidade {incident.severity} · {new Date(incident.createdAt).toLocaleString("pt-PT")}</p><p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{incident.description}</p>{incident.attachmentUrl && <a className="mt-3 inline-flex items-center text-sm font-medium text-emerald-700 underline underline-offset-4 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-100" href={incident.attachmentUrl} target="_blank" rel="noreferrer">Ver captura anexada{incident.attachmentMimeType ? ` (${incident.attachmentMimeType})` : ""}</a>}</div><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={incident.status} onChange={(event) => void handleIncidentStatus(incident.id, event.target.value as "open" | "investigating" | "contained" | "resolved")}><option value="open">Aberto</option><option value="investigating">Em investigação</option><option value="contained">Contido</option><option value="resolved">Resolvido</option></select></div></div>)}</div>}</CardContent>
+          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Linha do tempo de incidentes</CardTitle><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={errorLogExporting !== null} onClick={() => void handleErrorLogExport("csv")}>{errorLogExporting === "csv" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}CSV</Button><Button type="button" size="sm" variant="outline" disabled={errorLogExporting !== null} onClick={() => void handleErrorLogExport("pdf")}>{errorLogExporting === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}PDF</Button></div></div></CardHeader>
+          <CardContent><div className="mb-4 grid gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-4"><select aria-label="Filtrar logs por gravidade" className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={errorLogSeverity} onChange={(event) => setErrorLogSeverity(event.target.value as typeof errorLogSeverity)}><option value="">Todas as gravidades</option><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option><option value="critical">Crítica</option></select><select aria-label="Filtrar logs por estado" className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={errorLogStatus} onChange={(event) => setErrorLogStatus(event.target.value as typeof errorLogStatus)}><option value="">Todos os estados</option><option value="open">Aberto</option><option value="investigating">Em investigação</option><option value="contained">Contido</option><option value="resolved">Resolvido</option></select><Input aria-label="Data inicial dos logs" type="date" value={errorLogStartDate} onChange={(event) => setErrorLogStartDate(event.target.value)} /><Input aria-label="Data final dos logs" type="date" value={errorLogEndDate} onChange={(event) => setErrorLogEndDate(event.target.value)} /></div>{incidentQuery.isLoading ? <p className="text-sm text-slate-500">A carregar incidentes…</p> : incidents.length === 0 ? <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500 dark:bg-slate-900">Nenhum incidente registado.</p> : <div className="space-y-3">{incidents.map((incident) => <div key={incident.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-semibold text-slate-900 dark:text-white">#{incident.id} · {incident.title}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{incident.category} · Gravidade {incident.severity} · {new Date(incident.createdAt).toLocaleString("pt-PT")}</p><p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{incident.description}</p>{incident.attachmentUrl && <a className="mt-3 inline-flex items-center text-sm font-medium text-emerald-700 underline underline-offset-4 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-100" href={incident.attachmentUrl} target="_blank" rel="noreferrer">Ver captura anexada{incident.attachmentMimeType ? ` (${incident.attachmentMimeType})` : ""}</a>}</div><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={incident.status} onChange={(event) => void handleIncidentStatus(incident.id, event.target.value as "open" | "investigating" | "contained" | "resolved")}><option value="open">Aberto</option><option value="investigating">Em investigação</option><option value="contained">Contido</option><option value="resolved">Resolvido</option></select></div></div>)}</div>}</CardContent>
         </Card>
           <Card className="border-0 shadow-sm dark:bg-slate-800">
             <CardHeader><CardTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5 text-emerald-600" /> Criar backup</CardTitle></CardHeader>

@@ -37,6 +37,15 @@ describe("revogação global de sessões", () => {
     expect(auditSource).toContain("aria-label=\"Seleccionar todos os registos apresentados\"");
   });
 
+  it("mostra exportação CSV/PDF e filtros de logs de erro", () => {
+    expect(auditSource).toContain('handleErrorLogExport("csv")');
+    expect(auditSource).toContain('handleErrorLogExport("pdf")');
+    expect(auditSource).toContain('aria-label="Filtrar logs por gravidade"');
+    expect(auditSource).toContain('aria-label="Filtrar logs por estado"');
+    expect(auditSource).toContain('aria-label="Data inicial dos logs"');
+    expect(auditSource).toContain('aria-label="Data final dos logs"');
+  });
+
   it("protege a eliminação em lote com validação, confirmação e invalidação", () => {
     expect(auditSource).toContain("const validIds = ids.filter((id) => logs.some((log) => log.id === id));");
     expect(auditSource).toContain("window.confirm(`Eliminar ${validIds.length} registos de auditoria?`)");

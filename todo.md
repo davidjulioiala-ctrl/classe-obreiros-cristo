@@ -7388,3 +7388,4 @@
 - [x] Corrigir falha no preenchimento de formulários de criação de utilizadores
 - [x] Corrigir fluxo completo de configuração e imposição global do 2FA
 - [x] Separar logs de erros de auditoria de acesso e sincronizar com o ambiente Manus
+- [x] Adicionar funcionalidade para exportar logs de erro em CSV ou PDF com filtros e redação segura de dados sensíveis
