@@ -126,12 +126,30 @@ export default function Members() {
     },
   });
 
+  const positionOptions = useMemo(() => {
+    const positions = new Set((members ?? []).map((member) => member.position).filter((position): position is string => Boolean(position?.trim())));
+    return Array.from(positions).sort((a, b) => a.localeCompare(b, "pt-PT"));
+  }, [members]);
+
+  const filteredMembers = useMemo(() => filterMembers(members ?? [], {
+    query: searchQuery,
+    position: positionFilter,
+    sex: sexFilter,
+    status: statusFilter,
+    guest: guestFilter,
+    groupId: groupFilter,
+  }), [members, searchQuery, positionFilter, sexFilter, statusFilter, guestFilter, groupFilter]);
+
+  const allVisibleSelected = Boolean(filteredMembers && filteredMembers.length > 0 && filteredMembers.every(m => selectedMemberIds.includes(m.id)));
+
   const toggleSelectAll = () => {
-    if (!filteredMembers) return;
-    if (selectedMemberIds.length === filteredMembers.length) {
-      setSelectedMemberIds([]);
+    if (!filteredMembers || filteredMembers.length === 0) return;
+    if (allVisibleSelected) {
+      const visibleIds = new Set(filteredMembers.map(m => m.id));
+      setSelectedMemberIds(prev => prev.filter(id => !visibleIds.has(id)));
     } else {
-      setSelectedMemberIds(filteredMembers.map(m => m.id));
+      const visibleIds = filteredMembers.map(m => m.id);
+      setSelectedMemberIds(prev => Array.from(new Set([...prev, ...visibleIds])));
     }
   };
 
@@ -155,20 +173,6 @@ export default function Members() {
     },
     onError: (error) => toast.error(`Erro ao eliminar membro: ${error.message}`),
   });
-
-  const positionOptions = useMemo(() => {
-    const positions = new Set((members ?? []).map((member) => member.position).filter((position): position is string => Boolean(position?.trim())));
-    return Array.from(positions).sort((a, b) => a.localeCompare(b, "pt-PT"));
-  }, [members]);
-
-  const filteredMembers = useMemo(() => filterMembers(members ?? [], {
-    query: searchQuery,
-    position: positionFilter,
-    sex: sexFilter,
-    status: statusFilter,
-    guest: guestFilter,
-    groupId: groupFilter,
-  }), [members, searchQuery, positionFilter, sexFilter, statusFilter, guestFilter, groupFilter]);
 
   const hasActiveFilters = Boolean(searchQuery.trim()) || positionFilter !== "all" || sexFilter !== "all" || statusFilter !== "all" || guestFilter !== "all" || groupFilter !== "all";
 
