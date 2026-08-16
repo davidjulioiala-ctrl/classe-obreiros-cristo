@@ -302,8 +302,42 @@ export default function UserManagement() {
             <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
             <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} placeholder="Nome completo" /></div>
             <div><label className="mb-1 block text-sm font-medium">Email</label><Input type="email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} placeholder="email@exemplo.com" /></div>
-            <div><label className="mb-1 block text-sm font-medium">Função eclesiástica</label><Select value={formData.churchRole} onValueChange={(value) => { if (isChurchRole(value)) setFormData((current) => ({ ...current, churchRole: value })); }}><SelectTrigger aria-label="Função eclesiástica"><SelectValue placeholder="Selecione a função eclesiástica" /></SelectTrigger><SelectContent>{churchRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}</SelectContent></Select></div>
-            <div><label className="mb-1 block text-sm font-medium">Papel no sistema</label><Select value={formData.role} onValueChange={(value) => { if (isSystemRole(value)) setFormData((current) => ({ ...current, role: value })); }}><SelectTrigger aria-label="Papel no sistema"><SelectValue placeholder="Seleccione o papel no sistema" /></SelectTrigger><SelectContent><SelectItem value="user">Utilizador</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select><p className="mt-1 text-xs text-slate-500">Pode promover para administrador ou rebaixar para utilizador, respeitando a protecção da última conta administrativa.</p></div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Função eclesiástica</label>
+              <select
+                value={formData.churchRole}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  if (isChurchRole(val)) {
+                    setFormData((current) => ({ ...current, churchRole: val }));
+                  }
+                }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {churchRoles.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Papel no sistema</label>
+              <select
+                value={formData.role}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  if (isSystemRole(val)) {
+                    setFormData((current) => ({ ...current, role: val }));
+                  }
+                }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="user">Utilizador</option>
+                <option value="admin">Administrador</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500">Pode promover para administrador ou rebaixar para utilizador, respeitando a protecção da última conta administrativa.</p>
+            </div>
             <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} /> Utilizador ativo</label>
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={closeDialog}><X className="mr-2 h-4 w-4" /> Cancelar</Button><Button type="button" disabled={saving} onClick={saveUser} className="bg-emerald-600 text-white hover:bg-emerald-700">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{editingUser ? "Guardar alterações" : "Criar utilizador"}</Button></div>
           </div>

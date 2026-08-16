@@ -7364,3 +7364,4 @@
 - [x] Corrigir quebra no formulário de utilizadores ao selecionar papel e função eclesiástica
 - [x] Implementar exportação CSV para a lista de utilizadores e membros
 - [x] Adicionar filtros por intervalo de datas e função eclesiástica nas exportações CSV de membros e utilizadores
+- [x] Corrigir erro crítico no formulário de criação de utilizadores e seletores de função eclesiástica e papel
