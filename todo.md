@@ -7363,3 +7363,4 @@
 - [x] Reiniciar contadores de ID e validar estado limpo.
 - [x] Corrigir quebra no formulário de utilizadores ao selecionar papel e função eclesiástica
 - [x] Implementar exportação CSV para a lista de utilizadores e membros
+- [x] Adicionar filtros por intervalo de datas e função eclesiástica nas exportações CSV de membros e utilizadores
