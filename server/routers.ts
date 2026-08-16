@@ -152,6 +152,33 @@ const membersRouter = router({
       return result;
     }),
 
+  bulkMoveGroup: oficialProcedure
+    .input(
+      z.object({
+        memberIds: z.array(positiveId).min(1),
+        targetGroupId: positiveId,
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const targetGroup = await db.getGroupById(input.targetGroupId);
+      if (!targetGroup) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Grupo de destino não encontrado." });
+      }
+
+      for (const id of input.memberIds) {
+        await db.updateMember(id, { groupId: input.targetGroupId });
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: "mover_grupo_massa",
+          entityType: "member",
+          entityId: id,
+          details: JSON.stringify({ targetGroupId: input.targetGroupId, groupName: targetGroup.name }),
+        });
+      }
+
+      return { success: true, count: input.memberIds.length, targetGroupName: targetGroup.name };
+    }),
+
   update: oficialProcedure
     .input(
       z.object({

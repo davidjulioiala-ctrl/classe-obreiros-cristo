@@ -108,6 +108,36 @@ export default function Members() {
     },
     onError: (error) => toast.error(`Erro ao criar membro: ${error.message}`),
   });
+
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [bulkTargetGroupId, setBulkTargetGroupId] = useState<number | ''>('');
+  const [bulkMoveModalOpen, setBulkMoveModalOpen] = useState(false);
+
+  const bulkMoveMutation = trpc.members.bulkMoveGroup.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} membro(s) movido(s) com sucesso para o grupo ${data.targetGroupName}!`);
+      setSelectedMemberIds([]);
+      setBulkTargetGroupId('');
+      setBulkMoveModalOpen(false);
+      void refetch();
+    },
+    onError: (err) => {
+      toast.error(`Erro ao mover membros: ${err.message}`);
+    },
+  });
+
+  const toggleSelectAll = () => {
+    if (!filteredMembers) return;
+    if (selectedMemberIds.length === filteredMembers.length) {
+      setSelectedMemberIds([]);
+    } else {
+      setSelectedMemberIds(filteredMembers.map(m => m.id));
+    }
+  };
+
+  const toggleSelectMember = (id: number) => {
+    setSelectedMemberIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
   const updateMemberMutation = trpc.members.update.useMutation({
     onSuccess: () => {
       toast.success("Membro atualizado com sucesso!");
@@ -567,10 +597,52 @@ export default function Members() {
 
         <ExportColumnDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} title={`Exportar membros em ${pendingExportFormat.toUpperCase()}`} description="Escolha as colunas que pretende incluir no ficheiro. A pesquisa actual será mantida." columns={MEMBER_EXPORT_COLUMNS} selected={selectedExportColumns} askPersonalData defaultIncludePersonalData={false} onConfirm={(columns, includePersonalData) => { setSelectedExportColumns(columns); void exportMembers(columns, includePersonalData); }} confirmLabel={`Exportar ${pendingExportFormat.toUpperCase()}`} isSubmitting={exportingFormat !== null} />
 
+        {/* Barra de Ação em Massa */}
+        <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <input type="checkbox" aria-label="Selecionar todos os membros visíveis" checked={filteredMembers && filteredMembers.length > 0 && selectedMemberIds.length === filteredMembers.length} onChange={toggleSelectAll} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {selectedMemberIds.length > 0 ? `${selectedMemberIds.length} membro(s) selecionado(s)` : "Selecionar todos os visíveis"}
+            </span>
+          </div>
+          {selectedMemberIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <select aria-label="Grupo de destino para mover membros selecionados" value={bulkTargetGroupId} onChange={(e) => setBulkTargetGroupId(e.target.value ? Number(e.target.value) : '')} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                <option value="">Selecionar grupo de destino…</option>
+                {(groups ?? []).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <Button type="button" size="sm" disabled={!bulkTargetGroupId || bulkMoveMutation.isPending} onClick={() => setBulkMoveModalOpen(true)} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                Mover selecionados
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setSelectedMemberIds([])}>
+                Cancelar seleção
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Confirmação de Ação em Massa */}
+        {bulkMoveModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-800">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Confirmar transferência em massa</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Tem a certeza de que pretende mover <strong className="text-emerald-600">{selectedMemberIds.length}</strong> membro(s) selecionado(s) para o grupo <strong className="text-emerald-600">{(groups ?? []).find(g => g.id === bulkTargetGroupId)?.name}</strong>?
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setBulkMoveModalOpen(false)}>Cancelar</Button>
+                <Button type="button" disabled={bulkMoveMutation.isPending} onClick={() => bulkMoveMutation.mutate({ memberIds: selectedMemberIds, targetGroupId: Number(bulkTargetGroupId) })} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                  {bulkMoveMutation.isPending ? "A mover…" : "Confirmar e Mover"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (
             <motion.div key={member.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
-              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><RecordIdBadge id={member.id} /><h3 className="font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Idade: {calculateAge(member.birthDate) === null ? "—" : `${calculateAge(member.birthDate)} anos`} · Grupo: {(groups ?? []).find((g) => g.id === member.groupId)?.name || "Geral"}</p>
+              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="flex items-center pt-1"><input type="checkbox" aria-label={`Selecionar ${member.name}`} checked={selectedMemberIds.includes(member.id)} onChange={() => toggleSelectMember(member.id)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><RecordIdBadge id={member.id} /><h3 className="font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Idade: {calculateAge(member.birthDate) === null ? "—" : `${calculateAge(member.birthDate)} anos`} · Grupo: {(groups ?? []).find((g) => g.id === member.groupId)?.name || "Geral"}</p>
 <p className="text-xs text-slate-500 dark:text-slate-400">Estado: {member.isActive ? "Ativo" : "Inativo"}</p>{(member.phoneOrange || member.phoneTelecel) && <p className="mt-1 text-xs text-slate-500">{member.phoneOrange || member.phoneTelecel}</p>}
 <div className="mt-2">
   <MemberAttendanceBadge memberId={member.id} />
