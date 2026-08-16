@@ -96,6 +96,7 @@ export default function Members() {
   const [importCompleted, setImportCompleted] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importPhase, setImportPhase] = useState<"idle" | "reading" | "validating" | "ready" | "uploading" | "completed">("idle");
+  const [importStep, setImportStep] = useState<"select" | "preview">("select");
   const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
   const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -198,6 +199,17 @@ export default function Members() {
     setImportCompleted(false);
     setImportProgress(0);
     setImportPhase("idle");
+    setImportStep("select");
+  };
+
+  const chooseAnotherImportFile = () => {
+    setImportFileName("");
+    setImportRows([]);
+    setImportInvalidRows([]);
+    setImportCompleted(false);
+    setImportProgress(0);
+    setImportPhase("idle");
+    setImportStep("select");
   };
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -206,6 +218,7 @@ export default function Members() {
     if (!file) return;
     setImportLoading(true);
     setImportCompleted(false);
+    setImportStep("select");
     setImportProgress(12);
     setImportPhase("reading");
     setImportFileName(file.name);
@@ -217,6 +230,7 @@ export default function Members() {
       const result = await parseMemberImportFile(file, (groups ?? []).map((group) => ({ id: group.id, name: group.name })), (members ?? []).map((member) => ({ id: member.id, name: member.name, email: member.email })));
       setImportProgress(100);
       setImportPhase("ready");
+      setImportStep("preview");
       setImportRows(result.validRows);
       setImportInvalidRows(result.invalidRows);
       if (result.invalidRows.length > 0) toast.warning(`${result.invalidRows.length} linha(s) têm problemas e não serão importadas.`);
@@ -227,6 +241,7 @@ export default function Members() {
       setImportCompleted(false);
       setImportProgress(0);
       setImportPhase("idle");
+      setImportStep("select");
       setImportFileName("");
       toast.error(error instanceof Error ? error.message : "Não foi possível ler o ficheiro.");
     } finally {
@@ -729,7 +744,7 @@ export default function Members() {
                 <Button type="button" size="icon" variant="ghost" aria-label="Fechar importação" onClick={resetImportDialog}><X className="h-5 w-5" /></Button>
               </div>
 
-              <div className="mt-5 grid gap-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/20 sm:grid-cols-[1fr_auto] sm:items-center">
+              {importStep === "select" && <div className="mt-5 grid gap-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/20 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">Selecione o ficheiro de membros</p>
                   <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Formatos aceites: CSV, XLSX e XLS. Limite: 500 linhas e 5 MB.</p>
@@ -742,11 +757,13 @@ export default function Members() {
                   </label>
                   <Button type="button" variant="outline" onClick={downloadImportTemplate}><FileDown className="mr-2 h-4 w-4" /> Modelo Excel</Button>
                 </div>
-              </div>
+              </div>}
 
-              {!importLoading && importFileName && <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">Ficheiro selecionado: <strong>{importFileName}</strong></p>}
+              {!importLoading && importFileName && importStep === "preview" && <div className="mt-4 flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900/60 dark:bg-sky-950/20 sm:flex-row sm:items-center sm:justify-between" role="region" aria-labelledby="member-import-preview-title"><div><h3 id="member-import-preview-title" className="font-semibold text-sky-950 dark:text-sky-100">Pré-visualização antes da confirmação</h3><p className="mt-1 text-sm text-sky-800 dark:text-sky-200">{importFileName} · reveja o resumo e confirme apenas quando os dados estiverem corretos.</p></div><Button type="button" size="sm" variant="outline" onClick={chooseAnotherImportFile} disabled={bulkImportMutation.isPending}><Upload className="mr-2 h-4 w-4" /> Escolher outro ficheiro</Button></div>}
 
               {(importLoading || bulkImportMutation.isPending) && <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20" role="status" aria-live="polite"><div className="flex items-center justify-between gap-3 text-sm"><div className="flex items-center gap-2 font-medium text-emerald-900 dark:text-emerald-200"><span className="inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" aria-hidden="true" />{importPhase === "reading" ? "A ler o ficheiro…" : importPhase === "validating" ? "A validar linhas e duplicados…" : "A enviar membros para o sistema…"}</div><span className="font-semibold tabular-nums text-emerald-800 dark:text-emerald-300">{importProgress}%</span></div><div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950/60" role="progressbar" aria-label="Progresso da importação" aria-valuemin={0} aria-valuemax={100} aria-valuenow={importProgress}><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 ease-out motion-safe:animate-pulse" style={{ width: `${importProgress}%` }} /></div><p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">Pode continuar nesta janela; não feche o modal enquanto o processamento estiver em curso.</p></div>}
+
+              {importStep === "preview" && !importLoading && <div className="mb-2 mt-5 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Resumo da validação</p><p className="text-sm text-slate-600 dark:text-slate-300">As linhas válidas serão importadas; as inválidas serão ignoradas e podem ser descarregadas no relatório.</p></div><span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200 sm:inline-flex">Confirmação manual necessária</span></div>}
 
                                 {(importRows.length > 0 || importInvalidRows.length > 0 || importCompleted) && (
 
@@ -767,7 +784,7 @@ export default function Members() {
 
               <div className="mt-6 flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-700 sm:flex-row">
                 <Button type="button" variant="outline" onClick={resetImportDialog} disabled={bulkImportMutation.isPending}>Cancelar</Button>
-                {importRows.length > 0 && <Button type="button" onClick={confirmImport} disabled={importLoading || bulkImportMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">{bulkImportMutation.isPending ? "A importar…" : `Confirmar importação (${importRows.length})`}</Button>}
+                {importRows.length > 0 && <Button type="button" onClick={confirmImport} disabled={importLoading || bulkImportMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">{bulkImportMutation.isPending ? "A importar…" : `Confirmar e importar ${importRows.length} linha(s) válida(s)`}</Button>}
               </div>
             </div>
           </div>

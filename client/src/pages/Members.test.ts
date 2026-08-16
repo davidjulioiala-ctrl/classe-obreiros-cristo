@@ -43,7 +43,7 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("trpc.members.bulkImport.useMutation");
     expect(membersSource).toContain("parseMemberImportFile");
     expect(membersSource).toContain("Importar membros em massa");
-    expect(membersSource).toContain("Confirmar importação");
+    expect(membersSource).toContain("Confirmar e importar");
     expect(membersSource).toContain("accept=\".csv,.xlsx,.xls");
     expect(membersSource).toContain("canImportMembers");
   });
@@ -62,6 +62,15 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("A validar linhas e duplicados…");
     expect(membersSource).toContain("A enviar membros para o sistema…");
     expect(membersSource).toContain("animate-spin");
+  });
+
+  it("separa a seleção do ficheiro do ecrã de pré-visualização e exige confirmação", () => {
+    expect(membersSource).toContain('const [importStep, setImportStep] = useState<"select" | "preview">("select")');
+    expect(membersSource).toContain("Pré-visualização antes da confirmação");
+    expect(membersSource).toContain("Resumo da validação");
+    expect(membersSource).toContain("Escolher outro ficheiro");
+    expect(membersSource).toContain("Confirmação manual necessária");
+    expect(membersSource).toContain("Confirmar e importar ${importRows.length} linha(s) válida(s)");
   });
 
   it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
