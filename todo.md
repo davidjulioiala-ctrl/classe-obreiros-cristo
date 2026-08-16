@@ -7362,3 +7362,4 @@
 - [x] Preservar os 5 grupos estruturais repondo os nomes: "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4" e "Convidados".
 - [x] Reiniciar contadores de ID e validar estado limpo.
 - [x] Corrigir quebra no formulário de utilizadores ao selecionar papel e função eclesiástica
+- [x] Implementar exportação CSV para a lista de utilizadores e membros

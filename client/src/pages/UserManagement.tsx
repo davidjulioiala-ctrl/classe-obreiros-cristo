@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Edit2, Eye, EyeOff, Loader2, Plus, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
+import { Edit2, Eye, EyeOff, FileText, Loader2, Plus, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,9 +212,25 @@ export default function UserManagement() {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gestão de utilizadores</h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Crie, edite, desative e remova acessos da plataforma.</p>
           </div>
-          <Button onClick={() => openDialog()} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Novo utilizador
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => {
+              const rows = filteredUsers.map((u) => [u.id, u.username, u.name || "", u.email || "", roleLabel(u.churchRole), u.role === "admin" ? "Administrador" : "Utilizador", u.isActive ? "Ativo" : "Inativo", u.twoFactorEnabled ? "Ativo" : "Pendente"]);
+              const csvContent = "\uFEFF" + [["ID", "Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "2FA"], ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\n");
+              const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `utilizadores-${new Date().toISOString().slice(0, 10)}.csv`;
+              link.click();
+              URL.revokeObjectURL(url);
+              toast.success(`Exportados ${filteredUsers.length} utilizadores.`);
+            }} className="w-full sm:w-auto">
+              <FileText className="mr-2 h-4 w-4" /> Exportar CSV
+            </Button>
+            <Button onClick={() => openDialog()} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" /> Novo utilizador
+            </Button>
+          </div>
         </div>
 
 
