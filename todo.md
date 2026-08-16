@@ -7384,3 +7384,6 @@
 - [x] Diagnosticar e corrigir falhas no cadastro de membros
 - [x] Diagnosticar e corrigir configuração, ativação e imposição obrigatória do 2FA para todos os utilizadores
 - [x] Adicionar filtro na tabela de gestão de utilizadores para identificar rapidamente quem ainda não ativou o 2FA
+- [x] Corrigir erro de renderização no menu Membros (ERR-MSV0XH38-KUS8RV)
+- [x] Corrigir falha no preenchimento de formulários de criação de utilizadores
+- [x] Corrigir fluxo completo de configuração e imposição global do 2FA

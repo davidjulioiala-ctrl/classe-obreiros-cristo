@@ -505,7 +505,7 @@ export default function Members() {
             const guestGroup = allGroups.find(g => g.criteria === "special:guest" || g.name.toLowerCase().includes("convidado"));
 
             const renderGroupCard = (group: { id: number; name: string; description?: string | null }) => {
-              const groupMembers = allMembers.filter(m => m.groupId === group.id);
+              const groupMembers = allMembers.filter(m => m?.groupId === group.id);
               const total = groupMembers.length;
               const males = groupMembers.filter(m => m.sex === "M").length;
               const females = groupMembers.filter(m => m.sex === "F").length;
@@ -542,7 +542,7 @@ export default function Members() {
             };
 
             const renderGuestCard = () => {
-              const guestMembers = allMembers.filter(m => m.isGuest || (guestGroup && m.groupId === guestGroup.id));
+              const guestMembers = allMembers.filter(m => Boolean(m?.isGuest) || (guestGroup && m?.groupId === guestGroup.id));
               const total = guestMembers.length;
               const males = guestMembers.filter(m => m.sex === "M").length;
               const females = guestMembers.filter(m => m.sex === "F").length;
