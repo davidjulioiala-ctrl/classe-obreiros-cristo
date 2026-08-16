@@ -12,7 +12,7 @@ import {
   UserCreationError,
   deleteUser,
 } from "../auth";
-import { createAuditLog, getUserAuditHistory } from "../db";
+import * as db from "../db";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure, positiveId, safeEmail, safeText } from "../_core/security";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -92,7 +92,7 @@ export const authRouter = router({
         if (!user) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Não foi possível criar o utilizador. Tente novamente." });
         }
-        await createAuditLog({ userId: ctx.user.id, action: "criar", entityType: "user", entityId: user.id, details: JSON.stringify({ username: user.username, churchRole: user.churchRole, role: user.role }) });
+        await db.createAuditLog({ userId: ctx.user.id, action: "criar", entityType: "user", entityId: user.id, details: JSON.stringify({ username: user.username, churchRole: user.churchRole, role: user.role }) });
         return { success: true, user: safeUser(user) };
       } catch (error) {
         if (error instanceof UserCreationError) {
@@ -139,7 +139,7 @@ export const authRouter = router({
         churchRole,
       });
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ ...rest, churchRole, ...(password ? { passwordAlterada: true } : {}) }) });
+      await db.createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ ...rest, churchRole, ...(password ? { passwordAlterada: true } : {}) }) });
       return { success: true, user: safeUser(user) };
     }),
 
@@ -154,7 +154,7 @@ export const authRouter = router({
   getUserAuditHistory: adminProcedure
     .input(z.object({ userId: positiveId }))
     .query(async ({ input }) => {
-      return await getUserAuditHistory(input.userId);
+      return await db.getUserAuditHistory(input.userId);
     }),
 
   getAllUsers: adminProcedure.query(async () => {
@@ -176,7 +176,7 @@ export const authRouter = router({
       }
       const success = await deleteUser(input.userId);
       if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "apagar", entityType: "user", entityId: input.userId });
+      await db.createAuditLog({ userId: ctx.user.id, action: "apagar", entityType: "user", entityId: input.userId });
       return { success: true } as const;
     }),
 
@@ -186,8 +186,27 @@ export const authRouter = router({
       const { disableTwoFactor } = await import("../auth");
       const success = await disableTwoFactor(input.userId);
       if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "reset_2fa", entityType: "user", entityId: input.userId });
+      await db.createAuditLog({ userId: ctx.user.id, action: "reset_2fa", entityType: "user", entityId: input.userId });
       return { success: true } as const;
+    }),
+
+  getTwoFactorPolicy: protectedProcedure.query(async () => {
+    const raw = await db.getAppSetting("global_two_factor_required");
+    try {
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { required: Boolean(parsed.required) };
+      }
+    } catch {}
+    return { required: false };
+  }),
+
+  setTwoFactorPolicy: adminProcedure
+    .input(z.object({ required: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      await db.setAppSetting("global_two_factor_required", JSON.stringify({ required: input.required }));
+      await db.createAuditLog({ userId: ctx.user.id, action: input.required ? "ativar_2fa_global" : "desativar_2fa_global", entityType: "setting", details: JSON.stringify({ required: input.required }) });
+      return { success: true, required: input.required };
     }),
 
   updateProfile: protectedProcedure
@@ -200,7 +219,7 @@ export const authRouter = router({
     .mutation(async ({ input, ctx }) => {
       const user = await updateUser(ctx.user.id, input);
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ selfUpdate: true, ...input }) });
+      await db.createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ selfUpdate: true, ...input }) });
       return { success: true, user: safeUser(user) };
     }),
 
@@ -221,7 +240,7 @@ export const authRouter = router({
       }
       const user = await updateUser(ctx.user.id, { password: input.newPassword });
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
-      await createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ passwordChanged: true }) });
+      await db.createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ passwordChanged: true }) });
       return { success: true } as const;
     }),
 });

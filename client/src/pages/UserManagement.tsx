@@ -110,6 +110,15 @@ export default function UserManagement() {
     onError: (error) => toast.error(error.message || "Não foi possível redefinir o 2FA."),
   });
 
+  const twoFactorPolicyQuery = trpc.auth.getTwoFactorPolicy.useQuery();
+  const setTwoFactorPolicy = trpc.auth.setTwoFactorPolicy.useMutation({
+    onSuccess: async (data) => {
+      await utils.auth.getTwoFactorPolicy.invalidate();
+      toast.success(data.required ? "2FA obrigatório ativado para todos os utilizadores." : "2FA obrigatório desativado.");
+    },
+    onError: (error) => toast.error(error.message || "Não foi possível atualizar a política de 2FA."),
+  });
+
   const [selectedAuditUserId, setSelectedAuditUserId] = useState<number | null>(null);
   const auditQuery = trpc.auth.getUserAuditHistory.useQuery(
     { userId: selectedAuditUserId ?? 0 },
@@ -231,6 +240,14 @@ export default function UserManagement() {
             <p className="mt-1 text-slate-600 dark:text-slate-400">Crie, edite, desative e remova acessos da plataforma.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant={twoFactorPolicyQuery.data?.required ? "default" : "outline"}
+              className={twoFactorPolicyQuery.data?.required ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}
+              disabled={setTwoFactorPolicy.isPending}
+              onClick={() => setTwoFactorPolicy.mutate({ required: !twoFactorPolicyQuery.data?.required })}
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" /> {twoFactorPolicyQuery.data?.required ? "2FA Obrigatório Ativo" : "Tornar 2FA Obrigatório"}
+            </Button>
             <Button variant="outline" onClick={() => {
               const rows = filteredUsers.map((u) => [u.id, u.username, u.name || "", u.email || "", roleLabel(u.churchRole), u.role === "admin" ? "Administrador" : "Utilizador", u.isActive ? "Ativo" : "Inativo", u.twoFactorEnabled ? "Ativo" : "Pendente"]);
               const csvContent = "\uFEFF" + [["ID", "Utilizador", "Nome", "Email", "Função", "Papel", "Estado", "2FA"], ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\n");
