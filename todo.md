@@ -7387,3 +7387,4 @@
 - [x] Corrigir erro de renderização no menu Membros (ERR-MSV0XH38-KUS8RV)
 - [x] Corrigir falha no preenchimento de formulários de criação de utilizadores
 - [x] Corrigir fluxo completo de configuração e imposição global do 2FA
+- [x] Separar logs de erros de auditoria de acesso e sincronizar com o ambiente Manus
