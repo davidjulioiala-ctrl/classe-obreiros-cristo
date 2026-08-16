@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Edit2, Eye, EyeOff, FileText, Loader2, Plus, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
+import { Edit2, Eye, EyeOff, FileText, Loader2, Lock, Plus, Search, ShieldCheck, Trash2, Unlock, UsersRound, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -260,7 +260,17 @@ export default function UserManagement() {
                       <td className="px-4 py-4">{user.email || "—"}</td>
                       <td className="px-4 py-4"><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{roleLabel(user.churchRole)}</span></td>
                       <td className="px-4 py-4">{user.role === "admin" ? "Administrador" : "Utilizador"}</td>
-                      <td className="px-4 py-4">{user.isActive ? "Ativo" : "Inativo"}</td>
+                      <td className="px-4 py-4">
+                        {user.isActive ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
+                            Suspenso
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-4">
                         {user.twoFactorEnabled ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
@@ -275,10 +285,27 @@ export default function UserManagement() {
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-1.5">
                           <Button variant="outline" size="sm" onClick={() => openDialog(user)} aria-label={`Editar ${user.username}`}><Edit2 className="h-4 w-4" /></Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title={user.isActive ? "Suspender utilizador" : "Reativar utilizador"}
+                            onClick={() => {
+                              const actionName = user.isActive ? "suspender" : "reativar";
+                              if (confirm(`Tem certeza que deseja ${actionName} o utilizador ${user.username}?`)) {
+                                updateUser.mutate({
+                                  userId: user.id,
+                                  isActive: !user.isActive,
+                                });
+                              }
+                            }}
+                            className={user.isActive ? "text-amber-600 hover:text-amber-700" : "text-emerald-600 hover:text-emerald-700"}
+                          >
+                            {user.isActive ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
                           {user.twoFactorEnabled && (
                             <Button variant="outline" size="sm" title="Redefinir / Desativar 2FA" onClick={() => { if (confirm(`Tem certeza que deseja redefinir/desativar o 2FA para ${user.username}?`)) resetTwoFactor.mutate({ userId: user.id }); }} className="text-amber-600 hover:text-amber-700"><ShieldCheck className="h-4 w-4" /></Button>
                           )}
-                          <Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="sm" disabled={deleteUser.isPending} onClick={() => { if (confirm(`Eliminar definitivamente ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600" aria-label={`Eliminar ${user.username}`}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </td>
                     </tr>
