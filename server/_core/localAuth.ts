@@ -87,6 +87,8 @@ export function registerLocalAuthRoutes(app: Express) {
 
       if (!user.twoFactorEnabled) {
         if (globalTwoFactorRequired) {
+          // A sessão é temporária: o middleware só permite os endpoints de setup/confirm.
+          // Nenhuma rota protegida fica acessível enquanto o 2FA não estiver activo.
           setSessionCookie(req, res, user);
           return res.json({ success: true, twoFactorSetupRequired: true, message: "A administração exigiu a ativação obrigatória do 2FA para todos os utilizadores. Por favor, configure o seu 2FA." });
         }
@@ -98,6 +100,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const settings = await getTwoFactorSettings(user.id);
       if (!settings?.enabled || !settings.secret) {
         if (globalTwoFactorRequired) {
+          // Mantém o mesmo estado temporário do primeiro caso: apenas setup/confirm são permitidos.
           setSessionCookie(req, res, user);
           return res.json({ success: true, twoFactorSetupRequired: true, message: "A configuração 2FA desta conta está incompleta. Por favor, complete a configuração." });
         }

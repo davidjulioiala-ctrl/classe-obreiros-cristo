@@ -17,4 +17,13 @@ describe("login local", () => {
     expect(source).toContain('placeholder="Código 2FA ou recuperação"');
     expect(source).toContain("Voltar ao login");
   });
+
+  it("usa o mesmo contrato robusto para configurar o 2FA obrigatório", () => {
+    expect(source).toContain('fetch("/api/auth/2fa/setup"');
+    expect(source).toContain('fetch("/api/auth/2fa/confirm"');
+    expect(source).toContain("setupQrCode");
+    expect(source).toContain("normalizeTwoFactorCode");
+    expect(source).not.toContain("api.qrserver.com");
+    expect(source).toContain("data.twoFactorEnabled");
+  });
 });

@@ -7389,3 +7389,12 @@
 - [x] Corrigir fluxo completo de configuração e imposição global do 2FA
 - [x] Separar logs de erros de auditoria de acesso e sincronizar com o ambiente Manus
 - [x] Adicionar funcionalidade para exportar logs de erro em CSV ou PDF com filtros e redação segura de dados sensíveis
+- [x] Depurar e corrigir a falha no formulário de criação de utilizadores (frontend e backend)
+
+## Regressões críticas herdadas — estabilização final
+- [x] Corrigir crash do menu Membros quando grupos ou nomes chegam nulos/indefinidos e validar no mobile.
+- [x] Corrigir o formulário de criação/edição de utilizadores para manter `churchRole`, `role` e email alinhados com o contrato tRPC sem crash.
+- [x] Fazer o middleware de sessão bloquear rotas protegidas quando a política global exigir 2FA e a sessão ainda não o tiver concluído.
+- [x] Unificar o assistente de 2FA do login com o fluxo robusto de configuração existente.
+- [x] Criar testes de regressão para grupos nulos, contrato de utilizadores e enforcement global de 2FA.
+- [x] Executar typecheck, testes, build e verificação responsiva antes do checkpoint final.

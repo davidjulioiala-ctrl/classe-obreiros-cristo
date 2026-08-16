@@ -197,7 +197,7 @@ export async function updateUser(
 
     if (updates.username) updateData.username = updates.username.trim().toLowerCase();
     if (updates.name) updateData.name = updates.name;
-    if (updates.email) updateData.email = updates.email;
+    if (updates.email !== undefined) updateData.email = updates.email.trim().toLowerCase() || null;
     if (updates.churchRole) updateData.churchRole = updates.churchRole;
     if (updates.role) updateData.role = updates.role;
     if (updates.isActive !== undefined) {

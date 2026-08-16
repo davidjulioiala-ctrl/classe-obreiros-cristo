@@ -133,11 +133,16 @@ export const authRouter = router({
         if (admins.length <= 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Não pode remover o último administrador activo." });
       }
       const { userId, churchRole, password, ...rest } = input;
-      const user = await updateUser(userId, {
-        ...rest,
-        ...(password ? { password } : {}),
-        churchRole,
-      });
+      let user: any = null;
+      try {
+        user = await updateUser(userId, {
+          ...rest,
+          ...(password ? { password } : {}),
+          churchRole,
+        });
+      } catch (err: any) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: err?.message || "Erro ao atualizar utilizador." });
+      }
       if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Utilizador não encontrado." });
       await db.createAuditLog({ userId: ctx.user.id, action: "editar", entityType: "user", entityId: user.id, details: JSON.stringify({ ...rest, churchRole, ...(password ? { passwordAlterada: true } : {}) }) });
       return { success: true, user: safeUser(user) };

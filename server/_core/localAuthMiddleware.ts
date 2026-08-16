@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { parse } from "cookie";
 import { getUserById } from "../auth";
-import { getGlobalSessionRevokedAt } from "../db";
+import { getAppSetting, getGlobalSessionRevokedAt } from "../db";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { refreshLocalSessionToken, verifyLocalSessionToken } from "./localSession";
@@ -15,6 +15,28 @@ function getLocalSession(req: Request) {
 function refreshSessionCookie(req: Request, res: Response, session: ReturnType<typeof verifyLocalSessionToken>) {
   if (!session) return;
   res.cookie(COOKIE_NAME, refreshLocalSessionToken(session), getSessionCookieOptions(req));
+}
+
+function isTwoFactorSetupPath(req: Request) {
+  const path = (req as Request & { path?: string; originalUrl?: string }).path
+    ?? (req as Request & { originalUrl?: string }).originalUrl?.split("?")[0]
+    ?? "";
+  return path === "/api/auth/2fa/setup" || path === "/api/auth/2fa/confirm";
+}
+
+async function isGlobalTwoFactorRequired() {
+  const raw = await getAppSetting("global_two_factor_required");
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { required?: unknown };
+    return parsed.required === true;
+  } catch {
+    return false;
+  }
+}
+
+async function isTwoFactorBlocked(req: Request, user: { twoFactorEnabled?: unknown }) {
+  return !isTwoFactorSetupPath(req) && await isGlobalTwoFactorRequired() && user.twoFactorEnabled !== true;
 }
 
 export async function localAuthMiddleware(
@@ -39,6 +61,10 @@ export async function localAuthMiddleware(
     const user = await getUserById(session.userId);
     if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) {
       return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    if (await isTwoFactorBlocked(req, user)) {
+      return res.status(403).json({ code: "TWO_FACTOR_REQUIRED", error: "A autenticação de dois factores é obrigatória. Configure o 2FA para continuar." });
     }
 
     refreshSessionCookie(req, res, session);
@@ -70,6 +96,7 @@ export async function getLocalUserFromRequest(req: Request, res?: Response) {
   }
   const user = await getUserById(session.userId);
   if (!user || !user.isActive || (user.sessionVersion ?? 1) !== session.sessionVersion) return null;
+  if (await isTwoFactorBlocked(req, user)) return null;
   if (res) refreshSessionCookie(req, res, session);
   return user;
 }

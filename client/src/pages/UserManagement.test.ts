@@ -18,7 +18,7 @@ describe("edição de funções de utilizadores", () => {
   });
 
   it("permite editar a função sem exigir um email preenchido quando o registo já existe", () => {
-    expect(userManagementSource).toContain("if (!name || (!editingUser && (!safeUsername || !email)))");
+    expect(userManagementSource).toContain("if (!name || (!editingUser && !safeUsername))");
     expect(userManagementSource).toContain("...(email ? { email } : {})");
     expect(userManagementSource).toContain("Pode promover para administrador ou rebaixar para utilizador");
   });

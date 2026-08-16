@@ -4,9 +4,10 @@ import { getLocalUserFromRequest } from "./_core/localAuthMiddleware";
 import { createLocalSessionToken, verifyLocalSessionToken } from "./_core/localSession";
 import { COOKIE_NAME } from "../shared/const";
 
-const { getUserByIdMock, getGlobalSessionRevokedAtMock, authenticateUserMock } = vi.hoisted(() => ({
+const { getUserByIdMock, getGlobalSessionRevokedAtMock, getAppSettingMock, authenticateUserMock } = vi.hoisted(() => ({
   getUserByIdMock: vi.fn(),
   getGlobalSessionRevokedAtMock: vi.fn(),
+  getAppSettingMock: vi.fn(),
   authenticateUserMock: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ vi.mock("./auth", async () => {
 
 vi.mock("./db", () => ({
   getGlobalSessionRevokedAt: getGlobalSessionRevokedAtMock,
+  getAppSetting: getAppSettingMock,
 }));
 
 const adminFixture = {
@@ -39,6 +41,7 @@ describe("autenticação local", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getGlobalSessionRevokedAtMock.mockResolvedValue(null);
+    getAppSettingMock.mockResolvedValue(null);
     getUserByIdMock.mockResolvedValue(adminFixture);
   });
 
@@ -73,6 +76,16 @@ describe("autenticação local", () => {
     getGlobalSessionRevokedAtMock.mockResolvedValue(new Date().toISOString());
     const request = { headers: { cookie: `${COOKIE_NAME}=${token}` } } as any;
     await expect(getLocalUserFromRequest(request)).resolves.toBeNull();
+  });
+
+  it("bloqueia rotas protegidas para contas sem 2FA quando a política global está activa, mas permite setup", async () => {
+    const token = createLocalSessionToken(1, 1);
+    getAppSettingMock.mockResolvedValue(JSON.stringify({ required: true }));
+    getUserByIdMock.mockResolvedValue({ ...adminFixture, twoFactorEnabled: false });
+    const protectedRequest = { headers: { cookie: `${COOKIE_NAME}=${token}` }, path: "/api/trpc/members.list" } as any;
+    await expect(getLocalUserFromRequest(protectedRequest)).resolves.toBeNull();
+    const setupRequest = { headers: { cookie: `${COOKIE_NAME}=${token}` }, path: "/api/auth/2fa/setup" } as any;
+    await expect(getLocalUserFromRequest(setupRequest)).resolves.toMatchObject({ id: 1 });
   });
 
   it("resolve o utilizador pela sessão assinada e rejeita cookie adulterado", async () => {

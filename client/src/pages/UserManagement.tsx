@@ -26,11 +26,12 @@ type ChurchRole = (typeof churchRoles)[number]["value"];
 type SystemRole = "user" | "admin";
 const systemRoles = ["user", "admin"] as const;
 
-function isSystemRole(value: string): value is SystemRole {
-  return systemRoles.includes(value as SystemRole);
+function isSystemRole(value: unknown): value is SystemRole {
+  return typeof value === "string" && systemRoles.includes(value as SystemRole);
 }
 
-function isChurchRole(value: string): value is ChurchRole {
+function isChurchRole(value: unknown): value is ChurchRole {
+  if (typeof value !== "string") return false;
   const normalized = value.trim().toLowerCase();
   return churchRoles.some((role) => role.value === normalized);
 }
@@ -41,7 +42,7 @@ type UserItem = {
   name: string | null;
   email: string | null;
   role: SystemRole;
-  churchRole: ChurchRole;
+  churchRole: ChurchRole | null | undefined;
   isActive: boolean;
   createdAt: Date | string;
   twoFactorEnabled?: boolean;
@@ -149,7 +150,7 @@ export default function UserManagement() {
       return;
     }
     setEditingUser(user);
-    const safeChurchRole = churchRoles.some((item) => item.value === user.churchRole) ? user.churchRole : "membro";
+    const safeChurchRole: ChurchRole = isChurchRole(user.churchRole) ? user.churchRole : "membro";
     setFormData({
       username: user.username,
       password: "",
@@ -173,8 +174,8 @@ export default function UserManagement() {
     const safeRole: SystemRole = isSystemRole(formData.role) ? formData.role : editingUser?.role === "admin" ? "admin" : "user";
     const safeChurchRole: ChurchRole = isChurchRole(formData.churchRole) ? formData.churchRole : "membro";
 
-    if (!name || (!editingUser && (!safeUsername || !email))) {
-      toast.error(editingUser ? "Preencha pelo menos o nome do utilizador." : "Preencha nome, email e utilizador.");
+    if (!name || (!editingUser && !safeUsername)) {
+      toast.error(editingUser ? "Preencha pelo menos o nome do utilizador." : "Preencha o nome e o nome de utilizador.");
       return;
     }
     if (!editingUser && formData.password.length < 6) {
@@ -203,7 +204,7 @@ export default function UserManagement() {
       username: safeUsername,
       password: formData.password,
       name,
-      email,
+      ...(email ? { email } : {}),
       role: safeRole,
       churchRole: safeChurchRole,
       isActive: formData.isActive,
@@ -393,10 +394,14 @@ export default function UserManagement() {
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-lg">
           <DialogHeader><DialogTitle>{editingUser ? "Editar utilizador" : "Novo utilizador"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><label className="mb-1 block text-sm font-medium">Utilizador (Código)</label><Input value={formData.username} onChange={(event) => setFormData({ ...formData, username: event.target.value })} placeholder="username" /></div>
-            <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
-            <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} placeholder="Nome completo" /></div>
-            <div><label className="mb-1 block text-sm font-medium">Email</label><Input type="email" value={formData.email} onChange={(event) => setFormData({ ...formData, email: event.target.value })} placeholder="email@exemplo.com" /></div>
+                          <div><label className="mb-1 block text-sm font-medium">Utilizador (Código)</label><Input value={formData.username} onChange={(event) => setFormData((current) => ({ ...current, username: event.target.value }))} autoComplete="username" placeholder="username" /></div>
+
+                          <div><label className="mb-1 block text-sm font-medium">Senha {editingUser ? "(opcional)" : ""}</label><div className="relative"><Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData((current) => ({ ...current, password: event.target.value }))} autoComplete="new-password" placeholder={editingUser ? "Deixe em branco para manter" : "Mínimo de 6 caracteres"} className="pr-10" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+
+                          <div><label className="mb-1 block text-sm font-medium">Nome</label><Input value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} autoComplete="name" placeholder="Nome completo" /></div>
+
+                          <div><label className="mb-1 block text-sm font-medium">Email <span className="font-normal text-slate-500">(opcional)</span></label><Input type="email" value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} autoComplete="email" placeholder="email@exemplo.com" /></div>
+
             <div>
               <label className="mb-1 block text-sm font-medium">Função eclesiástica</label>
               <select
@@ -433,13 +438,13 @@ export default function UserManagement() {
               </select>
               <p className="mt-1 text-xs text-slate-500">Pode promover para administrador ou rebaixar para utilizador, respeitando a protecção da última conta administrativa.</p>
             </div>
-            <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} /> Utilizador ativo</label>
+            <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData((current) => ({ ...current, isActive: event.target.checked }))} /> Utilizador ativo</label>
             {!formData.isActive && (
               <div>
                 <label className="mb-1 block text-sm font-medium">Motivo da suspensão (exclusivo para administradores)</label>
                 <textarea
                   value={formData.suspendReason}
-                  onChange={(event) => setFormData({ ...formData, suspendReason: event.target.value })}
+                  onChange={(event) => setFormData((current) => ({ ...current, suspendReason: event.target.value }))}
                   placeholder="Descreva o motivo pelo qual a conta foi suspensa..."
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import * as QRCode from "qrcode";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,12 @@ import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
+type RequiredTwoFactorSetup = { secret: string; qrCodeUrl?: string; otpauthUri: string; recoveryCodes: string[] };
+
+function normalizeTwoFactorCode(value: string) {
+  return value.replace(/[^0-9]/g, "").slice(0, 6);
+}
+
 export default function LocalLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,7 +24,8 @@ export default function LocalLogin() {
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorSetupModal, setTwoFactorSetupModal] = useState(false);
-  const [setupData, setSetupData] = useState<{ secret?: string; qrCodeUrl?: string; otpauthUri?: string; recoveryCodes?: string[] } | null>(null);
+  const [setupData, setSetupData] = useState<RequiredTwoFactorSetup | null>(null);
+  const [setupQrCode, setSetupQrCode] = useState<string | null>(null);
   const [setupConfirmCode, setSetupConfirmCode] = useState("");
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false);
   const [showBootstrap, setShowBootstrap] = useState(false);
@@ -31,6 +39,24 @@ export default function LocalLogin() {
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery();
   const organizationName = organizationQuery.data?.organizationName ?? "Classe Obreiros de Cristo";
   const organizationLogoUrl = organizationQuery.data?.logoUrl ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!setupData) {
+      setSetupQrCode(null);
+      return () => { cancelled = true; };
+    }
+    const qrModule = QRCode as typeof import("qrcode") & { default?: typeof import("qrcode") };
+    const qrGenerator = typeof qrModule.toDataURL === "function" ? qrModule : qrModule.default;
+    if (!qrGenerator || typeof qrGenerator.toDataURL !== "function") {
+      setSetupQrCode(null);
+      return () => { cancelled = true; };
+    }
+    void qrGenerator.toDataURL(setupData.otpauthUri, { width: 240, margin: 2, errorCorrectionLevel: "M" })
+      .then((dataUrl) => { if (!cancelled) setSetupQrCode(dataUrl); })
+      .catch(() => { if (!cancelled) setSetupQrCode(null); });
+    return () => { cancelled = true; };
+  }, [setupData]);
 
   useEffect(() => {
     let active = true;
@@ -66,6 +92,61 @@ export default function LocalLogin() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartTwoFactorSetup = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/2fa/setup", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || data.message || "Não foi possível iniciar a configuração 2FA.");
+      if (!data.secret || !data.otpauthUri || !Array.isArray(data.recoveryCodes)) {
+        throw new Error("O servidor não devolveu uma configuração 2FA completa. Tente novamente.");
+      }
+      setSetupData({ secret: data.secret, otpauthUri: data.otpauthUri, recoveryCodes: data.recoveryCodes });
+      setSetupConfirmCode("");
+      toast.success("Configuração 2FA preparada. Guarde os códigos de recuperação.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível iniciar a configuração 2FA.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmTwoFactorSetup = async () => {
+    const code = normalizeTwoFactorCode(setupConfirmCode);
+    if (code.length !== 6) {
+      toast.error("Introduza o código actual de 6 dígitos da aplicação autenticadora.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/2fa/confirm", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || data.message || "Não foi possível confirmar o 2FA.");
+      if (!data.twoFactorEnabled) throw new Error("O servidor não confirmou a activação do 2FA. Tente novamente.");
+      setTwoFactorSetupModal(false);
+      setSetupData(null);
+      setSetupConfirmCode("");
+      await refresh();
+      toast.success("2FA activado com sucesso. Bem-vindo.");
+      navigate("/dashboard");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível confirmar o 2FA.");
     } finally {
       setIsLoading(false);
     }
@@ -296,65 +377,34 @@ export default function LocalLogin() {
                 </div>
                 <p className="text-xs text-slate-300">A administração exige o 2FA. Gere a sua chave segura para prosseguir.</p>
                 <div className="space-y-3">
-                  <button type="button" onClick={async () => {
-                    try {
-                      const res = await fetch("/api/auth/2fa/setup", { method: "POST", credentials: "include" });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Erro ao gerar segredo 2FA");
-                      setSetupData(data);
-                      toast.success("Segredo 2FA gerado! Leia o QR Code ou use a chave manual.");
-                    } catch (err: any) {
-                      toast.error(err.message || "Erro ao iniciar setup 2FA");
-                    }
-                  }} className="w-full rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
-                    Gerar Chave de Segurança e QR Code
+                  <button type="button" onClick={() => void handleStartTwoFactorSetup()} disabled={isLoading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {isLoading ? "A preparar…" : setupData ? "Regerar chave e QR Code" : "Gerar chave de segurança e QR Code"}
                   </button>
                   {setupData && (
                     <div className="space-y-3 rounded-lg bg-slate-800 p-3 text-xs">
-                      {setupData.otpauthUri && (
-                        <div className="flex justify-center bg-white p-2 rounded">
-                          <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(setupData.otpauthUri)}`} 
-                            alt="QR Code 2FA" 
-                            className="h-32 w-32" 
-                          />
-                        </div>
-                      )}
-                      <p className="font-mono text-emerald-300 break-all text-center">Chave: {setupData.secret}</p>
+                      <div className="flex justify-center rounded bg-white p-2">
+                        {setupQrCode ? <img src={setupQrCode} alt="QR Code para configurar a autenticação de dois factores" className="h-40 w-40" /> : <div className="flex h-40 w-40 items-center justify-center text-center text-xs text-slate-500">A gerar QR Code…</div>}
+                      </div>
+                      <p className="font-mono text-center text-emerald-300 break-all">Chave manual: {setupData.secret}</p>
                       <p className="text-slate-300 text-center">Insira o código de 6 dígitos gerado pela sua app:</p>
-                      <Input value={setupConfirmCode} onChange={(e) => setSetupConfirmCode(e.target.value)} placeholder="000000" className="bg-slate-900 border-slate-700 text-center font-mono text-lg tracking-widest text-white" maxLength={6} />
-                      <Button type="button" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold" onClick={async () => {
-                        try {
-                          const res = await fetch("/api/auth/2fa/confirm", {
-                            method: "POST",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ code: setupConfirmCode })
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || "Código inválido");
-                          toast.success("2FA ativado com sucesso! Bem-vindo.");
-                          setTwoFactorSetupModal(false);
-                          await refresh();
-                          navigate("/dashboard");
-                        } catch (err: any) {
-                          toast.error(err.message || "Erro ao confirmar código");
-                        }
-                      }}>
-                        Confirmar e Entrar
+                      <Input value={setupConfirmCode} onChange={(e) => setSetupConfirmCode(normalizeTwoFactorCode(e.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" className="bg-slate-900 border-slate-700 text-center font-mono text-lg tracking-widest text-white" maxLength={6} />
+                      <Button type="button" disabled={isLoading || normalizeTwoFactorCode(setupConfirmCode).length !== 6} className="w-full bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60" onClick={() => void handleConfirmTwoFactorSetup()}>
+                        {isLoading ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> : null}
+                        Confirmar e entrar
                       </Button>
-                      {setupData.recoveryCodes && (
+                      {setupData.recoveryCodes.length > 0 && (
                         <div className="mt-2 rounded bg-slate-900 p-2 text-[10px] text-slate-400">
                           <p className="font-semibold text-amber-400">Códigos de recuperação (guarde num local seguro):</p>
                           <ul className="list-disc pl-4 font-mono">
-                            {setupData.recoveryCodes.map((code: string, idx: number) => <li key={idx}>{code}</li>)}
+                            {setupData.recoveryCodes.map((code) => <li key={code}>{code}</li>)}
                           </ul>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 text-xs" onClick={() => setTwoFactorSetupModal(false)}>
+                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 text-xs" onClick={() => { setTwoFactorSetupModal(false); setSetupData(null); setSetupConfirmCode(""); }} disabled={isLoading}>
                   Cancelar
                 </Button>
               </div>
