@@ -7371,3 +7371,4 @@
 - [x] Adicionar histórico de auditoria de alterações de estado e suspensões no perfil do utilizador para administradores
 - [x] Corrigir quebra ao clicar em "Novo membro" na página de membros
 - [x] Implementar verificação de duplicados (nome ou email) ao criar ou atualizar membros
+- [x] Adicionar opção de selecionar o grupo específico (Grupo 1-4 ou Convidados) no formulário de criação/edição de membros
