@@ -127,6 +127,7 @@ export default function UserManagement() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+  const [twoFactorFilter, setTwoFactorFilter] = useState<"all" | "enabled" | "pending">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -218,6 +219,11 @@ export default function UserManagement() {
     } else if (statusFilter === "suspended") {
       users = users.filter((u) => u.isActive === false);
     }
+    if (twoFactorFilter === "enabled") {
+      users = users.filter((u) => u.twoFactorEnabled === true);
+    } else if (twoFactorFilter === "pending") {
+      users = users.filter((u) => u.twoFactorEnabled !== true);
+    }
     if (!term) return users;
     return users.filter((user) =>
       [user.username, user.name ?? "", user.email ?? "", user.churchRole]
@@ -225,7 +231,7 @@ export default function UserManagement() {
         .toLowerCase()
         .includes(term),
     );
-  }, [search, statusFilter, usersQuery.data]);
+  }, [search, statusFilter, twoFactorFilter, usersQuery.data]);
 
   const saving = createUser.isPending || updateUser.isPending;
   const roleLabel = (value: string | null | undefined) => churchRoles.find((role) => role.value === value)?.label ?? "Membro";
@@ -276,16 +282,28 @@ export default function UserManagement() {
               <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar utilizador, nome, email ou função" className="pl-10" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Estado:</span>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended")}
                 className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                aria-label="Filtrar por estado da conta"
               >
                 <option value="all">Todos os utilizadores</option>
                 <option value="active">Apenas Ativos</option>
                 <option value="suspended">Apenas Suspensos</option>
+              </select>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">2FA:</span>
+              <select
+                value={twoFactorFilter}
+                onChange={(e) => setTwoFactorFilter(e.target.value as "all" | "enabled" | "pending")}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                aria-label="Filtrar por ativação do 2FA"
+              >
+                <option value="all">Todos</option>
+                <option value="enabled">2FA ativo</option>
+                <option value="pending">2FA pendente</option>
               </select>
             </div>
           </div>
