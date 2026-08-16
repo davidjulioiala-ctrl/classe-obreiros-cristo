@@ -236,3 +236,58 @@ export function createMemberImportTemplate() {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Membros");
   return XLSX.write(workbook, { bookType: "xlsx", type: "array" });
 }
+
+const REJECTED_REPORT_COLUMNS = [
+  { key: "sourceRow", label: "Linha de origem" },
+  ...MEMBER_IMPORT_COLUMNS,
+  { key: "errors", label: "Motivos da rejeição" },
+] as const;
+
+function rejectedRowToRecord(row: MemberImportRow) {
+  return Object.fromEntries([
+    ["Linha de origem", row.sourceRow],
+    ["Nome", row.name],
+    ["Sexo (M/F)", row.sex],
+    ["Data de nascimento (AAAA-MM-DD)", row.birthDate ?? ""],
+    ["Nome do pai", row.father ?? ""],
+    ["Nome da mãe", row.mother ?? ""],
+    ["Nacionalidade", row.nationality ?? ""],
+    ["Região", row.region ?? ""],
+    ["Residência", row.residence ?? ""],
+    ["Telefone Orange", row.phoneOrange ?? ""],
+    ["Telefone Telecel", row.phoneTelecel ?? ""],
+    ["Email", row.email ?? ""],
+    ["Cargo eclesiástico", row.position ?? ""],
+    ["Função de líder", row.leaderRole ?? ""],
+    ["Função no louvor", row.louvorRole ?? ""],
+    ["Convidado (sim/não)", row.isGuest ? "Sim" : "Não"],
+    ["Grupo ou ID do grupo", row.groupName ?? row.groupId ?? ""],
+    ["Motivos da rejeição", row.errors.join(" ")],
+  ]);
+}
+
+function createRejectedMembersWorkbook(rows: MemberImportRow[]) {
+  const worksheet = XLSX.utils.json_to_sheet(rows.map(rejectedRowToRecord), { skipHeader: false });
+  worksheet["!cols"] = REJECTED_REPORT_COLUMNS.map((column) => ({ wch: Math.min(Math.max(column.label.length + 2, 14), 42) }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Linhas rejeitadas");
+  return workbook;
+}
+
+export function createRejectedMembersExcel(rows: MemberImportRow[]) {
+  return XLSX.write(createRejectedMembersWorkbook(rows), { bookType: "xlsx", type: "array" });
+}
+
+function csvCell(value: unknown) {
+  const cell = String(value ?? "");
+  return /[;"\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+}
+
+export function createRejectedMembersCsv(rows: MemberImportRow[]) {
+  const headers = REJECTED_REPORT_COLUMNS.map((column) => column.label);
+  const lines = rows.map((row) => {
+    const record = rejectedRowToRecord(row);
+    return headers.map((header) => csvCell(record[header])).join(";");
+  });
+  return `\ufeff${headers.map(csvCell).join(";")}\n${lines.join("\n")}`;
+}

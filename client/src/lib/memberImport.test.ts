@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { createMemberImportTemplate, normaliseMemberImportHeader, parseMemberImportFile } from "./memberImport";
+import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, normaliseMemberImportHeader, parseMemberImportFile, type MemberImportRow } from "./memberImport";
 
 describe("memberImport", () => {
   it("normaliza cabeçalhos portugueses e acentuados", () => {
@@ -33,6 +33,21 @@ describe("memberImport", () => {
     const result = await parseMemberImportFile(new File([bytes], "membros.xlsx"), [{ id: 1, name: "Grupo 1" }], [{ id: 4, name: "Maria Costa", email: null }]);
     expect(result.validRows).toHaveLength(0);
     expect(result.invalidRows[0]?.errors.join(" ")).toContain("Nome já registado");
+  });
+
+  it("gera relatórios detalhados CSV e Excel das linhas rejeitadas", () => {
+    const rejectedRows: MemberImportRow[] = [{ sourceRow: 7, name: "João; Costa", sex: "", email: "email-inválido", isGuest: false, errors: ["O sexo deve ser M/F.", "O email não é válido."] }];
+    const csv = createRejectedMembersCsv(rejectedRows);
+    expect(csv).toContain("Linha de origem;Nome");
+    expect(csv).toContain("7;\"João; Costa\"");
+    expect(csv).toContain("Motivos da rejeição");
+    expect(csv).toContain("O sexo deve ser M/F.");
+
+    const workbook = XLSX.read(createRejectedMembersExcel(rejectedRows), { type: "array" });
+    expect(workbook.SheetNames).toEqual(["Linhas rejeitadas"]);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Linhas rejeitadas"]);
+    expect(rows[0]?.["Linha de origem"]).toBe(7);
+    expect(rows[0]?.["Motivos da rejeição"]).toContain("O email não é válido.");
   });
 
   it("gera um modelo Excel descarregável", () => {

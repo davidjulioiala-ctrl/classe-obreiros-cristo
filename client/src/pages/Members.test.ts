@@ -48,6 +48,14 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("canImportMembers");
   });
 
+  it("mantém as linhas rejeitadas disponíveis para relatório CSV e Excel", () => {
+    expect(membersSource).toContain("createRejectedMembersCsv");
+    expect(membersSource).toContain("createRejectedMembersExcel");
+    expect(membersSource).toContain("downloadRejectedReport");
+    expect(membersSource).toContain("<FileText className=\"mr-2 h-4 w-4\" /> CSV");
+    expect(membersSource).toContain("<FileSpreadsheet className=\"mr-2 h-4 w-4\" /> Excel");
+  });
+
   it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
     expect(membersSource).toContain('import { ExportColumnDialog } from "@/components/ExportColumnDialog"');
     expect(membersSource).toContain("const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS])");

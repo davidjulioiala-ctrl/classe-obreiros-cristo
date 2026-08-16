@@ -14,7 +14,7 @@ import { MemberAttendanceBadge } from "./MemberAttendanceBadge";
 import { toast } from "sonner";
 import { filterMembers } from "@shared/memberSearch";
 import { downloadProtectedFile } from "@/lib/fileDownload";
-import { createMemberImportTemplate, MEMBER_IMPORT_COLUMNS, parseMemberImportFile, type MemberImportRow } from "@/lib/memberImport";
+import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, MEMBER_IMPORT_COLUMNS, parseMemberImportFile, type MemberImportRow } from "@/lib/memberImport";
 
 type MemberForm = {
   name: string;
@@ -93,6 +93,7 @@ export default function Members() {
   const [importRows, setImportRows] = useState<MemberImportRow[]>([]);
   const [importInvalidRows, setImportInvalidRows] = useState<MemberImportRow[]>([]);
   const [importLoading, setImportLoading] = useState(false);
+  const [importCompleted, setImportCompleted] = useState(false);
   const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
   const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -118,11 +119,15 @@ export default function Members() {
 
   const bulkImportMutation = trpc.members.bulkImport.useMutation({
     onSuccess: (data) => {
-      toast.success(`${data.count} membro(s) importado(s) com sucesso.`);
+      const rejectedCount = importInvalidRows.length;
+      toast.success(`${data.count} membro(s) importado(s) com sucesso${rejectedCount > 0 ? `; ${rejectedCount} linha(s) ficaram disponíveis para relatório.` : "."}`);
       setImportRows([]);
-      setImportInvalidRows([]);
-      setImportFileName("");
-      setImportDialogOpen(false);
+      setImportCompleted(rejectedCount > 0);
+      if (rejectedCount === 0) {
+        setImportInvalidRows([]);
+        setImportFileName("");
+        setImportDialogOpen(false);
+      }
       void refetch();
       void utils.members.list.invalidate();
     },
@@ -182,6 +187,7 @@ export default function Members() {
     setImportFileName("");
     setImportRows([]);
     setImportInvalidRows([]);
+    setImportCompleted(false);
   };
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -189,6 +195,7 @@ export default function Members() {
     event.target.value = "";
     if (!file) return;
     setImportLoading(true);
+    setImportCompleted(false);
     setImportFileName(file.name);
     try {
       const result = await parseMemberImportFile(file, (groups ?? []).map((group) => ({ id: group.id, name: group.name })), (members ?? []).map((member) => ({ id: member.id, name: member.name, email: member.email })));
@@ -199,6 +206,7 @@ export default function Members() {
     } catch (error) {
       setImportRows([]);
       setImportInvalidRows([]);
+      setImportCompleted(false);
       setImportFileName("");
       toast.error(error instanceof Error ? error.message : "Não foi possível ler o ficheiro.");
     } finally {
@@ -219,6 +227,20 @@ export default function Members() {
     anchor.download = "modelo-importacao-membros.xlsx";
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadRejectedReport = (format: "csv" | "xlsx") => {
+    if (importInvalidRows.length === 0) return;
+    const isCsv = format === "csv";
+    const body = isCsv ? createRejectedMembersCsv(importInvalidRows) : createRejectedMembersExcel(importInvalidRows);
+    const blob = new Blob([body], { type: isCsv ? "text/csv;charset=utf-8" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `relatorio-linhas-rejeitadas-${new Date().toISOString().slice(0, 10)}.${format}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Relatório ${isCsv ? "CSV" : "Excel"} descarregado.`);
   };
   const updateMemberMutation = trpc.members.update.useMutation({
     onSuccess: () => {
@@ -702,7 +724,8 @@ export default function Members() {
               {importLoading && <p className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-live="polite">A ler {importFileName || "o ficheiro"}…</p>}
               {!importLoading && importFileName && <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">Ficheiro selecionado: <strong>{importFileName}</strong></p>}
 
-              {(importRows.length > 0 || importInvalidRows.length > 0) && (
+                                {(importRows.length > 0 || importInvalidRows.length > 0 || importCompleted) && (
+
                 <div className="mt-4 space-y-4">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20"><div className="flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Prontas</div><p className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-200">{importRows.length}</p></div>
@@ -710,7 +733,9 @@ export default function Members() {
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/30"><div className="text-sm font-medium text-slate-600 dark:text-slate-300">Total analisado</div><p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{importRows.length + importInvalidRows.length}</p></div>
                   </div>
 
-                  {importInvalidRows.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"><p className="font-semibold">As linhas com problemas serão ignoradas.</p><ul className="mt-2 max-h-28 list-disc space-y-1 overflow-y-auto pl-5">{importInvalidRows.slice(0, 12).map((row) => <li key={row.sourceRow}>Linha {row.sourceRow}: {row.errors.join(" ")}</li>)}{importInvalidRows.length > 12 && <li>… e mais {importInvalidRows.length - 12} linha(s).</li>}</ul></div>}
+                  {importCompleted && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200"><p className="font-semibold">Importação concluída. As linhas válidas foram gravadas e as linhas rejeitadas permanecem disponíveis para descarregamento.</p></div>}
+
+                  {importInvalidRows.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-semibold">As linhas com problemas não foram importadas.</p><ul className="mt-2 max-h-28 list-disc space-y-1 overflow-y-auto pl-5">{importInvalidRows.slice(0, 12).map((row) => <li key={row.sourceRow}>Linha {row.sourceRow}: {row.errors.join(" ")}</li>)}{importInvalidRows.length > 12 && <li>… e mais {importInvalidRows.length - 12} linha(s).</li>}</ul></div><div className="flex shrink-0 flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("csv")}><FileText className="mr-2 h-4 w-4" /> CSV</Button><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("xlsx")}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</Button></div></div></div>}
 
                   {importRows.length > 0 && <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full min-w-[680px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/50 dark:text-slate-400"><tr><th className="px-3 py-2">Linha</th><th className="px-3 py-2">Nome</th><th className="px-3 py-2">Sexo</th><th className="px-3 py-2">Grupo</th><th className="px-3 py-2">Cargo</th><th className="px-3 py-2">Convidado</th></tr></thead><tbody>{importRows.slice(0, 8).map((row) => <tr key={row.sourceRow} className="border-t border-slate-100 dark:border-slate-700"><td className="px-3 py-2 text-slate-500">{row.sourceRow}</td><td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td><td className="px-3 py-2">{row.sex}</td><td className="px-3 py-2">{row.groupName || "Automático"}</td><td className="px-3 py-2">{row.position || "Membro"}</td><td className="px-3 py-2">{row.isGuest ? "Sim" : "Não"}</td></tr>)}</tbody></table>{importRows.length > 8 && <p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-slate-700">A mostrar 8 de {importRows.length} linhas válidas. Todas serão importadas após confirmação.</p>}</div>}
                 </div>
@@ -718,7 +743,7 @@ export default function Members() {
 
               <div className="mt-6 flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-700 sm:flex-row">
                 <Button type="button" variant="outline" onClick={resetImportDialog} disabled={bulkImportMutation.isPending}>Cancelar</Button>
-                <Button type="button" onClick={confirmImport} disabled={importLoading || importRows.length === 0 || bulkImportMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">{bulkImportMutation.isPending ? "A importar…" : `Confirmar importação (${importRows.length})`}</Button>
+                {importRows.length > 0 && <Button type="button" onClick={confirmImport} disabled={importLoading || bulkImportMutation.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">{bulkImportMutation.isPending ? "A importar…" : `Confirmar importação (${importRows.length})`}</Button>}
               </div>
             </div>
           </div>

@@ -7377,3 +7377,4 @@
 - [x] Adicionar caixa de seleção "Selecionar todos os resultados da pesquisa" para ações em massa
 - [x] Adicionar modal de confirmação antes de executar ações em massa em membros
 - [x] Adicionar funcionalidade para importar membros a partir de ficheiro CSV ou Excel com pré-visualização, validação e deteção de duplicados
+- [x] Adicionar funcionalidade para descarregar relatório detalhado com linhas rejeitadas após importação (Excel e CSV)
