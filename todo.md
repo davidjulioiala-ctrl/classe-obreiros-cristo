@@ -7380,3 +7380,4 @@
 - [x] Adicionar funcionalidade para descarregar relatório detalhado com linhas rejeitadas após importação (Excel e CSV)
 - [x] Adicionar barra de progresso e animação de carregamento no modal de importação de membros
 - [x] Implementar ecrã de pré-visualização dedicado para a importação de membros com resumo de dados válidos e inválidos e confirmação explícita
+- [x] Permitir editar diretamente as linhas inválidas no ecrã de pré-visualização e revalidá-las antes de confirmar a importação

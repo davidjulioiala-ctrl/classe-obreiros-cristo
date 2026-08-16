@@ -73,6 +73,16 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("Confirmar e importar ${importRows.length} linha(s) válida(s)");
   });
 
+  it("permite editar e revalidar linhas inválidas antes da importação", () => {
+    expect(membersSource).toContain("revalidateMemberImportRows");
+    expect(membersSource).toContain("editingInvalidRow");
+    expect(membersSource).toContain("Editar linha");
+    expect(membersSource).toContain("Guardar e validar linha");
+    expect(membersSource).toContain("Nome da linha ${row.sourceRow}");
+    expect(membersSource).toContain("Sexo da linha ${row.sourceRow}");
+    expect(membersSource).toContain("Grupo da linha ${row.sourceRow}");
+  });
+
   it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
     expect(membersSource).toContain('import { ExportColumnDialog } from "@/components/ExportColumnDialog"');
     expect(membersSource).toContain("const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS])");

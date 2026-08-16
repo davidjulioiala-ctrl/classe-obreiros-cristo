@@ -200,17 +200,7 @@ function toRow(raw: Record<string, unknown>, sourceRow: number, groups: ImportGr
   return row;
 }
 
-export async function parseMemberImportFile(file: File, groups: ImportGroup[], existingMembers: ImportExistingMember[]) {
-  if (!/\.(csv|xlsx|xls)$/i.test(file.name)) throw new Error("Selecione um ficheiro CSV, XLSX ou XLS.");
-  if (file.size > 5 * 1024 * 1024) throw new Error("O ficheiro não pode exceder 5 MB.");
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, raw: true });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) throw new Error("O ficheiro não contém uma folha de dados.");
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: "", raw: true });
-  if (rows.length === 0) throw new Error("O ficheiro não contém linhas de membros.");
-  if (rows.length > 500) throw new Error("Pode importar no máximo 500 membros de cada vez.");
-
-  const parsed = rows.map((row, index) => toRow(row, index + 2, groups));
+function validateParsedRows(parsed: MemberImportRow[], groups: ImportGroup[], existingMembers: ImportExistingMember[]) {
   const names = new Map<string, number>();
   const emails = new Map<string, number>();
   const existingNames = new Map(existingMembers.map((member) => [normaliseName(member.name), member.id]));
@@ -225,8 +215,60 @@ export async function parseMemberImportFile(file: File, groups: ImportGroup[], e
     else if (email && existingEmails.has(email)) row.errors.push(`Email já registado no sistema (ID ${existingEmails.get(email)}).`);
     else if (email) emails.set(email, row.sourceRow);
   }
-  const invalidRows = parsed.filter((row) => row.errors.length > 0);
-  return { fileName: file.name, sheetName, rows: parsed, validRows: parsed.filter((row) => row.errors.length === 0), invalidRows, total: parsed.length };
+  return {
+    rows: parsed,
+    validRows: parsed.filter((row) => row.errors.length === 0),
+    invalidRows: parsed.filter((row) => row.errors.length > 0),
+    total: parsed.length,
+  };
+}
+
+export function revalidateMemberImportRows(rows: MemberImportRow[], groups: ImportGroup[], existingMembers: ImportExistingMember[]) {
+  const parsed = rows.map((source) => {
+    const group = resolveGroup(source.groupName ?? source.groupId, groups);
+    const row: MemberImportRow = {
+      ...source,
+      name: text(source.name),
+      sex: parseSex(source.sex),
+      birthDate: parseDate(source.birthDate),
+      father: text(source.father) || undefined,
+      mother: text(source.mother) || undefined,
+      nationality: text(source.nationality) || undefined,
+      region: text(source.region) || undefined,
+      residence: text(source.residence) || undefined,
+      phoneOrange: text(source.phoneOrange) || undefined,
+      phoneTelecel: text(source.phoneTelecel) || undefined,
+      email: text(source.email) || undefined,
+      position: text(source.position) || "Membro",
+      leaderRole: text(source.leaderRole) || undefined,
+      louvorRole: text(source.louvorRole) || undefined,
+      isGuest: parseBoolean(source.isGuest) || normaliseName(group.groupName ?? "").includes("convidad"),
+      groupId: group.groupId,
+      groupName: group.groupName,
+      errors: [],
+    };
+    if (!row.name) row.errors.push("O nome é obrigatório.");
+    if (!row.sex) row.errors.push("O sexo deve ser M/F, Masculino ou Feminino.");
+    if (!validDate(row.birthDate)) row.errors.push("A data de nascimento deve ser válida, estar no formato AAAA-MM-DD e não ser futura.");
+    if (row.email && !/^\S+@\S+\.\S+$/.test(row.email)) row.errors.push("O email não é válido.");
+    if ((source.groupName || source.groupId) && !row.groupId) row.errors.push(`Grupo não encontrado: ${source.groupName ?? source.groupId}.`);
+    return row;
+  });
+  return validateParsedRows(parsed, groups, existingMembers);
+}
+
+export async function parseMemberImportFile(file: File, groups: ImportGroup[], existingMembers: ImportExistingMember[]) {
+  if (!/\.(csv|xlsx|xls)$/i.test(file.name)) throw new Error("Selecione um ficheiro CSV, XLSX ou XLS.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("O ficheiro não pode exceder 5 MB.");
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, raw: true });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error("O ficheiro não contém uma folha de dados.");
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], { defval: "", raw: true });
+  if (rows.length === 0) throw new Error("O ficheiro não contém linhas de membros.");
+  if (rows.length > 500) throw new Error("Pode importar no máximo 500 membros de cada vez.");
+
+  const result = validateParsedRows(rows.map((row, index) => toRow(row, index + 2, groups)), groups, existingMembers);
+  return { fileName: file.name, sheetName, ...result };
 }
 
 export function createMemberImportTemplate() {

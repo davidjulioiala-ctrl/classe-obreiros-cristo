@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, normaliseMemberImportHeader, parseMemberImportFile, type MemberImportRow } from "./memberImport";
+import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, normaliseMemberImportHeader, parseMemberImportFile, revalidateMemberImportRows, type MemberImportRow } from "./memberImport";
 
 describe("memberImport", () => {
   it("normaliza cabeçalhos portugueses e acentuados", () => {
@@ -48,6 +48,16 @@ describe("memberImport", () => {
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Linhas rejeitadas"]);
     expect(rows[0]?.["Linha de origem"]).toBe(7);
     expect(rows[0]?.["Motivos da rejeição"]).toContain("O email não é válido.");
+  });
+
+  it("revalida uma linha editada e promove-a para válida", () => {
+    const result = revalidateMemberImportRows([{ sourceRow: 2, name: "", sex: "", email: "invalido", isGuest: false, errors: ["erro antigo"] }], [{ id: 1, name: "Grupo 1" }], []);
+    expect(result.invalidRows).toHaveLength(1);
+
+    const corrected = revalidateMemberImportRows([{ sourceRow: 2, name: "Ana Silva", sex: "F", email: "ana@example.com", isGuest: false, groupName: "Grupo 1", errors: [] }], [{ id: 1, name: "Grupo 1" }], []);
+    expect(corrected.invalidRows).toHaveLength(0);
+    expect(corrected.validRows[0]?.groupId).toBe(1);
+    expect(corrected.validRows[0]?.errors).toEqual([]);
   });
 
   it("gera um modelo Excel descarregável", () => {

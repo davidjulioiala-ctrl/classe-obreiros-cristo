@@ -14,7 +14,7 @@ import { MemberAttendanceBadge } from "./MemberAttendanceBadge";
 import { toast } from "sonner";
 import { filterMembers } from "@shared/memberSearch";
 import { downloadProtectedFile } from "@/lib/fileDownload";
-import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, MEMBER_IMPORT_COLUMNS, parseMemberImportFile, type MemberImportRow } from "@/lib/memberImport";
+import { createMemberImportTemplate, createRejectedMembersCsv, createRejectedMembersExcel, MEMBER_IMPORT_COLUMNS, parseMemberImportFile, revalidateMemberImportRows, type MemberImportRow } from "@/lib/memberImport";
 
 type MemberForm = {
   name: string;
@@ -97,6 +97,7 @@ export default function Members() {
   const [importProgress, setImportProgress] = useState(0);
   const [importPhase, setImportPhase] = useState<"idle" | "reading" | "validating" | "ready" | "uploading" | "completed">("idle");
   const [importStep, setImportStep] = useState<"select" | "preview">("select");
+  const [editingInvalidRow, setEditingInvalidRow] = useState<number | null>(null);
   const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
   const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -200,6 +201,7 @@ export default function Members() {
     setImportProgress(0);
     setImportPhase("idle");
     setImportStep("select");
+    setEditingInvalidRow(null);
   };
 
   const chooseAnotherImportFile = () => {
@@ -210,6 +212,7 @@ export default function Members() {
     setImportProgress(0);
     setImportPhase("idle");
     setImportStep("select");
+    setEditingInvalidRow(null);
   };
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -248,6 +251,26 @@ export default function Members() {
       window.clearTimeout(validationTimer);
       setImportLoading(false);
     }
+  };
+
+  const updateInvalidRowField = (sourceRow: number, field: "name" | "sex" | "birthDate" | "email" | "position" | "groupName", value: string) => {
+    setImportInvalidRows((current) => current.map((row) => row.sourceRow === sourceRow ? { ...row, [field]: field === "sex" ? value as MemberImportRow["sex"] : value } : row));
+  };
+
+  const updateInvalidRowGroup = (sourceRow: number, value: string) => {
+    const group = (groups ?? []).find((item) => String(item.id) === value);
+    setImportInvalidRows((current) => current.map((row) => row.sourceRow === sourceRow ? { ...row, groupId: group?.id, groupName: group?.name } : row));
+  };
+
+  const revalidateInvalidRow = (sourceRow: number) => {
+    const allRows = [...importRows, ...importInvalidRows].sort((a, b) => a.sourceRow - b.sourceRow);
+    const result = revalidateMemberImportRows(allRows, (groups ?? []).map((group) => ({ id: group.id, name: group.name })), (members ?? []).map((member) => ({ id: member.id, name: member.name, email: member.email })));
+    setImportRows(result.validRows);
+    setImportInvalidRows(result.invalidRows);
+    setEditingInvalidRow(null);
+    const updated = result.invalidRows.find((row) => row.sourceRow === sourceRow);
+    if (updated) toast.warning(`A linha ${sourceRow} ainda precisa de correcções: ${updated.errors.join(" ")}`);
+    else toast.success(`A linha ${sourceRow} foi corrigida e está pronta para importação.`);
   };
 
   const confirmImport = () => {
@@ -776,7 +799,7 @@ export default function Members() {
 
                   {importCompleted && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200"><p className="font-semibold">Importação concluída. As linhas válidas foram gravadas e as linhas rejeitadas permanecem disponíveis para descarregamento.</p></div>}
 
-                  {importInvalidRows.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-semibold">As linhas com problemas não foram importadas.</p><ul className="mt-2 max-h-28 list-disc space-y-1 overflow-y-auto pl-5">{importInvalidRows.slice(0, 12).map((row) => <li key={row.sourceRow}>Linha {row.sourceRow}: {row.errors.join(" ")}</li>)}{importInvalidRows.length > 12 && <li>… e mais {importInvalidRows.length - 12} linha(s).</li>}</ul></div><div className="flex shrink-0 flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("csv")}><FileText className="mr-2 h-4 w-4" /> CSV</Button><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("xlsx")}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</Button></div></div></div>}
+                  {importInvalidRows.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-semibold">As linhas com problemas não foram importadas.</p><p className="mt-1 text-xs text-amber-800 dark:text-amber-300">Clique em editar para corrigir os campos e validar novamente a linha.</p></div><div className="flex shrink-0 flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("csv")}><FileText className="mr-2 h-4 w-4" /> CSV</Button><Button type="button" size="sm" variant="outline" onClick={() => downloadRejectedReport("xlsx")}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</Button></div></div><ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">{importInvalidRows.slice(0, 12).map((row) => <li key={row.sourceRow} className="rounded-lg border border-amber-200/80 bg-white/70 p-3 dark:border-amber-900/70 dark:bg-slate-900/30">{editingInvalidRow === row.sourceRow ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-medium">Nome<input aria-label={`Nome da linha ${row.sourceRow}`} value={row.name} onChange={(event) => updateInvalidRowField(row.sourceRow, "name", event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" /></label><label className="text-xs font-medium">Sexo<select aria-label={`Sexo da linha ${row.sourceRow}`} value={row.sex} onChange={(event) => updateInvalidRowField(row.sourceRow, "sex", event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option value="">Selecionar…</option><option value="M">M</option><option value="F">F</option></select></label><label className="text-xs font-medium">Data de nascimento<input aria-label={`Data de nascimento da linha ${row.sourceRow}`} type="date" value={row.birthDate ?? ""} onChange={(event) => updateInvalidRowField(row.sourceRow, "birthDate", event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" /></label><label className="text-xs font-medium">Email<input aria-label={`Email da linha ${row.sourceRow}`} type="email" value={row.email ?? ""} onChange={(event) => updateInvalidRowField(row.sourceRow, "email", event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" /></label><label className="text-xs font-medium">Cargo eclesiástico<input aria-label={`Cargo da linha ${row.sourceRow}`} value={row.position ?? ""} onChange={(event) => updateInvalidRowField(row.sourceRow, "position", event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" /></label><label className="text-xs font-medium">Grupo<select aria-label={`Grupo da linha ${row.sourceRow}`} value={row.groupId ? String(row.groupId) : ""} onChange={(event) => updateInvalidRowGroup(row.sourceRow, event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option value="">Sem grupo</option>{(groups ?? []).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label></div><div className="flex flex-wrap justify-end gap-2"><Button type="button" size="sm" variant="outline" onClick={() => setEditingInvalidRow(null)}>Cancelar</Button><Button type="button" size="sm" onClick={() => revalidateInvalidRow(row.sourceRow)} className="bg-emerald-600 text-white hover:bg-emerald-700">Guardar e validar linha</Button></div></div> : <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-medium">Linha {row.sourceRow}</p><p className="mt-1 text-xs text-red-700 dark:text-red-300">{row.errors.join(" ")}</p></div><Button type="button" size="sm" variant="outline" onClick={() => setEditingInvalidRow(row.sourceRow)}>Editar linha</Button></div>}</li>)}{importInvalidRows.length > 12 && <li className="text-xs">… e mais {importInvalidRows.length - 12} linha(s). Descarregue o relatório para consultar todas.</li>}</ul></div>}
 
                   {importRows.length > 0 && <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full min-w-[680px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/50 dark:text-slate-400"><tr><th className="px-3 py-2">Linha</th><th className="px-3 py-2">Nome</th><th className="px-3 py-2">Sexo</th><th className="px-3 py-2">Grupo</th><th className="px-3 py-2">Cargo</th><th className="px-3 py-2">Convidado</th></tr></thead><tbody>{importRows.slice(0, 8).map((row) => <tr key={row.sourceRow} className="border-t border-slate-100 dark:border-slate-700"><td className="px-3 py-2 text-slate-500">{row.sourceRow}</td><td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td><td className="px-3 py-2">{row.sex}</td><td className="px-3 py-2">{row.groupName || "Automático"}</td><td className="px-3 py-2">{row.position || "Membro"}</td><td className="px-3 py-2">{row.isGuest ? "Sim" : "Não"}</td></tr>)}</tbody></table>{importRows.length > 8 && <p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-slate-700">A mostrar 8 de {importRows.length} linhas válidas. Todas serão importadas após confirmação.</p>}</div>}
                 </div>
