@@ -15,7 +15,9 @@ describe("segurança 2FA por utilizador", () => {
   });
 
   it("normaliza códigos colados, preserva o setup durante a resposta e não exige papel administrativo", () => {
-    expect(componentSource).toContain("function normalizeCode");
+    expect(componentSource).toContain("function normalizeTotpCode");
+    expect(componentSource).toContain("function normalizeRecoveryOrTotpCode");
+    expect(componentSource).toContain("Código para desactivar");
     expect(componentSource).toContain("await refresh();");
     const setupStart = componentSource.slice(componentSource.indexOf("async function startSetup"), componentSource.indexOf("async function confirmSetup"));
     expect(setupStart).not.toContain("await refresh();");

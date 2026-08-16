@@ -214,8 +214,13 @@ export function registerLocalAuthRoutes(app: Express) {
       const current = (req as Request & { localUser?: { id: number } }).localUser;
       const user = await getUserById(current?.id ?? 0);
       const { code } = req.body as { code?: string };
+      const normalizedCode = typeof code === "string" ? code.trim().slice(0, 64) : "";
       const settings = user ? await getTwoFactorSettings(user.id) : null;
-      if (!user || !settings?.secret || !code || !verifyTotpCode(settings.secret, code)) return res.status(400).json({ success: false, error: "É necessário um código válido da aplicação autenticadora." });
+      if (!user || !settings?.secret || !normalizedCode) return res.status(400).json({ success: false, error: "Introduza um código 2FA ou um código de recuperação." });
+      const validTotp = verifyTotpCode(settings.secret, normalizedCode);
+      const remainingRecoveryCodes = validTotp ? null : consumeRecoveryCode(settings.recoveryCodes, normalizedCode);
+      if (!validTotp && !remainingRecoveryCodes) return res.status(400).json({ success: false, error: "Código 2FA ou código de recuperação inválido." });
+      if (remainingRecoveryCodes) await updateTwoFactorRecoveryCodes(user.id, remainingRecoveryCodes);
       if (!await disableTwoFactor(user.id)) return res.status(503).json({ success: false, error: "Não foi possível desactivar o 2FA." });
       const updatedUser = await getUserById(user.id);
       if (updatedUser) setSessionCookie(req, res, updatedUser);

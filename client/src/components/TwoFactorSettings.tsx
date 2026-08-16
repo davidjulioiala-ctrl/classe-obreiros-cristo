@@ -50,8 +50,12 @@ export default function TwoFactorSettings() {
     };
   }, [setup]);
 
-  function normalizeCode(value: string) {
+  function normalizeTotpCode(value: string) {
     return value.replace(/[^0-9]/g, "").slice(0, 6);
+  }
+
+  function normalizeRecoveryOrTotpCode(value: string) {
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 64);
   }
 
   async function request(path: string, body?: Record<string, string>) {
@@ -91,7 +95,7 @@ export default function TwoFactorSettings() {
   }
 
   async function confirmSetup() {
-    const normalized = normalizeCode(code);
+    const normalized = normalizeTotpCode(code);
     if (normalized.length !== 6) {
       toast.error("Introduza o código actual de 6 dígitos da aplicação autenticadora.");
       return;
@@ -112,9 +116,9 @@ export default function TwoFactorSettings() {
   }
 
   async function disableSetup() {
-    const normalized = normalizeCode(code);
-    if (normalized.length !== 6) {
-      toast.error("Introduza o código actual de 6 dígitos para desactivar o 2FA.");
+    const normalized = normalizeRecoveryOrTotpCode(code);
+    if (normalized.length !== 6 && normalized.length !== 12) {
+      toast.error("Introduza o código de 6 dígitos da aplicação ou um código de recuperação.");
       return;
     }
     setBusy(true);
@@ -145,14 +149,15 @@ export default function TwoFactorSettings() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
           {!user.twoFactorEnabled && !setup && <Button onClick={() => void startSetup()} disabled={busy} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}Configurar 2FA</Button>}
-          {user.twoFactorEnabled && <Button variant="outline" onClick={() => void disableSetup()} disabled={busy || normalizeCode(code).length !== 6} className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Desactivar 2FA</Button>}
+          {user.twoFactorEnabled && <Button variant="outline" onClick={() => void disableSetup()} disabled={busy || ![6, 12].includes(normalizeRecoveryOrTotpCode(code).length)} className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Desactivar 2FA</Button>}
         </div>
       </div>
 
       {user.twoFactorEnabled && (
         <div className="mt-4 max-w-md">
           <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Código para desactivar</label>
-          <Input value={code} onChange={(event) => setCode(normalizeCode(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} />
+          <Input value={code} onChange={(event) => setCode(normalizeRecoveryOrTotpCode(event.target.value))} inputMode="text" autoComplete="one-time-code" placeholder="Código de 6 dígitos ou recuperação" maxLength={64} />
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Pode usar o código actual da aplicação ou um código de recuperação guardado quando activou o 2FA.</p>
         </div>
       )}
 
@@ -176,11 +181,11 @@ export default function TwoFactorSettings() {
             </div>
             <div>
               <label className="mb-1 block font-medium text-slate-700 dark:text-slate-200">4. Introduza o código de 6 dígitos</label>
-              <Input value={code} onChange={(event) => setCode(normalizeCode(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} />
+              <Input value={code} onChange={(event) => setCode(normalizeTotpCode(event.target.value))} inputMode="numeric" autoComplete="one-time-code" placeholder="Código de 6 dígitos" maxLength={6} />
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Depois de introduzir o código actual, clique em Confirmar activação.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void confirmSetup()} disabled={busy || normalizeCode(code).length !== 6} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar activação</Button>
+              <Button onClick={() => void confirmSetup()} disabled={busy || normalizeTotpCode(code).length !== 6} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Confirmar activação</Button>
               <Button variant="outline" onClick={() => { setSetup(null); setQrCode(null); setCode(""); }} disabled={busy}>Cancelar</Button>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { ExportColumnDialog } from "@/components/ExportColumnDialog";
 
 const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -380,7 +381,7 @@ function FinancialRows({ loading, empty, search, setSearch, resultCount, totalCo
   return <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><SearchBox value={search} onChange={setSearch} placeholder={placeholder} resultCount={resultCount} totalCount={totalCount} />{loading ? <Loading /> : empty ? <EmptyState filtered={Boolean(search.trim())} /> : <><div className="hidden gap-2 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900 sm:grid" style={{ gridTemplateColumns: `repeat(${headers.length}, minmax(0, 1fr))` }}>{headers.map((header) => <span key={header}>{header}</span>)}</div>{children}</>}</Card>;
 }
 
-function Loading() { return <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" />A carregar…</div>; }
+function Loading() { return <PageLoadingSkeleton variant="list" rows={3} className="p-3" />; }
 function EmptyState({ filtered = false }: { filtered?: boolean }) { return <div className="p-10 text-center text-slate-500"><Wallet className="mx-auto mb-2 h-7 w-7" />{filtered ? "Nenhum registo corresponde à pesquisa." : "Sem lançamentos registados."}</div>; }
 
 export { FinancialRows, SearchBox };

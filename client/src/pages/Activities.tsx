@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { trpc } from "@/lib/trpc";
 import { printPdfFrame } from "@/lib/pdfPrint";
@@ -143,7 +144,7 @@ function ActivityDocuments({ activityId }: { activityId: number }) {
   const documents = documentsQuery.data ?? [];
 
   if (documentsQuery.isLoading) {
-    return <p className="mt-3 text-xs text-slate-500">A carregar documentos…</p>;
+    return <PageLoadingSkeleton variant="list" rows={2} className="mt-3" />;
   }
 
   if (!documents.length) {
@@ -828,7 +829,7 @@ export default function Activities() {
         )}
 
         <div className="space-y-4">
-          {activitiesQuery.isLoading && <p className="py-8 text-center text-slate-500">A carregar atividades…</p>}
+          {activitiesQuery.isLoading && <PageLoadingSkeleton variant="cards" rows={3} />}
           {!activitiesQuery.isLoading && filteredActivities.map((activity) => (
             <Card key={activity.id} className="border-0 shadow-sm dark:bg-slate-800">
               <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">

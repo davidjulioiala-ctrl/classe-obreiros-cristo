@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { useLocalAuth } from "@/_core/hooks/useLocalAuth";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import { ExportColumnDialog } from "@/components/ExportColumnDialog";
@@ -877,7 +878,7 @@ export default function Members() {
         )}
 
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (
+          {isLoading ? <PageLoadingSkeleton variant="list" rows={6} /> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (
             <motion.div key={member.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
               <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="flex items-center pt-1"><input type="checkbox" aria-label={`Selecionar ${member.name}`} checked={selectedMemberIds.includes(member.id)} onChange={() => toggleSelectMember(member.id)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-start gap-2"><RecordIdBadge id={member.id} /><h3 className="min-w-0 break-words font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Idade: {calculateAge(member.birthDate) === null ? "—" : `${calculateAge(member.birthDate)} anos`} · Grupo: {safeGroups.find((g) => g.id === member.groupId)?.name || "Geral"}</p>
 <p className="text-xs text-slate-500 dark:text-slate-400">Estado: {member.isActive ? "Ativo" : "Inativo"}</p>{(member.phoneOrange || member.phoneTelecel) && <p className="mt-1 text-xs text-slate-500">{member.phoneOrange || member.phoneTelecel}</p>}

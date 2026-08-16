@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardLayoutCustom from "@/components/DashboardLayoutCustom";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { RecordIdBadge } from "@/components/RecordIdBadge";
 import TwoFactorSettings from "@/components/TwoFactorSettings";
 import { toast } from "sonner";
@@ -311,7 +312,7 @@ export default function UserManagement() {
         </Card>
 
         {usersQuery.isLoading ? (
-          <Card className="flex items-center justify-center gap-3 p-12"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /> A carregar utilizadores…</Card>
+          <PageLoadingSkeleton variant="table" rows={5} />
         ) : usersQuery.isError ? (
           <Card className="p-8 text-center text-red-600">{usersQuery.error.message || "Não foi possível carregar os utilizadores."}</Card>
         ) : (
@@ -383,7 +384,7 @@ export default function UserManagement() {
               </table>
             </div>
             <div className="space-y-3 p-4 md:hidden">
-              {filteredUsers.map((user) => <div key={user.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><RecordIdBadge id={user.id} /><p className="truncate font-semibold">{user.name || user.username}</p><p className="truncate text-sm text-slate-500">@{user.username}</p></div><span className="shrink-0 text-xs font-semibold">{user.isActive ? "Ativo" : "Inativo"}</span></div><p className="mt-3 break-words text-sm text-slate-600 dark:text-slate-300">{user.email || "Sem email"}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{roleLabel(user.churchRole)} · {user.role === "admin" ? "Administrador" : "Utilizador"}</p><div className="mt-4 flex gap-2"><Button className="flex-1" variant="outline" onClick={() => openDialog(user)}><Edit2 className="mr-2 h-4 w-4" /> Editar</Button><Button variant="outline" onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button></div></div>)}
+              {filteredUsers.map((user) => <div key={user.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><RecordIdBadge id={user.id} /><p className="truncate font-semibold">{user.name || user.username}</p><p className="truncate text-sm text-slate-500">@{user.username}</p></div><span className="shrink-0 text-xs font-semibold">{user.isActive ? "Ativo" : "Inativo"}</span></div><p className="mt-3 break-words text-sm text-slate-600 dark:text-slate-300">{user.email || "Sem email"}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{roleLabel(user.churchRole)} · {user.role === "admin" ? "Administrador" : "Utilizador"}</p><div className="mt-4 flex flex-wrap gap-2"><Button className="min-w-0 flex-1" variant="outline" onClick={() => openDialog(user)}><Edit2 className="mr-2 h-4 w-4" /> Editar</Button>{user.twoFactorEnabled && <Button variant="outline" title="Redefinir / Desativar 2FA" aria-label={`Redefinir 2FA de ${user.username}`} onClick={() => { if (confirm(`Tem certeza que deseja redefinir/desativar o 2FA para ${user.username}?`)) resetTwoFactor.mutate({ userId: user.id }); }} className="text-amber-600 hover:text-amber-700"><ShieldCheck className="h-4 w-4" /></Button>}<Button variant="outline" onClick={() => { if (confirm(`Eliminar ${user.username}?`)) deleteUser.mutate({ userId: user.id }); }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button></div></div>)}
             </div>
             {!filteredUsers.length && <div className="p-12 text-center text-slate-500"><UsersRound className="mx-auto mb-3 h-8 w-8" />Nenhum utilizador encontrado.</div>}
           </Card>

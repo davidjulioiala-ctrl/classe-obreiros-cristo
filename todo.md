@@ -7410,3 +7410,9 @@
 - [x] Testar os fluxos de Membros, Utilizadores e Login em larguras de 320px, 375px, 768px e 1280px.
 - [x] Distinguir falhas de layout responsivo de crashes de runtime, dados nulos ou contratos tRPC incompatíveis.
 - [x] Executar testes, typecheck, build e verificação visual antes de publicar a revisão.
+
+## Recuperação de 2FA e Esqueletos de Carregamento — Solicitação Actual
+- [x] Adicionar ecrãs de esqueleto (skeleton loaders) e animações suaves de carregamento nos principais módulos de dados (Membros, Utilizadores, Actividades e Finanças) para melhorar a experiência em dispositivos móveis.
+- [x] Implementar a capacidade de o administrador repor ou desativar o 2FA de um utilizador específico na gestão de utilizadores quando este fica bloqueado sem ter escaneado o QR Code.
+- [x] Garantir que o utilizador preso no ecrã de 2FA sem autenticador configurado consiga recuperar o acesso através de códigos de recuperação ou contacto com o administrador.
+- [x] Validar com testes unitários, typecheck e build de produção a nova lógica de recuperação e os ecrãs de carregamento.
