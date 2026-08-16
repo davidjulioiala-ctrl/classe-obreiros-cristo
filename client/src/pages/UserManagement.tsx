@@ -111,6 +111,7 @@ export default function UserManagement() {
   });
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -196,7 +197,12 @@ export default function UserManagement() {
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const users = (usersQuery.data ?? []) as UserItem[];
+    let users = (usersQuery.data ?? []) as UserItem[];
+    if (statusFilter === "active") {
+      users = users.filter((u) => u.isActive !== false);
+    } else if (statusFilter === "suspended") {
+      users = users.filter((u) => u.isActive === false);
+    }
     if (!term) return users;
     return users.filter((user) =>
       [user.username, user.name ?? "", user.email ?? "", user.churchRole]
@@ -204,7 +210,7 @@ export default function UserManagement() {
         .toLowerCase()
         .includes(term),
     );
-  }, [search, usersQuery.data]);
+  }, [search, statusFilter, usersQuery.data]);
 
   const saving = createUser.isPending || updateUser.isPending;
   const roleLabel = (value: string | null | undefined) => churchRoles.find((role) => role.value === value)?.label ?? "Membro";
@@ -242,9 +248,23 @@ export default function UserManagement() {
 
 
         <Card className="border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar utilizador, nome, email ou função" className="pl-10" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar utilizador, nome, email ou função" className="pl-10" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Estado:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              >
+                <option value="all">Todos os utilizadores</option>
+                <option value="active">Apenas Ativos</option>
+                <option value="suspended">Apenas Suspensos</option>
+              </select>
+            </div>
           </div>
         </Card>
 

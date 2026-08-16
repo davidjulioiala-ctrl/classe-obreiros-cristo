@@ -7367,3 +7367,4 @@
 - [x] Corrigir erro crítico no formulário de criação de utilizadores e seletores de função eclesiástica e papel
 - [x] Adicionar funcionalidade de suspensão e reativação temporária de utilizadores, preservando histórico e bloqueando acesso
 - [x] Adicionar campo de motivo de suspensão visível apenas para administradores na gestão de utilizadores
+- [x] Adicionar filtro por estado (todos, ativos, suspensos) na lista de utilizadores
