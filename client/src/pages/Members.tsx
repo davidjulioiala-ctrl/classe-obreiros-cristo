@@ -94,6 +94,8 @@ export default function Members() {
   const [importInvalidRows, setImportInvalidRows] = useState<MemberImportRow[]>([]);
   const [importLoading, setImportLoading] = useState(false);
   const [importCompleted, setImportCompleted] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importPhase, setImportPhase] = useState<"idle" | "reading" | "validating" | "ready" | "uploading" | "completed">("idle");
   const { data: members, isLoading, isError: membersError, error: membersQueryError, refetch } = trpc.members.list.useQuery();
   const { data: groups, isError: groupsError, error: groupsQueryError, refetch: refetchGroups } = trpc.groups.list.useQuery();
   const utils = trpc.useUtils();
@@ -120,6 +122,8 @@ export default function Members() {
   const bulkImportMutation = trpc.members.bulkImport.useMutation({
     onSuccess: (data) => {
       const rejectedCount = importInvalidRows.length;
+      setImportProgress(100);
+      setImportPhase("completed");
       toast.success(`${data.count} membro(s) importado(s) com sucesso${rejectedCount > 0 ? `; ${rejectedCount} linha(s) ficaram disponíveis para relatório.` : "."}`);
       setImportRows([]);
       setImportCompleted(rejectedCount > 0);
@@ -131,7 +135,11 @@ export default function Members() {
       void refetch();
       void utils.members.list.invalidate();
     },
-    onError: (error) => toast.error(`Importação rejeitada: ${error.message}`),
+    onError: (error) => {
+      setImportProgress(100);
+      setImportPhase("ready");
+      toast.error(`Importação rejeitada: ${error.message}`);
+    },
   });
 
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
@@ -188,6 +196,8 @@ export default function Members() {
     setImportRows([]);
     setImportInvalidRows([]);
     setImportCompleted(false);
+    setImportProgress(0);
+    setImportPhase("idle");
   };
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -196,9 +206,17 @@ export default function Members() {
     if (!file) return;
     setImportLoading(true);
     setImportCompleted(false);
+    setImportProgress(12);
+    setImportPhase("reading");
     setImportFileName(file.name);
+    const validationTimer = window.setTimeout(() => {
+      setImportProgress(52);
+      setImportPhase("validating");
+    }, 140);
     try {
       const result = await parseMemberImportFile(file, (groups ?? []).map((group) => ({ id: group.id, name: group.name })), (members ?? []).map((member) => ({ id: member.id, name: member.name, email: member.email })));
+      setImportProgress(100);
+      setImportPhase("ready");
       setImportRows(result.validRows);
       setImportInvalidRows(result.invalidRows);
       if (result.invalidRows.length > 0) toast.warning(`${result.invalidRows.length} linha(s) têm problemas e não serão importadas.`);
@@ -207,15 +225,20 @@ export default function Members() {
       setImportRows([]);
       setImportInvalidRows([]);
       setImportCompleted(false);
+      setImportProgress(0);
+      setImportPhase("idle");
       setImportFileName("");
       toast.error(error instanceof Error ? error.message : "Não foi possível ler o ficheiro.");
     } finally {
+      window.clearTimeout(validationTimer);
       setImportLoading(false);
     }
   };
 
   const confirmImport = () => {
     if (importRows.length === 0 || bulkImportMutation.isPending) return;
+    setImportProgress(72);
+    setImportPhase("uploading");
     bulkImportMutation.mutate({ rows: importRows.map(({ errors: _errors, sourceRow: _sourceRow, groupName: _groupName, ...row }) => ({ ...row, sex: row.sex as "M" | "F" })) });
   };
 
@@ -721,8 +744,9 @@ export default function Members() {
                 </div>
               </div>
 
-              {importLoading && <p className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-700 dark:text-slate-200" aria-live="polite">A ler {importFileName || "o ficheiro"}…</p>}
               {!importLoading && importFileName && <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">Ficheiro selecionado: <strong>{importFileName}</strong></p>}
+
+              {(importLoading || bulkImportMutation.isPending) && <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20" role="status" aria-live="polite"><div className="flex items-center justify-between gap-3 text-sm"><div className="flex items-center gap-2 font-medium text-emerald-900 dark:text-emerald-200"><span className="inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" aria-hidden="true" />{importPhase === "reading" ? "A ler o ficheiro…" : importPhase === "validating" ? "A validar linhas e duplicados…" : "A enviar membros para o sistema…"}</div><span className="font-semibold tabular-nums text-emerald-800 dark:text-emerald-300">{importProgress}%</span></div><div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950/60" role="progressbar" aria-label="Progresso da importação" aria-valuemin={0} aria-valuemax={100} aria-valuenow={importProgress}><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 ease-out motion-safe:animate-pulse" style={{ width: `${importProgress}%` }} /></div><p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">Pode continuar nesta janela; não feche o modal enquanto o processamento estiver em curso.</p></div>}
 
                                 {(importRows.length > 0 || importInvalidRows.length > 0 || importCompleted) && (
 

@@ -56,6 +56,14 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain("<FileSpreadsheet className=\"mr-2 h-4 w-4\" /> Excel");
   });
 
+  it("apresenta progresso acessível durante a leitura, validação e envio", () => {
+    expect(membersSource).toContain("aria-label=\"Progresso da importação\"");
+    expect(membersSource).toContain("aria-valuenow={importProgress}");
+    expect(membersSource).toContain("A validar linhas e duplicados…");
+    expect(membersSource).toContain("A enviar membros para o sistema…");
+    expect(membersSource).toContain("animate-spin");
+  });
+
   it("abre o modal de colunas e envia a selecção juntamente com os filtros", () => {
     expect(membersSource).toContain('import { ExportColumnDialog } from "@/components/ExportColumnDialog"');
     expect(membersSource).toContain("const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => [...MEMBER_EXPORT_COLUMN_KEYS])");
