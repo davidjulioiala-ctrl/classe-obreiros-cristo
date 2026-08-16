@@ -7375,3 +7375,4 @@
 - [x] Implementar ação em massa para mover múltiplos membros entre grupos com confirmação e auditoria
 - [x] Adicionar barra de pesquisa na lista de membros para encontrar rapidamente pessoas por nome ou ID antes da ação em massa
 - [x] Adicionar caixa de seleção "Selecionar todos os resultados da pesquisa" para ações em massa
+- [x] Adicionar modal de confirmação antes de executar ações em massa em membros
