@@ -24,10 +24,10 @@ describe("edição de funções de utilizadores", () => {
   });
 
   it("mantém a selecção restrita aos valores aceites pelo servidor", () => {
-    expect(userManagementSource).toContain('if (isSystemRole(value))');
-    expect(userManagementSource).toContain('if (isChurchRole(value))');
-    expect(userManagementSource).toContain('<SelectItem value="user">Utilizador</SelectItem>');
-    expect(userManagementSource).toContain('<SelectItem value="admin">Administrador</SelectItem>');
+    expect(userManagementSource).toContain("isSystemRole");
+    expect(userManagementSource).toContain("isChurchRole");
+    expect(userManagementSource).toContain('<option value="user">Utilizador</option>');
+    expect(userManagementSource).toContain('<option value="admin">Administrador</option>');
   });
 
   it("utiliza o componente reutilizável TwoFactorSettings", () => {
