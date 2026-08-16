@@ -118,7 +118,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
 
       <aside
         aria-label="Navegação principal"
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white shadow-lg transition-[width,transform] duration-200 dark:border-slate-800 dark:bg-slate-900 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} ${sidebarExpanded ? "w-[min(84vw,280px)]" : "w-20"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex max-w-[calc(100vw-1rem)] flex-col border-r border-slate-200 bg-white shadow-lg transition-[width,transform] duration-200 dark:border-slate-800 dark:bg-slate-900 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} ${sidebarExpanded ? "w-[min(84vw,280px)]" : "w-20"}`}
       >
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
           {sidebarExpanded && (
@@ -246,7 +246,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
               </button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                <div className="absolute right-0 mt-2 max-h-[calc(100dvh-5rem)] w-56 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                   <div className="border-b border-slate-100 px-3 py-2 sm:hidden dark:border-slate-700">
                     <p className="text-sm font-medium text-slate-900 dark:text-white">{user?.name || "Utilizador"}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -275,7 +275,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-8" id="main-content">
+        <main className="min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8" id="main-content">
           {children}
         </main>
       </div>

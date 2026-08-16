@@ -241,11 +241,11 @@ export default function Finances() {
 
   return (
     <DashboardLayoutCustom>
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Tesouraria</p>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Finanças</h1>
+            <h1 className="break-words text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Finanças</h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Registe quotas, receitas e despesas com ID automático e responsável manual.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

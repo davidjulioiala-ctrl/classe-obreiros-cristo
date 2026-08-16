@@ -239,14 +239,14 @@ export default function UserManagement() {
 
   return (
     <DashboardLayoutCustom>
-      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <motion.div className="min-w-0 space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Administração</p>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gestão de utilizadores</h1>
+            <h1 className="break-words text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Gestão de utilizadores</h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">Crie, edite, desative e remova acessos da plataforma.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <Button
               variant={twoFactorPolicyQuery.data?.required ? "default" : "outline"}
               className={twoFactorPolicyQuery.data?.required ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}
@@ -283,12 +283,12 @@ export default function UserManagement() {
               <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar utilizador, nome, email ou função" className="pl-10" />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Estado:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended")}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white sm:w-auto"
                 aria-label="Filtrar por estado da conta"
               >
                 <option value="all">Todos os utilizadores</option>
@@ -299,7 +299,7 @@ export default function UserManagement() {
               <select
                 value={twoFactorFilter}
                 onChange={(e) => setTwoFactorFilter(e.target.value as "all" | "enabled" | "pending")}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white sm:w-auto"
                 aria-label="Filtrar por ativação do 2FA"
               >
                 <option value="all">Todos</option>
@@ -391,7 +391,7 @@ export default function UserManagement() {
       </motion.div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => open ? setDialogOpen(true) : closeDialog()}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-lg">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto bg-white p-4 dark:bg-slate-800 sm:max-h-[90vh] sm:max-w-lg sm:p-6">
           <DialogHeader><DialogTitle>{editingUser ? "Editar utilizador" : "Novo utilizador"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
                           <div><label className="mb-1 block text-sm font-medium">Utilizador (Código)</label><Input value={formData.username} onChange={(event) => setFormData((current) => ({ ...current, username: event.target.value }))} autoComplete="username" placeholder="username" /></div>
@@ -456,7 +456,7 @@ export default function UserManagement() {
       </Dialog>
 
       <Dialog open={selectedAuditUserId !== null} onOpenChange={(open) => { if (!open) setSelectedAuditUserId(null); }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 sm:max-w-xl">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto bg-white p-4 dark:bg-slate-800 sm:max-h-[90vh] sm:max-w-xl sm:p-6">
           <DialogHeader><DialogTitle>Histórico de Auditoria do Utilizador</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {auditQuery.isLoading ? (

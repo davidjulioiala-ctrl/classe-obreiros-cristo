@@ -584,7 +584,7 @@ export default function Activities() {
 
   return (
     <DashboardLayoutCustom>
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">Agenda</p>

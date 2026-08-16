@@ -466,7 +466,7 @@ export default function Members() {
 
   return (
     <DashboardLayoutCustom>
-      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <motion.div className="min-w-0 space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         {(membersError || groupsError) && (
           <div role="alert" className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
             <div>
@@ -631,7 +631,7 @@ export default function Members() {
         )}
 
         {showForm && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
             <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-white">{editingId ? "Editar membro" : "Novo membro"}</h2>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input placeholder="Nome completo" value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
@@ -776,8 +776,8 @@ export default function Members() {
         </div>
 
         {importDialogOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="member-import-title">
-            <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-800 sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-2 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="member-import-title">
+            <div className="my-auto max-h-[calc(100dvh-1rem)] w-full max-w-[calc(100vw-1rem)] min-w-0 overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-800 sm:max-h-[90vh] sm:max-w-4xl sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 id="member-import-title" className="text-xl font-semibold text-slate-900 dark:text-white">Importar membros em massa</h2>
@@ -843,8 +843,8 @@ export default function Members() {
             </span>
           </div>
           {selectedMemberIds.length > 0 && (
-            <div className="flex items-center gap-2">
-              <select aria-label="Grupo de destino para mover membros selecionados" value={bulkTargetGroupId} onChange={(e) => setBulkTargetGroupId(e.target.value ? Number(e.target.value) : '')} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+            <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <select aria-label="Grupo de destino para mover membros selecionados" value={bulkTargetGroupId} onChange={(e) => setBulkTargetGroupId(e.target.value ? Number(e.target.value) : '')} className="min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white sm:w-auto">
                 <option value="">Selecionar grupo de destino…</option>
                 {safeGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
@@ -860,13 +860,13 @@ export default function Members() {
 
         {/* Modal de Confirmação de Ação em Massa */}
         {bulkMoveModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-2 sm:p-4">
+            <div className="my-auto w-full max-w-[calc(100vw-1rem)] rounded-xl bg-white p-4 shadow-xl dark:bg-slate-800 sm:max-w-md sm:p-6">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Confirmar transferência em massa</h3>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Tem a certeza de que pretende mover <strong className="text-emerald-600">{selectedMemberIds.length}</strong> membro(s) selecionado(s) para o grupo <strong className="text-emerald-600">{safeGroups.find(g => g.id === bulkTargetGroupId)?.name}</strong>?
               </p>
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
                 <Button type="button" variant="outline" onClick={() => setBulkMoveModalOpen(false)}>Cancelar</Button>
                 <Button type="button" disabled={bulkMoveMutation.isPending} onClick={() => bulkMoveMutation.mutate({ memberIds: selectedMemberIds, targetGroupId: Number(bulkTargetGroupId) })} className="bg-emerald-600 text-white hover:bg-emerald-700">
                   {bulkMoveMutation.isPending ? "A mover…" : "Confirmar e Mover"}
@@ -879,7 +879,7 @@ export default function Members() {
         <motion.div className="grid grid-cols-1 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? <div className="py-8 text-center text-slate-500">A carregar membros…</div> : filteredMembers && filteredMembers.length > 0 ? filteredMembers.map((member, index) => (
             <motion.div key={member.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
-              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="flex items-center pt-1"><input type="checkbox" aria-label={`Selecionar ${member.name}`} checked={selectedMemberIds.includes(member.id)} onChange={() => toggleSelectMember(member.id)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><RecordIdBadge id={member.id} /><h3 className="font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Idade: {calculateAge(member.birthDate) === null ? "—" : `${calculateAge(member.birthDate)} anos`} · Grupo: {safeGroups.find((g) => g.id === member.groupId)?.name || "Geral"}</p>
+              <Card className="border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg dark:border-slate-700 dark:bg-slate-800"><div className="flex items-start justify-between gap-3"><div className="flex items-center pt-1"><input type="checkbox" aria-label={`Selecionar ${member.name}`} checked={selectedMemberIds.includes(member.id)} onChange={() => toggleSelectMember(member.id)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-start gap-2"><RecordIdBadge id={member.id} /><h3 className="min-w-0 break-words font-semibold text-slate-900 dark:text-white">{member.name}</h3>{member.isGuest && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Convidado</span>}</div><p className="text-sm text-slate-600 dark:text-slate-400">{member.position || "Sem cargo"} · {member.sex === "M" ? "Masculino" : "Feminino"} · Idade: {calculateAge(member.birthDate) === null ? "—" : `${calculateAge(member.birthDate)} anos`} · Grupo: {safeGroups.find((g) => g.id === member.groupId)?.name || "Geral"}</p>
 <p className="text-xs text-slate-500 dark:text-slate-400">Estado: {member.isActive ? "Ativo" : "Inativo"}</p>{(member.phoneOrange || member.phoneTelecel) && <p className="mt-1 text-xs text-slate-500">{member.phoneOrange || member.phoneTelecel}</p>}
 <div className="mt-2">
   <MemberAttendanceBadge memberId={member.id} />

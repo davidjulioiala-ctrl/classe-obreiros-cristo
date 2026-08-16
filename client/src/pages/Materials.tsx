@@ -125,10 +125,10 @@ export default function Materials() {
 
   return (
     <DashboardLayoutCustom>
-      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <motion.div className="min-w-0 space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+            <h1 className="flex min-w-0 items-center gap-3 break-words text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
               <Package className="w-8 h-8 text-emerald-600" /> Gestão de Materiais e Ativos
             </h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1">

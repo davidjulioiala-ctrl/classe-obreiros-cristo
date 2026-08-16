@@ -7398,3 +7398,15 @@
 - [x] Unificar o assistente de 2FA do login com o fluxo robusto de configuração existente.
 - [x] Criar testes de regressão para grupos nulos, contrato de utilizadores e enforcement global de 2FA.
 - [x] Executar typecheck, testes, build e verificação responsiva antes do checkpoint final.
+
+## Auditoria de Responsividade e Análise de Crashes
+- [x] Auditar componentes de layout, tabelas e formulários para overflow horizontal e quebras em ecrãs móveis (iPhone SE a iPad)
+- [x] Investigar se os problemas anteriores eram causados exclusivamente por responsividade ou por falhas de null-pointer e contrato de tRPC
+- [x] Documentar a conclusão técnica sobre a origem dos crashes no relatório final
+
+## Revisão responsiva solicitada — nova iteração
+- [x] Tornar a navegação, cabeçalho, cartões, tabelas, formulários e modais adaptáveis a larguras móveis, tablet e desktop.
+- [x] Garantir que campos e botões de formulários não provoquem overflow horizontal nem fiquem inacessíveis em ecrãs estreitos.
+- [x] Testar os fluxos de Membros, Utilizadores e Login em larguras de 320px, 375px, 768px e 1280px.
+- [x] Distinguir falhas de layout responsivo de crashes de runtime, dados nulos ou contratos tRPC incompatíveis.
+- [x] Executar testes, typecheck, build e verificação visual antes de publicar a revisão.
