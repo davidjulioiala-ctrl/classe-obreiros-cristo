@@ -80,6 +80,7 @@ const emptyForm: FormData = {
 export default function UserManagement() {
   const utils = trpc.useUtils();
   const { user: currentUser, refresh } = useLocalAuth();
+  const isAdmin = currentUser?.role === "admin";
   const usersQuery = trpc.auth.getAllUsers.useQuery(undefined, { retry: false });
   const createUser = trpc.auth.createUser.useMutation({
     onSuccess: async () => {
@@ -168,6 +169,10 @@ export default function UserManagement() {
 
 
   function saveUser() {
+    if (!isAdmin) {
+      toast.error("Apenas administradores podem criar ou editar utilizadores.");
+      return;
+    }
     const username = formData.username.trim().toLowerCase();
     const name = formData.name.trim();
     const email = formData.email.trim();
@@ -236,7 +241,19 @@ export default function UserManagement() {
   }, [search, statusFilter, twoFactorFilter, usersQuery.data]);
 
   const saving = createUser.isPending || updateUser.isPending;
-  const roleLabel = (value: string | null | undefined) => churchRoles.find((role) => role.value === value)?.label ?? "Membro";
+    const roleLabel = (value: string | null | undefined) => churchRoles.find((role) => role.value === value)?.label ?? "Membro";
+
+  if (currentUser && !isAdmin) {
+    return (
+      <DashboardLayoutCustom>
+        <Card className="mx-auto max-w-2xl border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-900/60 dark:bg-amber-950/20">
+          <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-amber-600" />
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Acesso restrito</h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-300">A criação e a gestão de utilizadores estão disponíveis apenas para administradores.</p>
+        </Card>
+      </DashboardLayoutCustom>
+    );
+  }
 
   return (
     <DashboardLayoutCustom>
@@ -270,9 +287,11 @@ export default function UserManagement() {
             }} className="w-full sm:w-auto">
               <FileText className="mr-2 h-4 w-4" /> Exportar CSV
             </Button>
-            <Button onClick={() => openDialog()} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" /> Novo utilizador
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => openDialog()} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" /> Novo utilizador
+              </Button>
+            )}
           </div>
         </div>
 

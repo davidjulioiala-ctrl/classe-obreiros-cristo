@@ -92,4 +92,19 @@ describe("validação do cargo eclesiástico", () => {
     expect(membersSource).toContain('params.set("columns", columns.join(","))');
     expect(membersSource).toContain('params.set("includePersonalData", includePersonalData ? "true" : "false")');
   });
+
+  it("alinha criação e importação com admin, oficial e lider", () => {
+    expect(membersSource).toContain('const canCreateMembers = user?.role === "admin" || user?.churchRole === "oficial" || user?.churchRole === "lider"');
+    expect(membersSource).toContain("const canImportMembers = canCreateMembers");
+  });
+
+  it("não submete o formulário para perfis sem permissão", () => {
+    expect(membersSource).toContain("if (!canCreateMembers)");
+    expect(membersSource).toContain("Apenas administradores, oficiais e líderes podem criar ou editar membros.");
+  });
+
+  it("oculta o botão Novo membro quando o perfil não pode criar", () => {
+    expect(membersSource).toContain("{canCreateMembers && (");
+    expect(membersSource).toContain('"Novo membro"');
+  });
 });

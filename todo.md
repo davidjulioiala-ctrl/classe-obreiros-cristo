@@ -7422,3 +7422,25 @@
 - [x] Executar script de reposição de configurações para os valores originais de fábrica.
 - [x] Validar que utilizadores, membros, actividades, presenças e finanças foram integralmente preservados.
 - [x] Executar typecheck, testes e build de produção para confirmar a integridade.
+
+## Recuperação de 2FA por Email
+- [ ] Criar campos na base de dados para armazenar o código de recuperação por email, expiração e tentativas falhadas.
+- [ ] Implementar procedimento tRPC para solicitar o envio do código de recuperação de 2FA para o email cadastrado do utilizador.
+- [ ] Implementar procedimento tRPC para validar o código de recuperação e repor/desativar o 2FA para permitir novo acesso.
+- [ ] Integrar serviço de envio de email seguro utilizando o canal de notificações da aplicação.
+- [ ] Adicionar botão e ecrã de recuperação por email no fluxo de login e no assistente de 2FA.
+- [ ] Criar testes unitários para o fluxo completo de recuperação por email e validação de expiração/tentativas.
+- [ ] Executar typecheck, testes e build de produção sem erros.
+
+## Recuperação de 2FA acionada pelo Administrador
+- [ ] Criar procedimento tRPC administrativo para enviar e-mail de recuperação/redefinição de 2FA para o endereço cadastrado do utilizador.
+- [ ] Integrar envio de e-mail seguro utilizando o serviço de notificações do sistema.
+- [ ] Adicionar botão "Enviar recuperação de 2FA por e-mail" na tabela de Gestão de Utilizadores (UserManagement.tsx).
+- [ ] Registar evento na auditoria do sistema e validar permissão exclusiva de administrador.
+- [ ] Criar testes unitários, executar typecheck, testes e build de produção.
+
+## Criação de membros e utilizadores — correcção de acesso
+- [x] Alinhar a visibilidade do botão Novo membro com a permissão `oficialProcedure` (admin, oficial ou lider).
+- [x] Impedir que perfis não administradores vejam ou submetam o formulário Novo utilizador e apresentar uma mensagem de acesso clara.
+- [x] Manter mensagens de erro explícitas para tentativas sem permissão e validar os contratos tRPC de criação.
+- [x] Adicionar testes de regressão para visibilidade/permissões e validar typecheck, testes e build.

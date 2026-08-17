@@ -40,4 +40,11 @@ describe("edição de funções de utilizadores", () => {
     expect(userManagementSource).toContain('u.twoFactorEnabled !== true');
     expect(userManagementSource).toContain('option value="pending">2FA pendente</option>');
   });
+
+  it("restringe a gestão e a criação de utilizadores ao administrador", () => {
+    expect(userManagementSource).toContain('const isAdmin = currentUser?.role === "admin"');
+    expect(userManagementSource).toContain('if (currentUser && !isAdmin)');
+    expect(userManagementSource).toContain('Apenas administradores podem criar ou editar utilizadores.');
+    expect(userManagementSource).toContain('{isAdmin && (');
+  });
 });

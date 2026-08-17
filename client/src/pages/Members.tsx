@@ -90,7 +90,8 @@ function calculateAge(birthDate?: string | Date | null) {
 export default function Members() {
   const { user } = useLocalAuth();
   const canExportMembers = user?.role === "admin" || (user?.churchRole !== undefined && user.churchRole !== "oficial");
-  const canImportMembers = user?.role === "admin" || user?.churchRole === "oficial" || user?.churchRole === "lider";
+  const canCreateMembers = user?.role === "admin" || user?.churchRole === "oficial" || user?.churchRole === "lider";
+  const canImportMembers = canCreateMembers;
   const [searchQuery, setSearchQuery] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [sexFilter, setSexFilter] = useState<"all" | "M" | "F">("all");
@@ -360,6 +361,10 @@ export default function Members() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canCreateMembers) {
+      toast.error("Apenas administradores, oficiais e líderes podem criar ou editar membros.");
+      return;
+    }
     if (!formData.name.trim()) {
       toast.error("Indique o nome completo do membro.");
       return;
@@ -387,6 +392,10 @@ export default function Members() {
   };
 
   const openEdit = (member: NonNullable<typeof members>[number]) => {
+    if (!canCreateMembers) {
+      toast.error("Apenas administradores, oficiais e líderes podem editar membros.");
+      return;
+    }
     setEditingId(member.id);
       setFormData({
         name: member.name,
@@ -509,10 +518,12 @@ export default function Members() {
             <Button onClick={() => setShowGroupManager((v) => !v)} variant="outline" className="flex-1 sm:flex-initial">
               {showGroupManager ? "Fechar gestão de grupos" : "Gerir e renomear grupos"}
             </Button>
-            <Button onClick={() => { if (showForm) closeForm(); else { setFormData(createEmptyForm()); setEditingId(null); setShowForm(true); } }} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-initial">
-              {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-              {showForm ? "Fechar" : "Novo membro"}
-            </Button>
+            {canCreateMembers && (
+              <Button onClick={() => { if (showForm) closeForm(); else { setFormData(createEmptyForm()); setEditingId(null); setShowForm(true); } }} className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-initial">
+                {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                {showForm ? "Fechar" : "Novo membro"}
+              </Button>
+            )}
           </div>
         </motion.div>
 
