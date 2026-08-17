@@ -7416,3 +7416,9 @@
 - [x] Implementar a capacidade de o administrador repor ou desativar o 2FA de um utilizador específico na gestão de utilizadores quando este fica bloqueado sem ter escaneado o QR Code.
 - [x] Garantir que o utilizador preso no ecrã de 2FA sem autenticador configurado consiga recuperar o acesso através de códigos de recuperação ou contacto com o administrador.
 - [x] Validar com testes unitários, typecheck e build de produção a nova lógica de recuperação e os ecrãs de carregamento.
+
+## Restauração de Configurações (Opção 1)
+- [x] Inventariar chaves de configuração no servidor e base de dados (nome da organização, quota, percentagens de activos/inactivos, cabeçalhos, 2FA global, manutenção).
+- [x] Executar script de reposição de configurações para os valores originais de fábrica.
+- [x] Validar que utilizadores, membros, actividades, presenças e finanças foram integralmente preservados.
+- [x] Executar typecheck, testes e build de produção para confirmar a integridade.
