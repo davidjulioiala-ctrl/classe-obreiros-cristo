@@ -78,12 +78,14 @@ describe("autenticação local", () => {
     await expect(getLocalUserFromRequest(request)).resolves.toBeNull();
   });
 
-  it("bloqueia rotas protegidas para contas sem 2FA quando a política global está activa, mas permite setup", async () => {
+  it("bloqueia rotas protegidas para contas sem 2FA quando a política global está activa, mas permite hidratar a sessão e concluir setup", async () => {
     const token = createLocalSessionToken(1, 1);
     getAppSettingMock.mockResolvedValue(JSON.stringify({ required: true }));
     getUserByIdMock.mockResolvedValue({ ...adminFixture, twoFactorEnabled: false });
     const protectedRequest = { headers: { cookie: `${COOKIE_NAME}=${token}` }, path: "/api/trpc/members.list" } as any;
     await expect(getLocalUserFromRequest(protectedRequest)).resolves.toBeNull();
+    const sessionRequest = { headers: { cookie: `${COOKIE_NAME}=${token}` }, path: "/api/auth/me" } as any;
+    await expect(getLocalUserFromRequest(sessionRequest)).resolves.toMatchObject({ id: 1 });
     const setupRequest = { headers: { cookie: `${COOKIE_NAME}=${token}` }, path: "/api/auth/2fa/setup" } as any;
     await expect(getLocalUserFromRequest(setupRequest)).resolves.toMatchObject({ id: 1 });
   });

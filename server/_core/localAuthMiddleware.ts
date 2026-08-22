@@ -17,11 +17,21 @@ function refreshSessionCookie(req: Request, res: Response, session: ReturnType<t
   res.cookie(COOKIE_NAME, refreshLocalSessionToken(session), getSessionCookieOptions(req));
 }
 
-function isTwoFactorSetupPath(req: Request) {
+function getRequestPath(req: Request) {
   const path = (req as Request & { path?: string; originalUrl?: string }).path
     ?? (req as Request & { originalUrl?: string }).originalUrl?.split("?")[0]
     ?? "";
-  return path === "/api/auth/2fa/setup" || path === "/api/auth/2fa/confirm";
+  return path.replace(/\/+$/, "") || "/";
+}
+
+function isTwoFactorPendingAllowedPath(req: Request) {
+  const path = getRequestPath(req);
+  // Um utilizador com 2FA obrigatório pendente só pode obter os próprios
+  // metadados de sessão e concluir o setup. Não pode chamar rotas tRPC nem
+  // aceder a dados de membros, finanças ou outros recursos protegidos.
+  return path === "/api/auth/me"
+    || path === "/api/auth/2fa/setup"
+    || path === "/api/auth/2fa/confirm";
 }
 
 async function isGlobalTwoFactorRequired() {
@@ -36,7 +46,7 @@ async function isGlobalTwoFactorRequired() {
 }
 
 async function isTwoFactorBlocked(req: Request, user: { twoFactorEnabled?: unknown }) {
-  return !isTwoFactorSetupPath(req) && await isGlobalTwoFactorRequired() && user.twoFactorEnabled !== true;
+  return !isTwoFactorPendingAllowedPath(req) && await isGlobalTwoFactorRequired() && user.twoFactorEnabled !== true;
 }
 
 export async function localAuthMiddleware(

@@ -74,6 +74,16 @@ function useLocalAuthState(): LocalAuthContextValue {
       });
       const data = await readResponse(response);
       if (data.twoFactorSetupRequired) {
+        // Quando o 2FA é obrigatório, o servidor emite uma sessão limitada
+        // apenas aos endpoints de setup. Hidratar o utilizador aqui permite
+        // que a aplicação mostre o assistente dedicado em vez de montar menus
+        // e consultas tRPC que serão correctamente bloqueados.
+        const sessionResponse = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+        const sessionData = await readResponse(sessionResponse);
+        if (!sessionData.user) {
+          throw new Error("Não foi possível preparar a sessão para a configuração obrigatória de 2FA.");
+        }
+        setUser(sessionData.user);
         return { twoFactorRequired: false, twoFactorSetupRequired: true };
       }
       if (data.twoFactorRequired) {

@@ -11,7 +11,18 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
+const isTwoFactorRequiredError = (error: unknown) => {
+  if (!(error instanceof TRPCClientError)) return false;
+  const message = error.message.toLocaleLowerCase("pt-PT");
+  return message.includes("two_factor_required")
+    || message.includes("autenticação de dois factores é obrigatória");
+};
+
 const redirectToLocalLoginIfUnauthorized = (error: unknown) => {
+  if (isTwoFactorRequiredError(error)) {
+    window.dispatchEvent(new Event("local-two-factor-required"));
+    return;
+  }
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
   if (error.message !== UNAUTHED_ERR_MSG) return;

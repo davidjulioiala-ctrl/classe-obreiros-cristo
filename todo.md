@@ -7444,3 +7444,16 @@
 - [x] Impedir que perfis não administradores vejam ou submetam o formulário Novo utilizador e apresentar uma mensagem de acesso clara.
 - [x] Manter mensagens de erro explícitas para tentativas sem permissão e validar os contratos tRPC de criação.
 - [x] Adicionar testes de regressão para visibilidade/permissões e validar typecheck, testes e build.
+
+## Recuperação de 2FA com o e-mail de backup configurado
+- [ ] Atualizar o serviço de notificações (`notification.ts`) para direcionar os avisos e instruções para o e-mail de backup definido nas Definições.
+- [ ] Adicionar procedimento tRPC administrativo para enviar o pedido de recuperação de 2FA utilizando o canal integrado.
+- [ ] Integrar o botão de disparo na tabela de Gestão de Utilizadores com feedback visual e registo de auditoria.
+- [ ] Executar testes unitários, typecheck e build de produção sem erros.
+
+## Estabilização urgente de menus, membros e 2FA
+- [x] Reproduzir as falhas actuais no navegador e correlacionar os erros de consola, servidor e tRPC.
+- [x] Corrigir a abertura e submissão do formulário de novo membro para perfis autorizados.
+- [x] Corrigir a configuração, activação e confirmação de 2FA sem permitir bypass de segurança.
+- [x] Corrigir os menus que falham por dados nulos, permissões inconsistentes ou erros de renderização.
+- [x] Validar em desktop e mobile com testes, typecheck, build e logs sem crashes.

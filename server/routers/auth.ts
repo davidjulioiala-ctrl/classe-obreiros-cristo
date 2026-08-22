@@ -195,7 +195,10 @@ export const authRouter = router({
       return { success: true } as const;
     }),
 
-  getTwoFactorPolicy: protectedProcedure.query(async () => {
+  // A política é pública porque apenas comunica se o 2FA é obrigatório. Isto
+  // permite que o cliente encaminhe uma sessão pendente para o assistente sem
+  // fazer uma chamada tRPC protegida que o middleware bloquearia.
+  getTwoFactorPolicy: publicProcedure.query(async () => {
     const raw = await db.getAppSetting("global_two_factor_required");
     try {
       if (raw) {

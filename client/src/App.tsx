@@ -19,6 +19,7 @@ import MemberHistoryPage from "@/pages/MemberHistory";
 import IncompleteMembers from "@/pages/IncompleteMembers";
 import Materials from "@/pages/Materials";
 import SystemStatus from "@/pages/SystemStatus";
+import TwoFactorRequiredGate from "@/components/TwoFactorRequiredGate";
 import SessionInactivityGuard from "./components/SessionInactivityGuard";
 import MaintenanceGate from "./components/MaintenanceGate";
 import { Route, Switch, useLocation } from "wouter";
@@ -29,11 +30,17 @@ import { Loader2 } from "lucide-react";
 
 function Router() {
   const [location] = useLocation();
-  const { user, loading, logout } = useLocalAuth();
+  const { user, loading, logout, refresh } = useLocalAuth();
   const { setTheme, setAccentColor } = useTheme();
+  const utils = trpc.useUtils();
   const appearanceQuery = trpc.settings.get.useQuery({ keyName: "appearance" }, {
-    enabled: Boolean(user),
+    enabled: Boolean(user?.twoFactorEnabled),
     retry: false,
+  });
+  const twoFactorPolicyQuery = trpc.auth.getTwoFactorPolicy.useQuery(undefined, {
+    enabled: Boolean(user && !user.twoFactorEnabled),
+    retry: false,
+    staleTime: 30_000,
   });
   const organizationQuery = trpc.settings.getPublicOrganization.useQuery(undefined, { retry: false });
 
@@ -53,6 +60,15 @@ function Router() {
       // Preferir a preferência local se a configuração remota estiver corrompida.
     }
   }, [appearanceQuery.data, setAccentColor, setTheme]);
+
+  useEffect(() => {
+    const synchronisePendingTwoFactor = () => {
+      void utils.auth.getTwoFactorPolicy.invalidate();
+      void refresh();
+    };
+    window.addEventListener("local-two-factor-required", synchronisePendingTwoFactor);
+    return () => window.removeEventListener("local-two-factor-required", synchronisePendingTwoFactor);
+  }, [refresh, utils.auth.getTwoFactorPolicy]);
 
   // O estado deve continuar acessível sem sessão e durante manutenção.
   if (location === "/status") {
@@ -78,6 +94,21 @@ function Router() {
         <Route component={LocalLogin} />
       </Switch>
     );
+  }
+
+  if (!user.twoFactorEnabled && twoFactorPolicyQuery.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">A verificar os requisitos de segurança...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.twoFactorEnabled && twoFactorPolicyQuery.data?.required) {
+    return <TwoFactorRequiredGate />;
   }
 
   return (
