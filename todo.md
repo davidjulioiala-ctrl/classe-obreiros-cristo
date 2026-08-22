@@ -7463,3 +7463,9 @@
 - [x] Garantir que o cliente detecta respostas incompatíveis de sessão ou 2FA e se actualiza sem deixar a aplicação num estado bloqueado.
 - [x] Validar o login, menus, criação de membro e configuração 2FA através do domínio externo publicado.
 - [x] Executar testes, build e publicar a correcção de distribuição validada.
+
+## Incidente ERR-MT4GTRYF-96DH6H
+- [x] Correlacionar a referência com os registos de produção, rede e fronteira de erros do cliente.
+- [x] Corrigir a operação que provoca o erro inesperado sem afectar dados guardados.
+- [x] Adicionar uma regressão automatizada e validar no domínio publicado.
+- [x] Executar testes, typecheck, build e publicar a correcção do incidente.

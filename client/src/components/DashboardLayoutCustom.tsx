@@ -43,6 +43,18 @@ export type MenuItem = {
 
 export type NavigationUser = { role?: string | null; churchRole?: string | null } | null | undefined;
 
+function formatChurchRole(value: unknown) {
+  const labels: Record<string, string> = {
+    lider: "Líder",
+    oficial: "Oficial",
+    financeiro: "Financeiro",
+    financeira: "Financeira",
+    louvor: "Louvor",
+    membro: "Membro",
+  };
+  return typeof value === "string" ? labels[value] ?? "Utilizador" : "Utilizador";
+}
+
 export const menuItems: MenuItem[] = [
   { icon: Home, label: "Página Inicial", href: "/dashboard" },
   { icon: Users, label: "Membros", href: "/members" },
@@ -239,7 +251,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                 <div className="hidden max-w-32 text-left sm:block">
                   <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{user?.name || "Utilizador"}</p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {user?.churchRole === "lider" ? "Líder" : user?.churchRole === "oficial" ? "Oficial" : "Louvor"}
+                    {formatChurchRole(user?.churchRole)}
                   </p>
                 </div>
                 <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
@@ -250,7 +262,7 @@ export default function DashboardLayoutCustom({ children }: DashboardLayoutCusto
                   <div className="border-b border-slate-100 px-3 py-2 sm:hidden dark:border-slate-700">
                     <p className="text-sm font-medium text-slate-900 dark:text-white">{user?.name || "Utilizador"}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {user?.churchRole === "lider" ? "Líder" : user?.churchRole === "oficial" ? "Oficial" : "Louvor"}
+                      {formatChurchRole(user?.churchRole)}
                     </p>
                   </div>
                   <button

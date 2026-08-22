@@ -17,6 +17,18 @@ const createErrorId = () => {
   return `ERR-${timestamp}-${random}`;
 };
 
+export function buildClientErrorReport(errorId: string, error: Error, pagePath: string) {
+  const safeName = String(error.name || "Error").replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 80) || "Error";
+  const safePath = String(pagePath || "/").replace(/[^a-zA-Z0-9/_?=&.-]/g, "").slice(0, 300) || "/";
+  return {
+    category: "operational" as const,
+    // Não transmitir a mensagem ou a stack, pois podem conter dados pessoais
+    // ou detalhes internos. A referência permite ao administrador correlacionar
+    // o relato do utilizador com o momento e a página afectada.
+    description: `Erro de renderização no navegador. Referência: ${errorId}. Página: ${safePath}. Tipo: ${safeName}.`,
+  };
+}
+
 /**
  * Captura erros de renderização na árvore React e mantém a aplicação num
  * estado recuperável, sem apresentar stack traces ou detalhes internos.
@@ -46,6 +58,18 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       name: error.name,
       componentStack: info.componentStack,
     });
+
+    if (typeof window !== "undefined") {
+      const report = buildClientErrorReport(errorId, error, window.location.pathname);
+      void fetch("/api/status-report", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(report),
+      }).catch(() => {
+        // O fallback permanece utilizável mesmo se o reporte técnico falhar.
+      });
+    }
 
     this.setState({ errorId });
   }

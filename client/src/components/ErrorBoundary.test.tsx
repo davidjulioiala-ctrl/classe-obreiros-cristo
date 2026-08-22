@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import ErrorBoundary from "./ErrorBoundary";
+import ErrorBoundary, { buildClientErrorReport } from "./ErrorBoundary";
 
 describe("ErrorBoundary global", () => {
   it("converte um erro de renderização num estado recuperável", () => {
@@ -26,5 +26,15 @@ describe("ErrorBoundary global", () => {
     expect(output).toContain("Tentar novamente");
     expect(output).toContain("ERR-TESTE");
     expect(output).not.toContain("detalhe sensível");
+  });
+
+  it("cria um reporte técnico correlacionável sem expor a mensagem interna do erro", () => {
+    const report = buildClientErrorReport("ERR-TESTE-1", new Error("token=segredo <interno>"), "/members?nome=Ana");
+
+    expect(report).toEqual({
+      category: "operational",
+      description: "Erro de renderização no navegador. Referência: ERR-TESTE-1. Página: /members?nome=Ana. Tipo: Error.",
+    });
+    expect(report.description).not.toContain("segredo");
   });
 });
