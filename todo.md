@@ -7457,3 +7457,9 @@
 - [x] Corrigir a configuração, activação e confirmação de 2FA sem permitir bypass de segurança.
 - [x] Corrigir os menus que falham por dados nulos, permissões inconsistentes ou erros de renderização.
 - [x] Validar em desktop e mobile com testes, typecheck, build e logs sem crashes.
+
+## Sincronização entre pré-visualização e navegador externo
+- [x] Comparar a versão, assets, cabeçalhos de cache e estado de sessão do domínio publicado com a pré-visualização.
+- [x] Garantir que o cliente detecta respostas incompatíveis de sessão ou 2FA e se actualiza sem deixar a aplicação num estado bloqueado.
+- [x] Validar o login, menus, criação de membro e configuração 2FA através do domínio externo publicado.
+- [x] Executar testes, build e publicar a correcção de distribuição validada.
