@@ -7469,3 +7469,16 @@
 - [x] Corrigir a operação que provoca o erro inesperado sem afectar dados guardados.
 - [x] Adicionar uma regressão automatizada e validar no domínio publicado.
 - [x] Executar testes, typecheck, build e publicar a correcção do incidente.
+
+## Recuperação administrativa de 2FA por Gmail
+- [ ] Preparar o transporte SMTP Gmail, com validação de configuração e sem enviar mensagens se a palavra-passe de aplicação não estiver disponível.
+- [ ] Guardar códigos de recuperação temporários cifrados, com expiração, limite de tentativas e uso único.
+- [ ] Permitir que apenas administradores emitam a recuperação a partir da gestão de utilizadores, com auditoria e confirmação explícita.
+- [ ] Integrar a validação do código no login para redefinir o 2FA apenas após recuperação válida.
+- [ ] Validar testes, typecheck, build e envio de teste após a palavra-passe de aplicação ser fornecida em campo seguro.
+
+## Publicação no GitHub
+- [x] Verificar o estado do repositório GitHub indicado e a autenticação disponível.
+- [x] Associar o remoto GitHub sem perder histórico nem alterações locais.
+- [x] Publicar no GitHub a versão mais recente validada do projecto.
+- [x] Definir a rotina de publicação do GitHub após cada nova versão validada.
