@@ -7471,6 +7471,7 @@
 - [x] Executar testes, typecheck, build e publicar a correcção do incidente.
 
 ## Recuperação administrativa de 2FA por Gmail
+> Estado: **adiada/bloqueada por decisão do utilizador** até existir uma palavra-passe de aplicação Gmail válida. Não foi marcada como concluída e não deve ser activada nem considerada funcional enquanto a credencial não passar a validação SMTP.
 - [ ] Preparar o transporte SMTP Gmail, com validação de configuração e sem enviar mensagens se a palavra-passe de aplicação não estiver disponível.
 - [ ] Guardar códigos de recuperação temporários cifrados, com expiração, limite de tentativas e uso único.
 - [ ] Permitir que apenas administradores emitam a recuperação a partir da gestão de utilizadores, com auditoria e confirmação explícita.
